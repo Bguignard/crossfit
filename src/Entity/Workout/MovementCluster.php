@@ -6,14 +6,16 @@ use App\Repository\Workout\MovementClusterRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementClusterRepository::class)]
 class MovementCluster
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    private ?Uuid $id = null;
 
     #[ORM\Column]
     private int $repetitions; // For example 5 reps, 10 reps, etc. if its 500m run its only 1 rep
@@ -23,7 +25,7 @@ class MovementCluster
     private Movement $movement;
 
     #[ORM\Column]
-    private float $movementIntensity; // For example the weight, the distance, the height, etc.
+    private ?float $movementIntensity; // For example the weight, the distance, the height, etc.
 
     #[ORM\Column(type: 'string', enumType: RepUnit::class)]
     private RepUnit $repUnit; // For example kg, lbs, meters, feet, etc.
@@ -35,7 +37,7 @@ class MovementCluster
         int $repetitions,
         ArrayCollection $implements,
         Movement $movement,
-        float $movementIntensity,
+        ?float $movementIntensity,
         RepUnit $repUnit
     ) {
         $this->repetitions = $repetitions;
@@ -45,7 +47,7 @@ class MovementCluster
         $this->repUnit = $repUnit;
     }
 
-    public function getId(): ?int
+    public function getId(): Uuid
     {
         return $this->id;
     }

@@ -6,14 +6,16 @@ use App\Repository\Workout\BlockRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: BlockRepository::class)]
 class Block
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    private ?Uuid $id = null;
 
     #[ORM\Column(nullable: false)]
     private int $rounds;
@@ -22,14 +24,27 @@ class Block
     private Collection $movementClusters;
 
     #[ORM\Column(nullable: true)]
-    private ?int $restTime = null;
+    private ?int $restTime;
 
-    public function __construct()
-    {
+    #[ORM\Column(nullable: false)]
+    private int $orderInWorkout;
+
+    public function __construct(
+        int $rounds,
+        int $orderInWorkout,
+        array $movementClusters,
+        ?int $restTime = null,
+    ) {
+        $this->rounds = $rounds;
+        $this->orderInWorkout = $orderInWorkout;
         $this->movementClusters = new ArrayCollection();
+        foreach ($movementClusters as $movementCluster) {
+            $this->addMovementCluster($movementCluster);
+        }
+        $this->restTime = $restTime;
     }
 
-    public function getId(): ?int
+    public function getId(): ?Uuid
     {
         return $this->id;
     }
@@ -81,4 +96,16 @@ class Block
 
         return $this;
     }
+
+    public function getOrderInWorkout(): int
+    {
+        return $this->orderInWorkout;
+    }
+
+    public function setOrderInWorkout(int $orderInWorkout): Block
+    {
+        $this->orderInWorkout = $orderInWorkout;
+        return $this;
+    }
+
 }
