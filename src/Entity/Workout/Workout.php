@@ -6,36 +6,55 @@ use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
 class Workout
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    private ?Uuid $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    private ?string $name;
 
     #[ORM\Column]
-    private ?int $numberOfRounds = null;
+    private ?int $numberOfRounds;
 
     #[ORM\ManyToMany(targetEntity: Block::class)]
     private Collection $blocks;
 
     #[ORM\Column]
-    private ?int $timeCap = null;
+    private ?int $timeCap;
 
     #[ORM\Column(length: 255)]
-    private ?string $workoutType = null;
+    private ?string $workoutType;
 
-    public function __construct()
-    {
+    #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class)]
+    private WorkoutOrigin $workoutOrigin;
+
+    public function __construct(
+        ?string $name,
+        ?int $numberOfRounds,
+        ?int $timeCap,
+        ?string $workoutType,
+        WorkoutOrigin $workoutOrigin,
+        array $blocks,
+    ) {
+        $this->name = $name;
+        $this->numberOfRounds = $numberOfRounds;
+        $this->timeCap = $timeCap;
+        $this->workoutType = $workoutType;
+        $this->workoutOrigin = $workoutOrigin;
         $this->blocks = new ArrayCollection();
+        foreach ($blocks as $block) {
+            $this->addBlock($block);
+        }
     }
 
-    public function getId(): ?int
+    public function getId(): Uuid
     {
         return $this->id;
     }
@@ -110,5 +129,10 @@ class Workout
         $this->workoutType = $workoutType;
 
         return $this;
+    }
+
+    public function getWorkoutOrigin(): WorkoutOrigin
+    {
+        return $this->workoutOrigin;
     }
 }

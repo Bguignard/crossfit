@@ -5,6 +5,7 @@ namespace App\Entity\Workout;
 enum RepUnit: string
 {
     case METER = 'meter';
-    case REP = 'rep';
+    case REPETITION = 'repetition';
     case SECOND = 'second';
+    case KILOGRAM = 'kilogram';
 }

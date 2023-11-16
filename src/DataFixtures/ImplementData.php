@@ -15,7 +15,7 @@ class ImplementData extends Fixture
     public const IMPLEMENT_SKI_ERG = 'implement-ski-erg';
     public const IMPLEMENT_BIKE_ERG = 'implement-bike-erg';
     public const IMPLEMENT_ROWER = 'implement-rower';
-    public const PULL_UP_BAR = 'implement-pull-up-bar';
+    public const IMPLEMENT_PULL_UP_BAR = 'implement-pull-up-bar';
     public const IMPLEMENT_MEDICINE_BALL = 'implement-medicine-ball';
     public const IMPLEMENT_BOX = 'implement-box';
     public const IMPLEMENT_JUMP_ROPE = 'implement-jump-rope';

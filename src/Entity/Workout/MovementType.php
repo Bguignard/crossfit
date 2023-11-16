@@ -2,6 +2,9 @@
 
 namespace App\Entity\Workout;
 
+use Symfony\Component\Uid\Uuid;
+use Doctrine\ORM\Mapping as ORM;
+
 enum MovementType: string
 {
     case GYMNASTIC = 'Gymnastic';
