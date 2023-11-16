@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Workout\Entity;
+namespace App\Entities\Workout;
 
-use App\Workout\Repository\MovementClusterRepository;
+use App\Repositories\Workout\MovementClusterRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MovementClusterRepository::class)]
