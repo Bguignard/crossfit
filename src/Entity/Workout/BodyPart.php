@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Entities\Workout;
+namespace App\Entity\Workout;
 
-use App\Repositories\Workout\BodyPartRepository;
+use App\Repository\Workout\BodyPartRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -21,8 +21,9 @@ class BodyPart
     #[ORM\ManyToMany(targetEntity: Movement::class, mappedBy: 'bodyParts')]
     private Collection $movements;
 
-    public function __construct()
+    public function __construct(string $name)
     {
+        $this->name = $name;
         $this->movements = new ArrayCollection();
     }
 
