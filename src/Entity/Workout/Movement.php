@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Entities\Workout;
+namespace App\Entity\Workout;
 
-use App\Repositories\Workout\MovementRepository;
+use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -15,18 +15,27 @@ class Movement
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    #[ORM\Column(length: 255, nullable: false)]
+    private string $name;
 
     #[ORM\ManyToMany(targetEntity: BodyPart::class, inversedBy: 'movements')]
     private Collection $bodyParts;
 
-    #[ORM\Column]
-    private ?int $difficulty = null;
+    #[ORM\Column(nullable: false)]
+    private int $difficulty;
 
-    public function __construct()
-    {
+    #[ORM\Column(type: 'string', enumType: MovementType::class, nullable: false)]
+    private MovementType $movementType;
+
+    public function __construct(
+        string $name,
+        int $difficulty,
+        MovementType $movementType
+    ) {
         $this->bodyParts = new ArrayCollection();
+        $this->name = $name;
+        $this->difficulty = $difficulty;
+        $this->movementType = $movementType;
     }
 
     public function getId(): ?int
@@ -78,6 +87,18 @@ class Movement
     public function setDifficulty(int $difficulty): static
     {
         $this->difficulty = $difficulty;
+
+        return $this;
+    }
+
+    public function getMovementType(): MovementType
+    {
+        return $this->movementType;
+    }
+
+    public function setBodyParts(Collection $bodyParts): Movement
+    {
+        $this->bodyParts = $bodyParts;
 
         return $this;
     }

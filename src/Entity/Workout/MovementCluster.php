@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Entities\Workout;
+namespace App\Entity\Workout;
 
-use App\Repositories\Workout\MovementClusterRepository;
+use App\Repository\Workout\MovementClusterRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MovementClusterRepository::class)]
@@ -13,18 +15,35 @@ class MovementCluster
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column]
+    private int $repetitions; // For example 5 reps, 10 reps, etc. if its 500m run its only 1 rep
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private Movement $movement;
 
     #[ORM\Column]
-    private float $numberOfClusterUnits;
+    private float $movementIntensity; // For example the weight, the distance, the height, etc.
 
     #[ORM\Column(type: 'string', enumType: RepUnit::class)]
-    private RepUnit $repUnit;
+    private RepUnit $repUnit; // For example kg, lbs, meters, feet, etc.
 
-    #[ORM\ManyToOne]
-    private ?MovementImplement $movementImplement = null;
+    #[ORM\ManyToMany(targetEntity: Implement::class)]
+    private Collection $implements;
+
+    public function __construct(
+        int $repetitions,
+        ArrayCollection $implements,
+        Movement $movement,
+        float $movementIntensity,
+        RepUnit $repUnit
+    ) {
+        $this->repetitions = $repetitions;
+        $this->implements = $implements;
+        $this->movement = $movement;
+        $this->movementIntensity = $movementIntensity;
+        $this->repUnit = $repUnit;
+    }
 
     public function getId(): ?int
     {
@@ -43,14 +62,14 @@ class MovementCluster
         return $this;
     }
 
-    public function getNumberOfClusterUnits(): ?float
+    public function getMovementIntensity(): ?float
     {
-        return $this->numberOfClusterUnits;
+        return $this->movementIntensity;
     }
 
-    public function setNumberOfClusterUnits(float $numberOfClusterUnits): static
+    public function setMovementIntensity(float $movementIntensity): static
     {
-        $this->numberOfClusterUnits = $numberOfClusterUnits;
+        $this->movementIntensity = $movementIntensity;
 
         return $this;
     }
@@ -65,18 +84,32 @@ class MovementCluster
         $this->repUnit = $repUnit;
     }
 
-    public function getMovementImplement(): ?MovementImplement
+    public function setImplements(Collection $implements): MovementCluster
     {
-        return $this->movementImplement;
-    }
-
-    public function setMovementImplement(?MovementImplement $movementImplement): static
-    {
-        $this->movementImplement = $movementImplement;
+        $this->implements = $implements;
 
         return $this;
     }
 
+    public function getImplements(): Collection
+    {
+        return $this->implements;
+    }
 
+    /**
+     * @return int
+     */
+    public function getRepetitions(): int
+    {
+        return $this->repetitions;
+    }
+
+    /**
+     * @param int $repetitions
+     */
+    public function setRepetitions(int $repetitions): void
+    {
+        $this->repetitions = $repetitions;
+    }
 
 }
