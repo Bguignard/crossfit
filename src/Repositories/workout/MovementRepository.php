@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Workout\Repository;
+namespace App\Repository;
 
-use App\Workout\Entity\Movement;
+use App\Entities\Workout\Movement;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Workout\Entity;
+namespace App\Entities\Workout;
 
-use App\Workout\Repository\WorkoutRepository;
+use App\Repositories\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;

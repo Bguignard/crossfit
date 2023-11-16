@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Workout\Repository;
+namespace App\Repository;
 
-use App\Workout\Entity\Workout;
+use App\Entities\Workout\Workout;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
