@@ -1,9 +1,6 @@
 <?php
 
-namespace App\Entity\Workout;
-
-use Symfony\Component\Uid\Uuid;
-use Doctrine\ORM\Mapping as ORM;
+namespace App\Enum;
 
 enum MovementType: string
 {
