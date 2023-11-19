@@ -1,11 +1,7 @@
 <?php
 
-namespace App\Entity\Workout;
+namespace App\Enum;
 
-use App\Repository\Workout\WorkoutOriginNameRepository;
-use Doctrine\ORM\Mapping as ORM;
-
-#[ORM\Entity(repositoryClass: WorkoutOriginNameRepository::class)]
 enum WorkoutOriginName: string
 {
     case CROSSFIT_GAMES = 'CrossFit Games';

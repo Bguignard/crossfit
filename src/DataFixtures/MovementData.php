@@ -3,7 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Movement;
-use App\Entity\Workout\MovementType;
+use App\Enum\MovementType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
