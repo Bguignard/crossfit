@@ -25,17 +25,11 @@ class FixturesController extends AbstractController
     ) {
     }
 
-    public function getOneFixtureData(string $slug): Response
-    {
-        return $this->render('fixtures/index.html.twig', [
-            'controller_name' => 'FixturesController',
-        ]);
-    }
-
     public function __invoke(): Response
     {
         return $this->render('fixtures/index.html.twig', [
-            'controller_name' => 'FixturesController',
+            'workoutOrigins' => $this->workoutRepository->getWorkoutsOrigins(),
+            'workouts' => $this->workoutRepository->findAll(),
         ]);
     }
 }

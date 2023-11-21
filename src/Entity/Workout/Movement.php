@@ -99,9 +99,11 @@ class Movement
         return $this->movementType;
     }
 
-    public function setBodyParts(Collection $bodyParts): Movement
+    public function setBodyParts(array $bodyParts): Movement
     {
-        $this->bodyParts = $bodyParts;
+        foreach ($bodyParts as $bodyPart) {
+            $this->addBodyPart($bodyPart);
+        }
 
         return $this;
     }

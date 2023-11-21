@@ -13,5 +13,4 @@ enum WorkoutOriginName: string
     case HERO_WORKOUT = 'Hero workout';
     case SANCTIONAL_EVENTS = 'Sanctional_events';
     case OTHER = 'Other';
-
 }

@@ -2,5 +2,18 @@
 
 {% block content %}
     <h1>Fixtures</h1>
-    <p> Welcome to the home page!</p>
+    <h2>Workouts</h2>
+    <h3>Origins</h3>
+    <ul>
+        {% for origin in origins %}
+            <p>{{ origin.name }}</p>
+            <p>{{ origin.year }}</p>
+        {% endfor %}
+    </ul>
+    <h3>Workouts</h3>
+    <ul>
+        {% for workout in workouts %}
+            <p>{{ workout.name }}</p>
+        {% endfor %}
+    </ul>
 {% endblock %}

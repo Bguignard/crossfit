@@ -42,6 +42,7 @@ class WorkoutOrigin
     public function setName(?WorkoutOriginName $name): WorkoutOrigin
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -53,7 +54,7 @@ class WorkoutOrigin
     public function setYear(?int $year): WorkoutOrigin
     {
         $this->year = $year;
+
         return $this;
     }
-
 }

@@ -3,11 +3,13 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Block;
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\RepUnit;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
-use App\Entity\Workout\WorkoutOriginName;
+use App\Enum\WorkoutOriginName;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -30,11 +32,11 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
         foreach ($this->getWorkouts() as $workout) {
             $blocks = [];
             foreach ($workout['blocks'] as $block) {
-                $clusters =  array_map(function ($movementCluster) {
+                $clusters = array_map(function ($movementCluster) {
                     return new MovementCluster(
                         $movementCluster['repetitions'],
-                        $this->getReference($movementCluster['implement']),
-                        $this->getReference($movementCluster['movement']),
+                        $this->getImplementsArrayFromReferences($movementCluster['implements']),
+                        $this->getReference($movementCluster['movement'], Movement::class),
                         $movementCluster['movementIntensity'],
                         $movementCluster['repUnit'],
                     );
@@ -47,7 +49,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 );
                 $blocks[] = $block;
             }
-            $workout = new Workout(
+            $workoutObject = new Workout(
                 $workout['name'],
                 $workout['numberOfRounds'],
                 $workout['timeCap'],
@@ -58,8 +60,8 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ),
                 $blocks,
             );
-            $manager->persist($workout);
-            $this->addReference($workout['reference'], $workout);
+            $manager->persist($workoutObject);
+            $this->addReference($workout['reference'], $workoutObject);
         }
     }
 
@@ -78,7 +80,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 21,
-                                'implement' => ImplementData::IMPLEMENT_BARBELL,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementIntensity' => 43,
                                 'repUnit' => RepUnit::KILOGRAM,
@@ -88,7 +89,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 21,
-                                'implement' => ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
@@ -105,7 +105,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 15,
-                                'implement' => ImplementData::IMPLEMENT_BARBELL,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementIntensity' => 43,
                                 'repUnit' => RepUnit::KILOGRAM,
@@ -115,7 +114,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 15,
-                                'implement' => ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
@@ -132,7 +130,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'implement' => ImplementData::IMPLEMENT_BARBELL,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementIntensity' => 43,
                                 'repUnit' => RepUnit::KILOGRAM,
@@ -142,7 +139,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 9,
-                                'implement' => ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
@@ -173,7 +169,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'implement' => ImplementData::IMPLEMENT_BARBELL,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementIntensity' => 43,
                                 'repUnit' => RepUnit::KILOGRAM,
@@ -183,7 +178,6 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 35,
-                                'implement' => ImplementData::IMPLEMENT_JUMP_ROPE,
                                 'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
                                 'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
@@ -203,5 +197,12 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
             ],
         ];
+    }
+
+    private function getImplementsArrayFromReferences(array $implements): array
+    {
+        return array_map(function ($implement) {
+            return $this->getReference($implement, Implement::class);
+        }, $implements);
     }
 }

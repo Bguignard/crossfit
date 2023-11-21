@@ -35,13 +35,16 @@ class MovementCluster
 
     public function __construct(
         int $repetitions,
-        ArrayCollection $implements,
+        array $implements,
         Movement $movement,
         ?float $movementIntensity,
         RepUnit $repUnit
     ) {
+        $this->implements = new ArrayCollection();
         $this->repetitions = $repetitions;
-        $this->implements = $implements;
+        foreach ($implements as $implement) {
+            $this->addImplement($implement);
+        }
         $this->movement = $movement;
         $this->movementIntensity = $movementIntensity;
         $this->repUnit = $repUnit;
@@ -93,25 +96,27 @@ class MovementCluster
         return $this;
     }
 
+    public function addImplement(Implement $implement): MovementCluster
+    {
+        if (!$this->implements->contains($implement)) {
+            $this->implements->add($implement);
+        }
+
+        return $this;
+    }
+
     public function getImplements(): Collection
     {
         return $this->implements;
     }
 
-    /**
-     * @return int
-     */
     public function getRepetitions(): int
     {
         return $this->repetitions;
     }
 
-    /**
-     * @param int $repetitions
-     */
     public function setRepetitions(int $repetitions): void
     {
         $this->repetitions = $repetitions;
     }
-
 }

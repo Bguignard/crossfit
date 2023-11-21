@@ -53,6 +53,7 @@ class BodyPartData extends Fixture
             self::BODY_PART_RHOMBOIDS => 'Rhomboids',
             self::BODY_PART_FOREARMS => 'Forearms',
             self::BODY_PART_LATISSIMUS_DORSI => 'Latissimus dorsi',
+            self::BODY_PART_HIP_FLEXORS => 'Hip flexors',
         ];
     }
 

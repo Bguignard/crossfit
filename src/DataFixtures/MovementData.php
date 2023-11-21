@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Workout\BodyPart;
 use App\Entity\Workout\Movement;
 use App\Enum\MovementType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
@@ -104,7 +105,6 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const MOVEMENT_BURPEE_BROAD_JUMP = 'movement-burpee-broad-jump';
     public const MOVEMENT_PUSH_UP = 'movement-push-up';
 
-
     public function getDependencies(): array
     {
         return [
@@ -117,22 +117,22 @@ class MovementData extends Fixture implements DependentFixtureInterface
     {
         foreach ($this->getMovements() as $movement) {
             $bodyParts = array_map(
-                fn ($bodyPart) => $this->getReference($bodyPart),
+                fn ($bodyPart) => $this->getReference($bodyPart, BodyPart::class),
                 $movement['bodyParts']
             );
-            $movement = (new Movement(
+            $movementObject = (new Movement(
                 $movement['name'],
                 $movement['difficulty'],
                 $movement['movementType'],
             ))
                 ->setBodyparts($bodyParts);
-            $this->addReference($movement['reference'], $movement);
-            $manager->persist($movement);
+            $this->addReference($movement['reference'], $movementObject);
+            $manager->persist($movementObject);
         }
         $manager->flush();
     }
 
-    private function getMovements():array
+    private function getMovements(): array
     {
         return [
             [
@@ -172,7 +172,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'difficulty' => 50,
                 'movementType' => MovementType::GYMNASTIC,
                 'implements' => [
-                    ImplementData::PULL_UP_BAR,
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
             ],
             [
@@ -1120,7 +1120,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::GYMNASTIC,
             ],
             [
-                'reference'=> self::MOVEMENT_CARRY,
+                'reference' => self::MOVEMENT_CARRY,
                 'name' => 'Carry',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_FOREARMS,
@@ -1135,7 +1135,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::STRONGMAN,
             ],
             [
-                'reference'=> self::MOVEMENT_SLED_DRAG,
+                'reference' => self::MOVEMENT_SLED_DRAG,
                 'name' => 'Sled Drag',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_FOREARMS,
@@ -1151,7 +1151,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::STRONGMAN,
             ],
             [
-                'reference'=> self::MOVEMENT_SLED_PUSH,
+                'reference' => self::MOVEMENT_SLED_PUSH,
                 'name' => 'Sled Push',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_FOREARMS,
@@ -1168,7 +1168,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::STRONGMAN,
             ],
             [
-                'reference'=> self::MOVEMENT_SLED_PULL,
+                'reference' => self::MOVEMENT_SLED_PULL,
                 'name' => 'Sled Pull',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_FOREARMS,
@@ -1185,7 +1185,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::STRONGMAN,
             ],
             [
-                'reference'=> self::MOVEMENT_SIT_UP,
+                'reference' => self::MOVEMENT_SIT_UP,
                 'name' => 'Sit Up',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_ABDOMINALS,
@@ -1195,7 +1195,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::GYMNASTIC,
             ],
             [
-                'reference'=> self::MOVEMENT_SHUTTLE_RUN,
+                'reference' => self::MOVEMENT_SHUTTLE_RUN,
                 'name' => 'Shuttle Run',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_QUADRICEPS,
@@ -1208,7 +1208,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementType::CARDIO,
             ],
             [
-                'reference'=> self::MOVEMENT_BIKE,
+                'reference' => self::MOVEMENT_BIKE,
                 'name' => 'Bike',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_QUADRICEPS,
