@@ -37,17 +37,6 @@ class WorkoutRepository extends ServiceEntityRepository implements WorkoutReposi
         return $result;
     }
 
-    public function getWorkoutsOrigins(): array
-    {
-        $qb = $this->createQueryBuilder('w');
-        $qb->select('w.origin');
-        $qb->orderBy('w.origin', 'ASC');
-        $query = $qb->getQuery();
-        $result = $query->getResult();
-
-        return $result;
-    }
-
     public function getWorkoutsNamesByOrigin(string $originId): array
     {
         $qb = $this->createQueryBuilder('w');

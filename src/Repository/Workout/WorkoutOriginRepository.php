@@ -14,7 +14,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method WorkoutOrigin[]    findAll()
  * @method WorkoutOrigin[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class WorkoutOriginRepository extends ServiceEntityRepository
+class WorkoutOriginRepository extends ServiceEntityRepository implements WorkoutOriginRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
