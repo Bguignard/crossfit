@@ -6,6 +6,7 @@ use App\Entity\Workout\Block;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
+use App\Entity\Workout\MovementDetail;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Enum\RepUnit;
@@ -36,10 +37,14 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 $clusters = array_map(function ($movementCluster) {
                     return new MovementCluster(
                         $movementCluster['repetitions'],
+                        $movementCluster['repUnit'],
                         $this->getImplementsArrayFromReferences($movementCluster['implements']),
                         $this->getReference($movementCluster['movement'], Movement::class),
-                        $movementCluster['movementIntensity'],
-                        $movementCluster['repUnit'],
+                        $movementCluster['movementDetail'] ?
+                            new MovementDetail(
+                                $movementCluster['movementDetail']['movementIntensity'],
+                                $movementCluster['movementDetail']['movementIntensityUnit'],
+                          ) : null,
                     );
                 }, $block['movementClusters']);
 
@@ -83,18 +88,21 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 21,
+                                'repUnit' => RepUnit::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementIntensity' => 43,
-                                'repUnit' => RepUnit::KILOGRAM,
+                                'movementDetail' => [
+                                    'movementIntensity' => 43,
+                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 21,
-                                'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
+                                'movement' => MovementData::MOVEMENT_PULL_UP,
+                                'movementDetail' => null,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -108,18 +116,21 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 15,
+                                'repUnit' => RepUnit::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementIntensity' => 43,
-                                'repUnit' => RepUnit::KILOGRAM,
+                                'movementDetail' => [
+                                    'movementIntensity' => 43,
+                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                    ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 15,
-                                'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
+                                'movement' => MovementData::MOVEMENT_PULL_UP,
+                                'movementDetail' => null,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -133,18 +144,21 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
+                                'repUnit' => RepUnit::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementIntensity' => 43,
-                                'repUnit' => RepUnit::KILOGRAM,
+                                'movementDetail' => [
+                                    'movementIntensity' => 43,
+                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 9,
-                                'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
+                                'movement' => MovementData::MOVEMENT_PULL_UP,
+                                'movementDetail' => null,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -172,18 +186,21 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
+                                'repUnit' => RepUnit::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementIntensity' => 43,
-                                'repUnit' => RepUnit::KILOGRAM,
+                                'movementDetail' => [
+                                    'movementIntensity' => 43,
+                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 35,
-                                'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
-                                'movementIntensity' => null,
                                 'repUnit' => RepUnit::REPETITION,
+                                'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
+                                'movementDetail' => null,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_JUMP_ROPE,
                                 ],
