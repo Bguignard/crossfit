@@ -1,19 +1,101 @@
-{% extends "base.html" %}
+{% extends "base.html.twig" %}
 
-{% block content %}
+{% block title %}Fixtures{% endblock %}
+
+{% block body %}
     <h1>Fixtures</h1>
     <h2>Workouts</h2>
     <h3>Origins</h3>
     <ul>
-        {% for origin in origins %}
-            <p>{{ origin.name }}</p>
-            <p>{{ origin.year }}</p>
+        {% for name in workoutOriginsNames %}
+            <p>{{ name }}</p>
         {% endfor %}
     </ul>
     <h3>Workouts</h3>
     <ul>
         {% for workout in workouts %}
-            <p>{{ workout.name }}</p>
+            <li><h4>{{ workout.name }}</h4>
+            {% if workout.numberOfRounds is not same as(1) %}
+                <p>{{ workout.numberOfRounds }} rounds of :</p>
+            {% endif %}
+
+{#            Order by block.orderInWorkout#}
+            {% for block in workout.blocks %}
+                {% if block.rounds is not same as(1) %}
+                    <h5>{{ block.rounds }} rounds of :</h5>
+                {% endif %}
+
+                {% for movementCluster in block.movementClusters %}
+                    <p>- {{ movementCluster.repetitions }} {{ movementCluster.repUnit.value }}
+                    {% for implement in movementCluster.implements %}
+                        {{ implement.name }}
+                    {% endfor %}
+                        {{ movementCluster.movement.name }}
+                    {% if movementCluster.movementDetail is not null %}
+                        ( {{ movementCluster.movementDetail.movementIntensity }} {{ movementCluster.movementDetail.movementIntensityUnit.value }} )
+                    {% endif %}
+                    </p>
+                {% endfor %}
+                {% if block.restTime is not null %}
+                    {block.restTime}} seconds rest
+                {% endif %}
+            {% endfor %}
+            <p>Time cap {{ workout.timeCap }} minutes</p>
+            </li>
         {% endfor %}
     </ul>
+
+    <h3>Movements</h3>
+    <ul>
+        {% for movement in movements %}
+            <li>
+                {{ movement.name }}
+                ({{ movement.difficulty }})
+                <ul>
+                    {% for bodyPart in movement.bodyParts %}
+                        <li>
+                            {{ bodyPart.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h3>Body parts</h3>
+    <ul>
+        {% for bodyPart in bodyParts %}
+            <li>
+                {{ bodyPart.name }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h3>Movement types</h3>
+    <ul>
+        {% for movementType in movementTypes %}
+            <li>
+                {{ movementType }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h3>Implements</h3>
+    <ul>
+        {% for implement in implements %}
+            <li>
+                {{ implement.name }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h3>Workout types</h3>
+    <ul>
+        {% for workoutType in workoutTypes %}
+            <li>
+                {{ workoutType }}
+            </li>
+        {% endfor %}
+    </ul>
+
 {% endblock %}
