@@ -2,7 +2,7 @@
 
 namespace App\Repository\Workout;
 
-use App\Entity\Workout\RepUnit;
+use App\Enum\RepUnit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

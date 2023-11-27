@@ -2,6 +2,7 @@
 
 namespace App\Entity\Workout;
 
+use App\Enum\RepUnit;
 use App\Repository\Workout\MovementClusterRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -24,10 +25,10 @@ class MovementCluster
     #[ORM\JoinColumn(nullable: false)]
     private Movement $movement;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?float $movementIntensity; // For example the weight, the distance, the height, etc.
 
-    #[ORM\Column(type: 'string', enumType: RepUnit::class)]
+    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnit::class)]
     private RepUnit $repUnit; // For example kg, lbs, meters, feet, etc.
 
     #[ORM\ManyToMany(targetEntity: Implement::class)]

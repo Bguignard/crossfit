@@ -6,10 +6,11 @@ use App\Entity\Workout\Block;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
-use App\Entity\Workout\RepUnit;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
+use App\Enum\RepUnit;
 use App\Enum\WorkoutOriginName;
+use App\Enum\WorkoutType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -41,6 +42,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         $movementCluster['repUnit'],
                     );
                 }, $block['movementClusters']);
+
                 $block = new Block(
                     $block['rounds'],
                     $block['orderInWorkout'],
@@ -63,6 +65,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
             $manager->persist($workoutObject);
             $this->addReference($workout['reference'], $workoutObject);
         }
+        $manager->flush();
     }
 
     private function getWorkouts(): array
@@ -151,7 +154,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 1,
                 'timeCap' => 10,
-                'workoutType' => 'For time',
+                'workoutType' => WorkoutType::ForTime,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginName::GIRLS_WORKOUT,
                     'year' => 2010,
@@ -190,7 +193,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 10,
                 'timeCap' => 40,
-                'workoutType' => 'For time',
+                'workoutType' => WorkoutType::ForTime,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginName::CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,

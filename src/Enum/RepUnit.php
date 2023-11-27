@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entity\Workout;
+namespace App\Enum;
 
 enum RepUnit: string
 {

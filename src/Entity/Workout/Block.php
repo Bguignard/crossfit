@@ -20,10 +20,10 @@ class Block
     #[ORM\Column(nullable: false)]
     private int $rounds;
 
-    #[ORM\ManyToMany(targetEntity: MovementCluster::class)]
+    #[ORM\ManyToMany(targetEntity: MovementCluster::class, cascade: ['persist'])]
     private Collection $movementClusters;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true)] // Time in SECONDS
     private ?int $restTime;
 
     #[ORM\Column(nullable: false)]
