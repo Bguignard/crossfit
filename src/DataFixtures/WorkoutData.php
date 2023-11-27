@@ -44,7 +44,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             new MovementDetail(
                                 $movementCluster['movementDetail']['movementIntensity'],
                                 $movementCluster['movementDetail']['movementIntensityUnit'],
-                          ) : null,
+                            ) : null,
                     );
                 }, $block['movementClusters']);
 

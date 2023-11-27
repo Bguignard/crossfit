@@ -22,7 +22,6 @@ class MovementDetail
     #[ORM\Column(type: 'string', nullable: true, enumType: RepUnit::class)]
     private ?RepUnit $movementIntensityUnit; // For example kg, lbs, meters, feet, etc. of MOVEMENT INTENSITY
 
-
     public function __construct(
         ?float $movementIntensity,
         ?RepUnit $movementIntensityUnit
@@ -56,7 +55,7 @@ class MovementDetail
     public function setMovementIntensityUnit(?RepUnit $movementIntensityUnit): MovementDetail
     {
         $this->movementIntensityUnit = $movementIntensityUnit;
+
         return $this;
     }
-
 }

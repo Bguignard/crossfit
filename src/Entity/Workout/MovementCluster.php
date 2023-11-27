@@ -90,5 +90,4 @@ class MovementCluster
     {
         return $this->movementDetail;
     }
-
 }
