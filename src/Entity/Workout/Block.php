@@ -20,10 +20,10 @@ class Block
     #[ORM\Column(nullable: false)]
     private int $rounds;
 
-    #[ORM\ManyToMany(targetEntity: MovementCluster::class)]
+    #[ORM\ManyToMany(targetEntity: MovementCluster::class, cascade: ['persist'])]
     private Collection $movementClusters;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true)] // Time in SECONDS
     private ?int $restTime;
 
     #[ORM\Column(nullable: false)]
@@ -33,7 +33,7 @@ class Block
         int $rounds,
         int $orderInWorkout,
         array $movementClusters,
-        ?int $restTime = null,
+        int $restTime = null,
     ) {
         $this->rounds = $rounds;
         $this->orderInWorkout = $orderInWorkout;
@@ -105,7 +105,7 @@ class Block
     public function setOrderInWorkout(int $orderInWorkout): Block
     {
         $this->orderInWorkout = $orderInWorkout;
+
         return $this;
     }
-
 }

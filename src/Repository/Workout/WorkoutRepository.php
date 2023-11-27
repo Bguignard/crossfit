@@ -14,35 +14,39 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Workout[]    findAll()
  * @method Workout[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class WorkoutRepository extends ServiceEntityRepository
+class WorkoutRepository extends ServiceEntityRepository implements WorkoutRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Workout::class);
     }
 
-    //    /**
-    //     * @return Workout[] Returns an array of Workout objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('w')
-    //            ->andWhere('w.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('w.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function getByName(string $name): ?Workout
+    {
+        return $this->findOneBy(['name' => $name]);
+    }
 
-    //    public function findOneBySomeField($value): ?Workout
-    //    {
-    //        return $this->createQueryBuilder('w')
-    //            ->andWhere('w.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function getWorkoutsNames(): array
+    {
+        $qb = $this->createQueryBuilder('w');
+        $qb->select('w.name');
+        $qb->orderBy('w.name', 'ASC');
+        $query = $qb->getQuery();
+        $result = $query->getResult();
+
+        return $result;
+    }
+
+    public function getWorkoutsNamesByOrigin(string $originId): array
+    {
+        $qb = $this->createQueryBuilder('w');
+        $qb->select('w.name');
+        $qb->where('w.origin = :origin');
+        $qb->setParameter('origin', $originId);
+        $qb->orderBy('w.name', 'ASC');
+        $query = $qb->getQuery();
+        $result = $query->getResult();
+
+        return $result;
+    }
 }

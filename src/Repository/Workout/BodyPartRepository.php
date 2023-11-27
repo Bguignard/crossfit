@@ -14,35 +14,10 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method BodyPart[]    findAll()
  * @method BodyPart[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class BodyPartRepository extends ServiceEntityRepository
+class BodyPartRepository extends ServiceEntityRepository implements BodyPartRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, BodyPart::class);
     }
-
-    //    /**
-    //     * @return BodyPart[] Returns an array of BodyPart objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('b')
-    //            ->andWhere('b.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('b.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?BodyPart
-    //    {
-    //        return $this->createQueryBuilder('b')
-    //            ->andWhere('b.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
 }

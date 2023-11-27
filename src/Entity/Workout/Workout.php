@@ -21,26 +21,26 @@ class Workout
     #[ORM\Column(length: 255)]
     private ?string $name;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $numberOfRounds;
 
-    #[ORM\ManyToMany(targetEntity: Block::class)]
+    #[ORM\ManyToMany(targetEntity: Block::class, cascade: ['persist'])]
     private Collection $blocks;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $timeCap;
 
-    #[ORM\Column(type: 'string', enumType: WorkoutType::class)]
-    private ?string $workoutType;
+    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutType::class)]
+    private ?WorkoutType $workoutType;
 
-    #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class)]
+    #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['persist'])]
     private WorkoutOrigin $workoutOrigin;
 
     public function __construct(
         ?string $name,
         ?int $numberOfRounds,
         ?int $timeCap,
-        ?string $workoutType,
+        ?WorkoutType $workoutType,
         WorkoutOrigin $workoutOrigin,
         array $blocks,
     ) {
@@ -120,12 +120,12 @@ class Workout
         return $this;
     }
 
-    public function getWorkoutType(): ?string
+    public function getWorkoutType(): ?WorkoutType
     {
         return $this->workoutType;
     }
 
-    public function setWorkoutType(string $workoutType): static
+    public function setWorkoutType(?WorkoutType $workoutType): static
     {
         $this->workoutType = $workoutType;
 

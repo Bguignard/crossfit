@@ -16,9 +16,10 @@ class WorkoutOrigin
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     private ?Uuid $id = null;
 
-    #[ORM\Column(type: 'string', enumType: WorkoutOriginName::class)]
+    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutOriginName::class)]
     private ?WorkoutOriginName $name;
 
+    #[ORM\Column(nullable: true)]
     private ?int $year;
 
     public function __construct(
@@ -42,6 +43,7 @@ class WorkoutOrigin
     public function setName(?WorkoutOriginName $name): WorkoutOrigin
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -53,7 +55,7 @@ class WorkoutOrigin
     public function setYear(?int $year): WorkoutOrigin
     {
         $this->year = $year;
+
         return $this;
     }
-
 }

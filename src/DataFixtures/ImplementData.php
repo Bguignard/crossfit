@@ -45,9 +45,9 @@ class ImplementData extends Fixture
     public function load(ObjectManager $manager)
     {
         foreach ($this->getImplements() as $implement) {
-            $implement = new Implement($implement['name']);
-            $manager->persist($implement);
-            $this->addReference($implement['reference'], $implement);
+            $implementObject = new Implement($implement['name']);
+            $manager->persist($implementObject);
+            $this->addReference($implement['reference'], $implementObject);
         }
         $manager->flush();
     }
@@ -84,7 +84,7 @@ class ImplementData extends Fixture
                 'name' => 'Row',
             ],
             [
-                'reference' => self::PULL_UP_BAR,
+                'reference' => self::IMPLEMENT_PULL_UP_BAR,
                 'name' => 'Pull up bar',
             ],
             [
