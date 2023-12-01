@@ -15,7 +15,7 @@ services:
     ports:
       - 3306:3306
     networks:
-      - symfony_app
+      crossfit:
   php:
     build:
       context: ./php
@@ -24,7 +24,7 @@ services:
     volumes:
       - ../:/var/www/symfony:cached
     networks:
-      - symfony_app
+      crossfit:
   nginx:
     build:
       context: ./nginx
@@ -33,7 +33,9 @@ services:
     ports:
       - 80:80
     networks:
-      - symfony_app
+      crossfit:
+        aliases:
+          - admin.crossfit.local
     env_file:
       - .env.nginx.local
 
@@ -41,4 +43,4 @@ volumes:
   db_app:
 
 networks:
-  symfony_app:
+  crossfit:
