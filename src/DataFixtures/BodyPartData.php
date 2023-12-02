@@ -3,6 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
+use App\Enum\BodyPartEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -38,22 +39,22 @@ class BodyPartData extends Fixture
     private function getBodyParts(): array
     {
         return [
-            self::BODY_PART_PECTORALS => 'Pectorals',
-            self::BODY_PART_LOWER_BACK => 'Lower back',
-            self::BODY_PART_SHOULDERS => 'Shoulders',
-            self::BODY_PART_BICEPS => 'Biceps',
-            self::BODY_PART_TRICEPS => 'Triceps',
-            self::BODY_PART_LEGS => 'Legs',
-            self::BODY_PART_ABDOMINALS => 'Abdominals',
-            self::BODY_PART_GLUTES => 'Glutes',
-            self::BODY_PART_HAMSTRINGS => 'Hamstrings',
-            self::BODY_PART_QUADRICEPS => 'Quadriceps',
-            self::BODY_PART_TRAPEZIUS => 'Trapezius',
-            self::BODY_PART_CALVES => 'Calves',
-            self::BODY_PART_RHOMBOIDS => 'Rhomboids',
-            self::BODY_PART_FOREARMS => 'Forearms',
-            self::BODY_PART_LATISSIMUS_DORSI => 'Latissimus dorsi',
-            self::BODY_PART_HIP_FLEXORS => 'Hip flexors',
+            self::BODY_PART_PECTORALS => BodyPartEnum::PECTORALS,
+            self::BODY_PART_LOWER_BACK => BodyPartEnum::LOWER_BACK,
+            self::BODY_PART_SHOULDERS => BodyPartEnum::SHOULDERS,
+            self::BODY_PART_BICEPS => BodyPartEnum::BICEPS,
+            self::BODY_PART_TRICEPS => BodyPartEnum::TRICEPS,
+            self::BODY_PART_LEGS => BodyPartEnum::LEGS,
+            self::BODY_PART_ABDOMINALS => BodyPartEnum::ABDOMINALS,
+            self::BODY_PART_GLUTES => BodyPartEnum::GLUTES,
+            self::BODY_PART_HAMSTRINGS => BodyPartEnum::HAMSTRINGS,
+            self::BODY_PART_QUADRICEPS => BodyPartEnum::QUADRICEPS,
+            self::BODY_PART_TRAPEZIUS => BodyPartEnum::TRAPEZIUS,
+            self::BODY_PART_CALVES => BodyPartEnum::CALVES,
+            self::BODY_PART_RHOMBOIDS => BodyPartEnum::RHOMBOIDS,
+            self::BODY_PART_FOREARMS => BodyPartEnum::FOREARMS,
+            self::BODY_PART_LATISSIMUS_DORSI => BodyPartEnum::LATISSIMUS_DORSI,
+            self::BODY_PART_HIP_FLEXORS => BodyPartEnum::HIP_FLEXORS,
         ];
     }
 

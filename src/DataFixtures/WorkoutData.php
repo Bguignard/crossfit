@@ -9,9 +9,9 @@ use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\MovementDetail;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
-use App\Enum\RepUnit;
-use App\Enum\WorkoutOriginName;
-use App\Enum\WorkoutType;
+use App\Enum\RepUnitEnum;
+use App\Enum\WorkoutOriginNameEnum;
+use App\Enum\WorkoutTypeEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -88,11 +88,11 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementDetail' => [
                                     'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
                                 ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -100,7 +100,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementDetail' => null,
                                 'implements' => [
@@ -116,11 +116,11 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementDetail' => [
                                     'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
                                     ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -128,7 +128,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementDetail' => null,
                                 'implements' => [
@@ -144,11 +144,11 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementDetail' => [
                                     'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
                                 ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -156,7 +156,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
                                 'movementDetail' => null,
                                 'implements' => [
@@ -168,9 +168,9 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 1,
                 'timeCap' => 10,
-                'workoutType' => WorkoutType::ForTime,
+                'workoutType' => WorkoutTypeEnum::ForTime,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginName::GIRLS_WORKOUT,
+                    'name' => WorkoutOriginNameEnum::GIRLS_WORKOUT,
                     'year' => 2010,
                 ],
             ],
@@ -186,11 +186,11 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'movementDetail' => [
                                     'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnit::KILOGRAM,
+                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
                                 ],
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -198,7 +198,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                             ],
                             [
                                 'repetitions' => 35,
-                                'repUnit' => RepUnit::REPETITION,
+                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
                                 'movementDetail' => null,
                                 'implements' => [
@@ -210,9 +210,9 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 10,
                 'timeCap' => 40,
-                'workoutType' => WorkoutType::ForTime,
+                'workoutType' => WorkoutTypeEnum::ForTime,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginName::CROSSFIT_OPEN_WORKOUT,
+                    'name' => WorkoutOriginNameEnum::CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,
                 ],
             ],

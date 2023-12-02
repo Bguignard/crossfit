@@ -2,9 +2,9 @@
 
 namespace App\Controller;
 
-use App\Enum\MovementType;
-use App\Enum\WorkoutOriginName;
-use App\Enum\WorkoutType;
+use App\Enum\MovementTypeEnum;
+use App\Enum\WorkoutOriginNameEnum;
+use App\Enum\WorkoutTypeEnum;
 use App\Repository\Workout\BlockRepositoryInterface;
 use App\Repository\Workout\BodyPartRepositoryInterface;
 use App\Repository\Workout\ImplementRepositoryInterface;
@@ -33,13 +33,13 @@ class FixturesController extends AbstractController
     public function __invoke(): Response
     {
         return $this->render('fixtures.html.twig', [
-            'workoutOriginsNames' => array_column(WorkoutOriginName::cases(), 'value'),
+            'workoutOriginsNames' => array_column(WorkoutOriginNameEnum::cases(), 'value'),
             'workouts' => $this->workoutRepository->findAll(),
             'movements' => $this->movementRepository->findAll(),
             'bodyParts' => $this->bodyPartRepository->findAll(),
-            'movementTypes' => array_column(MovementType::cases(), 'value'),
+            'movementTypes' => array_column(MovementTypeEnum::cases(), 'value'),
             'implements' => $this->implementRepository->findAll(),
-            'workoutTypes' => array_column(WorkoutType::cases(), 'value'),
+            'workoutTypes' => array_column(WorkoutTypeEnum::cases(), 'value'),
         ]);
     }
 }

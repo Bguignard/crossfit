@@ -4,7 +4,7 @@ namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
 use App\Entity\Workout\Movement;
-use App\Enum\MovementType;
+use App\Enum\MovementTypeEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -144,7 +144,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_SHOULDERS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::BODYBUILDING,
+                'movementType' => MovementTypeEnum::BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_BENCH,
@@ -159,7 +159,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_SHOULDERS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::BODYBUILDING,
+                'movementType' => MovementTypeEnum::BODYBUILDING,
             ],
             [
                 'reference' => self::MOVEMENT_PULL_UP,
@@ -170,7 +170,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_FOREARMS,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -185,7 +185,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_QUADRICEPS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_SHOULDER_PRESS,
@@ -195,7 +195,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_TRICEPS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_CHIN_UP,
@@ -206,7 +206,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_FOREARMS,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_CHEST_TO_BAR_PULL_UP,
@@ -218,7 +218,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_RHOMBOIDS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_THRUSTER,
@@ -231,7 +231,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_PRESS,
@@ -244,7 +244,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_JERK,
@@ -257,7 +257,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_CLEAN,
@@ -270,7 +270,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 40,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_POWER_CLEAN,
@@ -283,7 +283,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_CLEAN,
@@ -296,7 +296,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 35,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_CLEAN,
@@ -309,7 +309,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 35,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_CLEAN,
@@ -322,7 +322,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 45,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_POWER_CLEAN,
@@ -335,7 +335,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 35,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_SQUAT_CLEAN,
@@ -348,7 +348,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 45,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_POWER_CLEAN,
@@ -361,7 +361,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 35,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_SQUAT_CLEAN,
@@ -374,7 +374,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 45,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_SNATCH,
@@ -390,7 +390,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_POWER_SNATCH,
@@ -405,7 +405,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_SNATCH,
@@ -420,7 +420,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 55,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_SNATCH,
@@ -435,7 +435,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 55,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_SNATCH,
@@ -450,7 +450,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 65,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_CLEAN,
@@ -463,7 +463,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_SNATCH,
@@ -473,7 +473,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_SQUAT,
@@ -487,7 +487,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_RACK_WALKING_LUNGE,
@@ -500,7 +500,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_WALKING_LUNGE,
@@ -513,7 +513,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_BACK_RACK_WALKING_LUNGE,
@@ -525,7 +525,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_SQUAT,
@@ -538,7 +538,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_SHOULDERS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::BODYBUILDING,
+                'movementType' => MovementTypeEnum::BODYBUILDING,
             ],
             [
                 'reference' => self::MOVEMENT_BACK_SQUAT,
@@ -550,7 +550,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::BODYBUILDING,
+                'movementType' => MovementTypeEnum::BODYBUILDING,
             ],
             [
                 'reference' => self::MOVEMENT_SINGLE_UNDER,
@@ -563,7 +563,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_DOUBLE_UNDER,
@@ -576,7 +576,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_CROSS_OVER,
@@ -589,7 +589,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP_OVER,
@@ -600,7 +600,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP,
@@ -611,7 +611,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_WALL_BALL_SHOT,
@@ -625,7 +625,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_AMERICAN_SWING,
@@ -636,7 +636,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_FOREARMS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_RUSSIAN_SWING,
@@ -647,7 +647,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_FOREARMS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_RUN,
@@ -659,7 +659,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_ROW,
@@ -677,7 +677,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BIKE_ERG,
@@ -689,7 +689,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_CALVES,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_ASSAULT_BIKE,
@@ -705,7 +705,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_SKI_ERG,
@@ -719,7 +719,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_TRICEPS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE,
@@ -736,7 +736,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BOX_JUMP_OVER,
@@ -753,7 +753,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER,
@@ -770,7 +770,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 15,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER_FACING,
@@ -787,7 +787,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 15,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_UP,
@@ -804,7 +804,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 55,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_MUSCLE_UP,
@@ -821,7 +821,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 75,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_CHEST_TO_BAR_PULL_UP,
@@ -838,7 +838,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 65,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_CHEST_TO_BAR_PULL_UP,
@@ -850,7 +850,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_RHOMBOIDS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_PULL_UP,
@@ -862,7 +862,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_RHOMBOIDS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_UP,
@@ -876,7 +876,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_ABDOMINALS,
                 ],
                 'difficulty' => 80,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_PULL_OVER,
@@ -890,7 +890,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_ABDOMINALS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_DIP,
@@ -902,7 +902,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_SHOULDERS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PUSH_UP,
@@ -914,7 +914,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_ABDOMINALS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_TARGET,
@@ -927,7 +927,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_ABDOMINALS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_OVER,
@@ -942,7 +942,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_RHOMBOIDS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_HANDSTAND_PUSH_UP,
@@ -953,7 +953,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 80,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PIROUETTE,
@@ -964,7 +964,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 80,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_WALK,
@@ -975,7 +975,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_HANDSTAND_PUSH_UP,
@@ -986,7 +986,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 80,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_KIPPING_HANDSTAND_PUSH_UP,
@@ -997,7 +997,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_BAR,
@@ -1010,7 +1010,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HIP_FLEXORS,
                 ],
                 'difficulty' => 40,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_RING,
@@ -1023,7 +1023,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HIP_FLEXORS,
                 ],
                 'difficulty' => 40,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_TOES_TO_BAR,
@@ -1036,7 +1036,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HIP_FLEXORS,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_KNEES_TO_ELBOWS,
@@ -1049,7 +1049,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HIP_FLEXORS,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_ALTERNATE_PISTOL_SQUAT,
@@ -1060,7 +1060,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_PISTOL_SQUAT,
@@ -1071,7 +1071,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_TURKISH_GET_UP,
@@ -1084,7 +1084,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 60,
-                'movementType' => MovementType::WEIGHTLIFTING,
+                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
             ],
             [
                 'reference' => self::MOVEMENT_GHD_SIT_UP,
@@ -1095,7 +1095,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_QUADRICEPS,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_GHD_BACK_EXTENSION,
@@ -1106,7 +1106,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_GHD_HIP_EXTENSION,
@@ -1117,7 +1117,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 50,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_CARRY,
@@ -1132,7 +1132,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_QUADRICEPS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::STRONGMAN,
+                'movementType' => MovementTypeEnum::STRONGMAN,
             ],
             [
                 'reference' => self::MOVEMENT_SLED_DRAG,
@@ -1148,7 +1148,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::STRONGMAN,
+                'movementType' => MovementTypeEnum::STRONGMAN,
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PUSH,
@@ -1165,7 +1165,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::STRONGMAN,
+                'movementType' => MovementTypeEnum::STRONGMAN,
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PULL,
@@ -1182,7 +1182,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::STRONGMAN,
+                'movementType' => MovementTypeEnum::STRONGMAN,
             ],
             [
                 'reference' => self::MOVEMENT_SIT_UP,
@@ -1192,7 +1192,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HIP_FLEXORS,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_SHUTTLE_RUN,
@@ -1205,7 +1205,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_BIKE,
@@ -1218,7 +1218,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_RUN_AND_BIKE,
@@ -1231,7 +1231,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LOWER_BACK,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_SWIM,
@@ -1246,7 +1246,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LATISSIMUS_DORSI,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_PADDLE,
@@ -1260,7 +1260,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_LATISSIMUS_DORSI,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::CARDIO,
+                'movementType' => MovementTypeEnum::CARDIO,
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP,
@@ -1272,7 +1272,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP_OVER,
@@ -1284,7 +1284,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_BOX_STEP_UP,
@@ -1296,7 +1296,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_HAMSTRINGS,
                 ],
                 'difficulty' => 10,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_WALL_WALK,
@@ -1309,7 +1309,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_TRAPEZIUS,
                 ],
                 'difficulty' => 70,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_DEFICIT_HANDSTAND_PUSH_UP,
@@ -1320,7 +1320,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
                 'difficulty' => 80,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_BROAD_JUMP,
@@ -1330,7 +1330,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 20,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BROAD_JUMP,
@@ -1340,7 +1340,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_GLUTES,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::PLYOMETRIC,
+                'movementType' => MovementTypeEnum::PLYOMETRIC,
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_UP,
@@ -1352,7 +1352,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     BodyPartData::BODY_PART_SHOULDERS,
                 ],
                 'difficulty' => 30,
-                'movementType' => MovementType::GYMNASTIC,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
         ];
     }

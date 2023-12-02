@@ -2,22 +2,22 @@
 
 namespace App\Repository\Workout;
 
-use App\Enum\RepUnit;
+use App\Enum\RepUnitEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<RepUnit>
+ * @extends ServiceEntityRepository<RepUnitEnum>
  *
- * @method RepUnit|null find($id, $lockMode = null, $lockVersion = null)
- * @method RepUnit|null findOneBy(array $criteria, array $orderBy = null)
- * @method RepUnit[]    findAll()
- * @method RepUnit[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method RepUnitEnum|null find($id, $lockMode = null, $lockVersion = null)
+ * @method RepUnitEnum|null findOneBy(array $criteria, array $orderBy = null)
+ * @method RepUnitEnum[]    findAll()
+ * @method RepUnitEnum[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class MovementTypeRepository extends ServiceEntityRepository implements MovementTypeRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, RepUnit::class);
+        parent::__construct($registry, RepUnitEnum::class);
     }
 }
