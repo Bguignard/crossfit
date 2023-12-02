@@ -2,7 +2,7 @@
 
 namespace App\Enum;
 
-enum RepUnit: string
+enum RepUnitEnum: string
 {
     case METER = 'meter';
     case REPETITION = 'repetition';

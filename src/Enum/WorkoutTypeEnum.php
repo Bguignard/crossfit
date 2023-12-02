@@ -2,7 +2,7 @@
 
 namespace App\Enum;
 
-enum WorkoutType: string
+enum WorkoutTypeEnum: string
 {
     case ForTime = 'For time';
     case AMRAP = 'AMRAP';

@@ -2,9 +2,11 @@
 
 namespace App\Entity\Workout;
 
+use App\Enum\BodyPartEnum;
 use App\Repository\Workout\BodyPartRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
+
 
 #[ORM\Entity(repositoryClass: BodyPartRepository::class)]
 class BodyPart
@@ -15,12 +17,12 @@ class BodyPart
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     private ?Uuid $id = null;
 
-    #[ORM\Column(length: 255, nullable: false)]
+    #[ORM\Column(length: 255)]
     private string $name;
 
-    public function __construct(string $name)
+    public function __construct(BodyPartEnum $bodyPart)
     {
-        $this->name = $name;
+        $this->name = $bodyPart->value;
     }
 
     public function getId(): Uuid
@@ -28,15 +30,13 @@ class BodyPart
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getName(): string
     {
         return $this->name;
     }
-
-    public function setName(string $name): static
+    public function getNameAsEnum(): BodyPartEnum
     {
-        $this->name = $name;
-
-        return $this;
+        return BodyPartEnum::from($this->name);
     }
+
 }

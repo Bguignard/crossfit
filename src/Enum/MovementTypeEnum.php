@@ -2,7 +2,7 @@
 
 namespace App\Enum;
 
-enum MovementType: string
+enum MovementTypeEnum: string
 {
     case GYMNASTIC = 'Gymnastic';
     case WEIGHTLIFTING = 'Weightlifting';

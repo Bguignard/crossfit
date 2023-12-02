@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\RepUnit;
+use App\Enum\RepUnitEnum;
 use App\Repository\Workout\MovementDetailRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -19,12 +19,12 @@ class MovementDetail
     #[ORM\Column(nullable: true)]
     private ?float $movementIntensity; // For example the weight, the distance, the height, etc.
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnit::class)]
-    private ?RepUnit $movementIntensityUnit; // For example kg, lbs, meters, feet, etc. of MOVEMENT INTENSITY
+    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnitEnum::class)]
+    private ?RepUnitEnum $movementIntensityUnit; // For example kg, lbs, meters, feet, etc. of MOVEMENT INTENSITY
 
     public function __construct(
-        ?float $movementIntensity,
-        ?RepUnit $movementIntensityUnit
+        ?float       $movementIntensity,
+        ?RepUnitEnum $movementIntensityUnit
     ) {
         $this->movementIntensity = $movementIntensity;
         $this->movementIntensityUnit = $movementIntensityUnit;
@@ -47,12 +47,12 @@ class MovementDetail
         return $this;
     }
 
-    public function getMovementIntensityUnit(): ?RepUnit
+    public function getMovementIntensityUnit(): ?RepUnitEnum
     {
         return $this->movementIntensityUnit;
     }
 
-    public function setMovementIntensityUnit(?RepUnit $movementIntensityUnit): MovementDetail
+    public function setMovementIntensityUnit(?RepUnitEnum $movementIntensityUnit): MovementDetail
     {
         $this->movementIntensityUnit = $movementIntensityUnit;
 
