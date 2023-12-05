@@ -7,7 +7,6 @@ use App\Repository\Workout\BodyPartRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
-
 #[ORM\Entity(repositoryClass: BodyPartRepository::class)]
 class BodyPart
 {
@@ -34,9 +33,9 @@ class BodyPart
     {
         return $this->name;
     }
+
     public function getNameAsEnum(): BodyPartEnum
     {
         return BodyPartEnum::from($this->name);
     }
-
 }

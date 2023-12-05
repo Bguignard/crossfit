@@ -4,7 +4,6 @@ namespace App\Enum;
 
 enum BodyPartEnum: string
 {
-
     case PECTORALS = 'pectorals';
     case LOWER_BACK = 'lower back';
     case SHOULDERS = 'shoulders';

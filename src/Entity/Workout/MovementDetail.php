@@ -23,7 +23,7 @@ class MovementDetail
     private ?RepUnitEnum $movementIntensityUnit; // For example kg, lbs, meters, feet, etc. of MOVEMENT INTENSITY
 
     public function __construct(
-        ?float       $movementIntensity,
+        ?float $movementIntensity,
         ?RepUnitEnum $movementIntensityUnit
     ) {
         $this->movementIntensity = $movementIntensity;

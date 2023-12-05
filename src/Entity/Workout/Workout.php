@@ -37,12 +37,12 @@ class Workout
     private WorkoutOrigin $workoutOrigin;
 
     public function __construct(
-        ?string          $name,
-        ?int             $numberOfRounds,
-        ?int             $timeCap,
+        ?string $name,
+        ?int $numberOfRounds,
+        ?int $timeCap,
         ?WorkoutTypeEnum $workoutType,
-        WorkoutOrigin    $workoutOrigin,
-        array            $blocks,
+        WorkoutOrigin $workoutOrigin,
+        array $blocks,
     ) {
         $this->name = $name;
         $this->numberOfRounds = $numberOfRounds;

@@ -36,11 +36,11 @@ class MovementCluster
     private Collection $implements;
 
     public function __construct(
-        int             $repetitions,
-        RepUnitEnum     $repUnit,
-        array           $implements,
-        Movement        $movement,
-        ?MovementDetail $movementDetail = null
+        int $repetitions,
+        RepUnitEnum $repUnit,
+        array $implements,
+        Movement $movement,
+        MovementDetail $movementDetail = null
     ) {
         $this->implements = new ArrayCollection();
         $this->repetitions = $repetitions;

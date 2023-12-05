@@ -24,7 +24,7 @@ class WorkoutOrigin
 
     public function __construct(
         ?WorkoutOriginNameEnum $name,
-        ?int                   $year
+        ?int $year
     ) {
         $this->name = $name;
         $this->year = $year;

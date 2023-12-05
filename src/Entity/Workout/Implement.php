@@ -2,6 +2,7 @@
 
 namespace App\Entity\Workout;
 
+use App\Enum\ImplementEnum;
 use App\Repository\Workout\ImplementRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -18,9 +19,9 @@ class Implement
     #[ORM\Column(length: 255, nullable: false)]
     private string $name;
 
-    public function __construct(string $name)
+    public function __construct(ImplementEnum $name)
     {
-        $this->name = $name;
+        $this->name = $name->value;
     }
 
     public function getId(): Uuid
@@ -31,5 +32,10 @@ class Implement
     public function getName(): string
     {
         return $this->name;
+    }
+
+    public function getNameAsEnum(): ImplementEnum
+    {
+        return ImplementEnum::from($this->name);
     }
 }
