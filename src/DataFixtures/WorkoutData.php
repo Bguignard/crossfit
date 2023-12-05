@@ -168,7 +168,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 1,
                 'timeCap' => 10,
-                'workoutType' => WorkoutTypeEnum::ForTime,
+                'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginNameEnum::GIRLS_WORKOUT,
                     'year' => 2010,
@@ -210,7 +210,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 10,
                 'timeCap' => 40,
-                'workoutType' => WorkoutTypeEnum::ForTime,
+                'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginNameEnum::CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,
