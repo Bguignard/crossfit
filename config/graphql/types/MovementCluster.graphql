@@ -1,0 +1,8 @@
+type MovementCluster {
+    id: ID!
+    repetitions: Int!
+    repUnit: RepUnitEnum!
+    implement: [ImplementEnum]!
+    movement: Movement
+    movementDetail: MovementDetail
+}
