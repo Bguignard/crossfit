@@ -17,7 +17,7 @@ final readonly class MovementDTO
          * @var BodyPartEnum[]
          */
         public array $bodyParts,
-        public MovementTypeEnum $movementTypeEnum,
+        public MovementTypeEnum $movementType,
     ) {
     }
 

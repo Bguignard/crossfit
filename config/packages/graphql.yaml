@@ -1,11 +1,15 @@
 overblog_graphql:
     definitions:
+        show_debug_info: true # Debug info is disabled by default
         schema:
             query: Query
+#            mutation: Mutation
         mappings:
             types:
                 -
-#                    type: yaml
-                    type: graphql
+                    type: yaml
+#                    type: graphql
                     dir: "%kernel.project_dir%/config/graphql/types"
+#                    dir: "%kernel.project_dir%/config/graphql/graphql-types"
+#                    dir: "%kernel.project_dir%/app/Api/Graphql/Types"
                     suffix: null

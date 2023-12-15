@@ -25,6 +25,7 @@ final readonly class BlockDTO
         foreach ($block->getMovementClusters() as $movementCluster) {
             $movementClusters[] = MovementClusterDTO::createFromEntity($movementCluster);
         }
+
         return new self(
             $block->getId(),
             $block->getRounds(),

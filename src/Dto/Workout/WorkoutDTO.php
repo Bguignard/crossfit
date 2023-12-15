@@ -19,8 +19,7 @@ final readonly class WorkoutDTO
         public ?int $timeCap,
         public ?WorkoutTypeEnum $workoutType,
         public ?WorkoutOriginDTO $workoutOrigin,
-    )
-    {
+    ) {
     }
 
     public static function createFromEntity(Workout $workout): self
@@ -29,6 +28,7 @@ final readonly class WorkoutDTO
         foreach ($workout->getBlocks() as $block) {
             $blocks[] = BlockDTO::createFromEntity($block);
         }
+
         return new self(
             $workout->getId(),
             $workout->getName(),
@@ -40,4 +40,3 @@ final readonly class WorkoutDTO
         );
     }
 }
-

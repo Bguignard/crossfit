@@ -1,0 +1,4 @@
+BodyPartEnum:
+  type: enum
+  config:
+    enumClass: App\Enum\BodyPartEnum

@@ -33,7 +33,7 @@ class Movement
     public function __construct(
         string $name,
         int $difficulty,
-        MovementTypeEnum $movementType
+        MovementTypeEnum $movementType,
     ) {
         $this->bodyParts = new ArrayCollection();
         $this->name = $name;

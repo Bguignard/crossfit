@@ -1,0 +1,12 @@
+Workout:
+  type: object
+  config:
+    resolveField: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutResolver", info, value)'
+    fields:
+      id: ID!
+      name: String
+      numberOfRounds: Int
+      blocks: "[Block]!"
+      timeCap: Int
+      workoutType: WorkoutTypeEnum
+      workoutOrigin: WorkoutOrigin

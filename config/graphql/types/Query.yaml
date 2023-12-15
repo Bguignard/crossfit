@@ -1,0 +1,40 @@
+Query:
+  type: object
+  config:
+    fields:
+      getWorkouts:
+        type: '[Workout]'
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::resolve")'
+      workout:
+        type: Workout!
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutResolver::resolve", args["id"])'
+        args:
+          id: String!
+      getWorkoutsByWorkoutOrigin:
+        type: '[Workout]'
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::resolveByWorkoutOrigin", args["workoutOriginId"])'
+        args:
+          workoutOriginId: Int!
+      workoutByName:
+        type: Workout
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutResolver::getWorkoutByName", args["name"])'
+        args:
+          name: String!
+
+#          name:
+#            description: 'Resolves Workout using its name.'
+#            type: 'String!'
+#        resolve: "@=resolver('WorkoutResolver', [args['id']], [args['name']])"
+
+#        resolve: '@=query("App\\GraphQL\\Resolver\\Greetings::sayHello", args["name"])'
+##        access: "@=hasRole('ROLE_ADMIN')"
+#      workouts:
+#        type: '[Workout]'
+#        resolve: "@=resolver('Workouts')"
+#      workoutOrigin:
+#        type: 'WorkoutOrigin'
+#        args:
+#          id:
+#            description: 'Resolves WorkoutOrigin using its id.'
+#            type: 'Int!'
+#        resolve: "@=resolver('WorkoutOrigin', [args['id']])"

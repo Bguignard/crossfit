@@ -1,0 +1,7 @@
+MovementDetail:
+  type: object
+  config:
+    fields:
+      Id: ID!
+      movementIntensity:  Float
+      repUnit:  RepUnitEnum!
