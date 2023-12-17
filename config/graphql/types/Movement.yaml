@@ -2,7 +2,7 @@ Movement:
   type: object
   config:
     fields:
-      Id: ID!
+      id: ID!
       name: String!
       difficulty: Int!
       bodyParts: "[BodyPart!]!"

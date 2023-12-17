@@ -11,4 +11,6 @@ interface WorkoutRepositoryInterface
     public function getWorkoutsNames(): array;
 
     public function getWorkoutsNamesByOrigin(string $originId): array;
+
+    public function getWorkoutsByNameLike(string $name): array;
 }

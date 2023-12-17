@@ -3,16 +3,20 @@
 namespace App\Api\Graphql\Resolver\Query;
 
 use App\Dto\Workout\WorkoutDTO;
+use App\Entity\Workout\Workout;
+use App\Repository\Workout\WorkoutOriginRepositoryInterface;
 use App\Repository\Workout\WorkoutRepositoryInterface;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 use Symfony\Component\Runtime\ResolverInterface;
+use Symfony\Component\Uid\Uuid;
 
 // final class WorkoutsResolver implements ResolverInterface
 final class WorkoutsResolver implements QueryInterface
 {
     public function __construct(
         private WorkoutRepositoryInterface $workoutRepository,
+        private WorkoutOriginRepositoryInterface $workoutOriginRepository,
     ) {
     }
 
@@ -34,26 +38,21 @@ final class WorkoutsResolver implements QueryInterface
 
     public function resolve(): array
     {
-        $workoutDtos = [];
-        foreach ($this->workoutRepository->findAll() as $workoutEntity) {
-            $workoutDtos[] = WorkoutDTO::createFromEntity($workoutEntity);
-        }
-
-        return $workoutDtos;
+        return array_map(
+            fn (Workout $workout) => WorkoutDTO::createFromEntity($workout),
+            $this->workoutRepository->findAll()
+        );
     }
 
-    public function getWorkoutById(string $id): WorkoutDTO
+    /**
+     * @return WorkoutDTO[]
+     */
+    public function getWorkoutsByName(string $name): array
     {
-        $workout = $this->workoutRepository->find($id);
-
-        return WorkoutDTO::createFromEntity($workout);
-    }
-
-    public function getOneWorkoutByName(string $name): WorkoutDTO
-    {
-        $workout = $this->workoutRepository->findOneBy(['name' => $name]);
-
-        return WorkoutDTO::createFromEntity($workout);
+        return array_map(
+            fn (Workout $workout) => WorkoutDTO::createFromEntity($workout),
+            $this->workoutRepository->getWorkoutsByNameLike($name)
+        );
     }
 
     /**
@@ -61,11 +60,22 @@ final class WorkoutsResolver implements QueryInterface
      */
     public function getAllWorkouts(): array
     {
-        $workoutDtos = [];
-        foreach ($this->workoutRepository->findAll() as $workoutEntity) {
-            $workoutDtos[] = WorkoutDTO::createFromEntity($workoutEntity);
-        }
+        return array_map(
+            fn (Workout $workout) => WorkoutDTO::createFromEntity($workout),
+            $this->workoutRepository->findAll()
+        );
+    }
 
-        return $workoutDtos;
+    /**
+     * @return WorkoutDTO[]
+     */
+    public function getWorkoutByWorkoutOrigin(string $workoutOriginId): array
+    {
+        $workoutOrigin = $this->workoutOriginRepository->find(Uuid::fromString($workoutOriginId));
+
+        return array_map(
+            fn (Workout $workout) => WorkoutDTO::createFromEntity($workout),
+            $this->workoutRepository->findBy(['workoutOrigin' => $workoutOrigin])
+        );
     }
 }

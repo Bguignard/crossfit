@@ -2,6 +2,6 @@ MovementDetail:
   type: object
   config:
     fields:
-      Id: ID!
+      id: ID!
       movementIntensity:  Float
       repUnit:  RepUnitEnum!

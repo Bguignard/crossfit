@@ -2,39 +2,29 @@ Query:
   type: object
   config:
     fields:
-      getWorkouts:
+      workouts:
         type: '[Workout]'
         resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::resolve")'
+      workoutsByName:
+        type: '[Workout]!'
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::getWorkoutsByName", args["name"])'
+        args:
+          name: String!
+      workoutsByWorkoutOrigin:
+        type: '[Workout]!'
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::getWorkoutByWorkoutOrigin", args["workoutOriginId"])'
+        args:
+          workoutOriginId: String!
       workout:
         type: Workout!
         resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutResolver::resolve", args["id"])'
         args:
           id: String!
-      getWorkoutsByWorkoutOrigin:
-        type: '[Workout]'
-        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutsResolver::resolveByWorkoutOrigin", args["workoutOriginId"])'
+      workoutOriginNames:
+        type: "[String!]!"
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutOriginsNameResolver::resolve")'
+      workoutOriginsByWorkoutOriginsName:
+        type: '[WorkoutOrigin]!'
+        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutOriginsResolver::getWorkoutOriginsByName", args["workoutOriginName"])'
         args:
-          workoutOriginId: Int!
-      workoutByName:
-        type: Workout
-        resolve: '@=query("App\\Api\\Graphql\\Resolver\\Query\\WorkoutResolver::getWorkoutByName", args["name"])'
-        args:
-          name: String!
-
-#          name:
-#            description: 'Resolves Workout using its name.'
-#            type: 'String!'
-#        resolve: "@=resolver('WorkoutResolver', [args['id']], [args['name']])"
-
-#        resolve: '@=query("App\\GraphQL\\Resolver\\Greetings::sayHello", args["name"])'
-##        access: "@=hasRole('ROLE_ADMIN')"
-#      workouts:
-#        type: '[Workout]'
-#        resolve: "@=resolver('Workouts')"
-#      workoutOrigin:
-#        type: 'WorkoutOrigin'
-#        args:
-#          id:
-#            description: 'Resolves WorkoutOrigin using its id.'
-#            type: 'Int!'
-#        resolve: "@=resolver('WorkoutOrigin', [args['id']])"
+          workoutOriginName: String!

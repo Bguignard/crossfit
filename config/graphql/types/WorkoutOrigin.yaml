@@ -2,6 +2,6 @@ WorkoutOrigin:
   type: object
   config:
     fields:
-      Id: ID!
+      id: ID!
       name: WorkoutOriginNameEnum
       year: Int
