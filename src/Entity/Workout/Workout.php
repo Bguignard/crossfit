@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\WorkoutType;
+use App\Enum\WorkoutTypeEnum;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -30,8 +30,8 @@ class Workout
     #[ORM\Column(nullable: true)]
     private ?int $timeCap;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutType::class)]
-    private ?WorkoutType $workoutType;
+    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutTypeEnum::class)]
+    private ?WorkoutTypeEnum $workoutType;
 
     #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['persist'])]
     private WorkoutOrigin $workoutOrigin;
@@ -40,7 +40,7 @@ class Workout
         ?string $name,
         ?int $numberOfRounds,
         ?int $timeCap,
-        ?WorkoutType $workoutType,
+        ?WorkoutTypeEnum $workoutType,
         WorkoutOrigin $workoutOrigin,
         array $blocks,
     ) {
@@ -120,12 +120,12 @@ class Workout
         return $this;
     }
 
-    public function getWorkoutType(): ?WorkoutType
+    public function getWorkoutType(): ?WorkoutTypeEnum
     {
         return $this->workoutType;
     }
 
-    public function setWorkoutType(?WorkoutType $workoutType): static
+    public function setWorkoutType(?WorkoutTypeEnum $workoutType): static
     {
         $this->workoutType = $workoutType;
 

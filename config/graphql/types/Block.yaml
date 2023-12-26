@@ -1,0 +1,9 @@
+Block:
+  type: object
+  config:
+    fields:
+      id: ID!
+      rounds: Int
+      orderInWorkout: Int
+      movementClusters: "[MovementCluster]!"
+      restTime: Int

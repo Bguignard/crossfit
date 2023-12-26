@@ -1,0 +1,7 @@
+WorkoutOrigin:
+  type: object
+  config:
+    fields:
+      id: ID!
+      name: WorkoutOriginNameEnum
+      year: Int

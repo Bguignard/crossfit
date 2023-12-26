@@ -2,7 +2,7 @@
 
 namespace App\Enum;
 
-enum WorkoutOriginName: string
+enum WorkoutOriginNameEnum: string
 {
     case CROSSFIT_GAMES = 'CrossFit Games';
     case CROSSFIT_REGIONALS = 'CrossFit Regionals';

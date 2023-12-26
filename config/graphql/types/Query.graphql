@@ -1,0 +1,6 @@
+type Query {
+    getWorkouts: [Workout]
+    workout(id: String!): Workout!
+    getWorkoutsByWorkoutOrigin(workoutOriginId: Int!): [Workout]
+    workoutByName(name: String!): Workout
+}

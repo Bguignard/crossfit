@@ -3,6 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Implement;
+use App\Enum\ImplementEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -44,10 +45,10 @@ class ImplementData extends Fixture
 
     public function load(ObjectManager $manager)
     {
-        foreach ($this->getImplements() as $implement) {
-            $implementObject = new Implement($implement['name']);
+        foreach ($this->getImplements() as $reference => $implementEnum) {
+            $implementObject = new Implement($implementEnum);
             $manager->persist($implementObject);
-            $this->addReference($implement['reference'], $implementObject);
+            $this->addReference($reference, $implementObject);
         }
         $manager->flush();
     }
@@ -55,138 +56,39 @@ class ImplementData extends Fixture
     private function getImplements(): array
     {
         return [
-            [
-                'reference' => self::IMPLEMENT_BARBELL,
-                'name' => 'Barbell',
-            ],
-            [
-                'reference' => self::IMPLEMENT_DUMBBELL,
-                'name' => 'Dumbbell',
-            ],
-            [
-                'reference' => self::IMPLEMENT_KETTLEBELL,
-                'name' => 'Kettlebell',
-            ],
-            [
-                'reference' => self::IMPLEMENT_ASSAULT_BIKE,
-                'name' => 'Assault bike',
-            ],
-            [
-                'reference' => self::IMPLEMENT_SKI_ERG,
-                'name' => 'Ski erg',
-            ],
-            [
-                'reference' => self::IMPLEMENT_BIKE_ERG,
-                'name' => 'Bike erg',
-            ],
-            [
-                'reference' => self::IMPLEMENT_ROWER,
-                'name' => 'Row',
-            ],
-            [
-                'reference' => self::IMPLEMENT_PULL_UP_BAR,
-                'name' => 'Pull up bar',
-            ],
-            [
-                'reference' => self::IMPLEMENT_MEDICINE_BALL,
-                'name' => 'Wall ball',
-            ],
-            [
-                'reference' => self::IMPLEMENT_BOX,
-                'name' => 'Box',
-            ],
-            [
-                'reference' => self::IMPLEMENT_JUMP_ROPE,
-                'name' => 'Jump rope',
-            ],
-            [
-                'reference' => self::IMPLEMENT_BENCH,
-                'name' => 'Bench',
-            ],
-            [
-                'reference' => self::IMPLEMENT_ROPE,
-                'name' => 'Rope',
-            ],
-            [
-                'reference' => self::IMPLEMENT_DOUBLE_KETTLEBELLS,
-                'name' => 'Double kettlebells',
-            ],
-            [
-                'reference' => self::IMPLEMENT_DOUBLE_DUMBBELLS,
-                'name' => 'Double dumbbells',
-            ],
-            [
-                'reference' => self::IMPLEMENT_ECHO_BIKE,
-                'name' => 'Echo bike',
-            ],
-            [
-                'reference' => self::IMPLEMENT_PLATE,
-                'name' => 'Plate',
-            ],
-            [
-                'reference' => self::IMPLEMENT_PARALLETTE,
-                'name' => 'Parallette',
-            ],
-            [
-                'reference' => self::IMPLEMENT_SLAM_BALL,
-                'name' => 'Slam ball',
-            ],
-            [
-                'reference' => self::IMPLEMENT_SLED,
-                'name' => 'Sled',
-            ],
-            [
-                'reference' => self::IMPLEMENT_TIRE,
-                'name' => 'Tire',
-            ],
-            [
-                'reference' => self::IMPLEMENT_HAMMER,
-                'name' => 'Hammer',
-            ],
-            [
-                'reference' => self::IMPLEMENT_SLEDGE,
-                'name' => 'Sledge',
-            ],
-            [
-                'reference' => self::IMPLEMENT_SAND_BAG,
-                'name' => 'Sand bag',
-            ],
-            [
-                'reference' => self::IMPLEMENT_HUSAFELL_BAG,
-                'name' => 'Husafell bag',
-            ],
-            [
-                'reference' => self::IMPLEMENT_YOKE,
-                'name' => 'Yoke',
-            ],
-            [
-                'reference' => self::IMPLEMENT_HEAVY_JUMP_ROPE,
-                'name' => 'Heavy jump rope',
-            ],
-            [
-                'reference' => self::IMPLEMENT_RINGS,
-                'name' => 'Rings',
-            ],
-            [
-                'reference' => self::IMPLEMENT_WORM,
-                'name' => 'Worm',
-            ],
-            [
-                'reference' => self::IMPLEMENT_BAND,
-                'name' => 'Band',
-            ],
-            [
-                'reference' => self::IMPLEMENT_STICK,
-                'name' => 'Stick',
-            ],
-            [
-                'reference' => self::IMPLEMENT_AXLE_BARBELL,
-                'name' => 'Axle barbell',
-            ],
-            [
-                'reference' => self::IMPLEMENT_PIG,
-                'name' => 'Pig',
-            ],
+            self::IMPLEMENT_BARBELL => ImplementEnum::BARBELL,
+            self::IMPLEMENT_DUMBBELL => ImplementEnum::DUMBBELL,
+            self::IMPLEMENT_KETTLEBELL => ImplementEnum::KETTLEBELL,
+            self::IMPLEMENT_ASSAULT_BIKE => ImplementEnum::ASSAULT_BIKE,
+            self::IMPLEMENT_SKI_ERG => ImplementEnum::SKI_ERG,
+            self::IMPLEMENT_BIKE_ERG => ImplementEnum::BIKE_ERG,
+            self::IMPLEMENT_ROWER => ImplementEnum::ROWER,
+            self::IMPLEMENT_PULL_UP_BAR => ImplementEnum::PULL_UP_BAR,
+            self::IMPLEMENT_MEDICINE_BALL => ImplementEnum::MEDICINE_BALL,
+            self::IMPLEMENT_BOX => ImplementEnum::BOX,
+            self::IMPLEMENT_JUMP_ROPE => ImplementEnum::JUMP_ROPE,
+            self::IMPLEMENT_BENCH => ImplementEnum::BENCH,
+            self::IMPLEMENT_ROPE => ImplementEnum::ROPE,
+            self::IMPLEMENT_DOUBLE_KETTLEBELLS => ImplementEnum::DOUBLE_KETTLEBELLS,
+            self::IMPLEMENT_DOUBLE_DUMBBELLS => ImplementEnum::DOUBLE_DUMBBELLS,
+            self::IMPLEMENT_ECHO_BIKE => ImplementEnum::ECHO_BIKE,
+            self::IMPLEMENT_PLATE => ImplementEnum::PLATE,
+            self::IMPLEMENT_PARALLETTE => ImplementEnum::PARALLETTE,
+            self::IMPLEMENT_SLAM_BALL => ImplementEnum::SLAM_BALL,
+            self::IMPLEMENT_SLED => ImplementEnum::SLED,
+            self::IMPLEMENT_TIRE => ImplementEnum::TIRE,
+            self::IMPLEMENT_HAMMER => ImplementEnum::HAMMER,
+            self::IMPLEMENT_SLEDGE => ImplementEnum::SLEDGE,
+            self::IMPLEMENT_SAND_BAG => ImplementEnum::SAND_BAG,
+            self::IMPLEMENT_HUSAFELL_BAG => ImplementEnum::HUSAFELL_BAG,
+            self::IMPLEMENT_YOKE => ImplementEnum::YOKE,
+            self::IMPLEMENT_HEAVY_JUMP_ROPE => ImplementEnum::HEAVY_JUMP_ROPE,
+            self::IMPLEMENT_RINGS => ImplementEnum::RINGS,
+            self::IMPLEMENT_WORM => ImplementEnum::WORM,
+            self::IMPLEMENT_BAND => ImplementEnum::BAND,
+            self::IMPLEMENT_STICK => ImplementEnum::STICK,
+            self::IMPLEMENT_AXLE_BARBELL => ImplementEnum::AXLE_BARBELL,
+            self::IMPLEMENT_PIG => ImplementEnum::PIG,
         ];
     }
 }

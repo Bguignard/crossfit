@@ -1,0 +1,9 @@
+Movement:
+  type: object
+  config:
+    fields:
+      id: ID!
+      name: String!
+      difficulty: Int!
+      bodyParts: "[BodyPart!]!"
+      movementType: MovementTypeEnum!

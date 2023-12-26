@@ -26,15 +26,24 @@ class WorkoutRepository extends ServiceEntityRepository implements WorkoutReposi
         return $this->findOneBy(['name' => $name]);
     }
 
+    public function getWorkoutsByNameLike(string $name): array
+    {
+        $qb = $this->createQueryBuilder('w');
+        $qb->where('upper(w.name) LIKE upper(:name)');
+        $qb->setParameter('name', '%'.$name.'%');
+        $query = $qb->getQuery();
+
+        return $query->getResult();
+    }
+
     public function getWorkoutsNames(): array
     {
         $qb = $this->createQueryBuilder('w');
         $qb->select('w.name');
         $qb->orderBy('w.name', 'ASC');
         $query = $qb->getQuery();
-        $result = $query->getResult();
 
-        return $result;
+        return $query->getResult();
     }
 
     public function getWorkoutsNamesByOrigin(string $originId): array

@@ -1,0 +1,4 @@
+ImplementEnum:
+  type: enum
+  config:
+    enumClass: App\Enum\ImplementEnum

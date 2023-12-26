@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\MovementType;
+use App\Enum\MovementTypeEnum;
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -27,13 +27,13 @@ class Movement
     #[ORM\Column(nullable: false)]
     private int $difficulty;
 
-    #[ORM\Column(type: 'string', enumType: MovementType::class)]
-    private MovementType $movementType;
+    #[ORM\Column(type: 'string', enumType: MovementTypeEnum::class)]
+    private MovementTypeEnum $movementType;
 
     public function __construct(
         string $name,
         int $difficulty,
-        MovementType $movementType
+        MovementTypeEnum $movementType,
     ) {
         $this->bodyParts = new ArrayCollection();
         $this->name = $name;
@@ -94,7 +94,7 @@ class Movement
         return $this;
     }
 
-    public function getMovementType(): MovementType
+    public function getMovementType(): MovementTypeEnum
     {
         return $this->movementType;
     }

@@ -31,6 +31,7 @@
                         {{ implement.name }}
                     {% endfor %}
                         {{ movementCluster.movement.name }}
+                         - {{ movementCluster.movement.movementType.value }}
                     {% if movementCluster.movementDetail is not null %}
                         ( {{ movementCluster.movementDetail.movementIntensity }} {{ movementCluster.movementDetail.movementIntensityUnit.value }} )
                     {% endif %}

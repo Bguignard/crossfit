@@ -1,0 +1,15 @@
+enum RepUnitEnum {
+    METER
+    REPETITION
+    SECOND
+    KILOGRAM
+    POUND
+    FEET
+    INCH
+    CALORIE
+    YARD
+    MILE
+    KILOMETER
+    MINUTE
+    HOUR
+}

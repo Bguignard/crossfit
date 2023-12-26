@@ -1,0 +1,7 @@
+type Block {
+    id: ID!
+    rounds: Int
+    orderInWorkout: Int
+    movementClusters: [MovementCluster]!
+    restTime: Int
+}

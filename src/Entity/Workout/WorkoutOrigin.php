@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\WorkoutOriginName;
+use App\Enum\WorkoutOriginNameEnum;
 use App\Repository\Workout\WorkoutOriginRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -16,14 +16,14 @@ class WorkoutOrigin
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     private ?Uuid $id = null;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutOriginName::class)]
-    private ?WorkoutOriginName $name;
+    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutOriginNameEnum::class)]
+    private ?WorkoutOriginNameEnum $name;
 
     #[ORM\Column(nullable: true)]
     private ?int $year;
 
     public function __construct(
-        ?WorkoutOriginName $name,
+        ?WorkoutOriginNameEnum $name,
         ?int $year
     ) {
         $this->name = $name;
@@ -35,12 +35,12 @@ class WorkoutOrigin
         return $this->id;
     }
 
-    public function getName(): ?WorkoutOriginName
+    public function getName(): ?WorkoutOriginNameEnum
     {
         return $this->name;
     }
 
-    public function setName(?WorkoutOriginName $name): WorkoutOrigin
+    public function setName(?WorkoutOriginNameEnum $name): WorkoutOrigin
     {
         $this->name = $name;
 

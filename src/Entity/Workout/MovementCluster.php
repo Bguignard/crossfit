@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\RepUnit;
+use App\Enum\RepUnitEnum;
 use App\Repository\Workout\MovementClusterRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -29,18 +29,18 @@ class MovementCluster
     #[ORM\JoinColumn(nullable: true)]
     private ?MovementDetail $movementDetail;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnit::class)]
-    private RepUnit $repUnit; // For example kg, lbs, meters, feet, etc. of REPETITIONS
+    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnitEnum::class)]
+    private RepUnitEnum $repUnit; // For example kg, lbs, meters, feet, etc. of REPETITIONS
 
     #[ORM\ManyToMany(targetEntity: Implement::class)]
     private Collection $implements;
 
     public function __construct(
         int $repetitions,
-        RepUnit $repUnit,
+        RepUnitEnum $repUnit,
         array $implements,
         Movement $movement,
-        ?MovementDetail $movementDetail = null
+        MovementDetail $movementDetail = null
     ) {
         $this->implements = new ArrayCollection();
         $this->repetitions = $repetitions;
@@ -62,7 +62,7 @@ class MovementCluster
         return $this->movement;
     }
 
-    public function getRepUnit(): RepUnit
+    public function getRepUnit(): RepUnitEnum
     {
         return $this->repUnit;
     }
