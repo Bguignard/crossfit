@@ -1,4 +1,0 @@
-RepUnitEnum:
-  type: enum
-  config:
-    enumClass: App\Enum\RepUnitEnum

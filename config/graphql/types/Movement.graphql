@@ -1,7 +1,0 @@
-type Movement {
-    Id: ID!
-    name: String!
-    difficulty: Int
-    bodyParts: [BodyPartEnum!]!
-    movementType: MovementTypeEnum!
-}

@@ -1,5 +1,0 @@
-type WorkoutOrigin {
-    Id: ID!
-    name: WorkoutOriginNameEnum
-    year: Int
-}

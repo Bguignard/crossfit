@@ -1,5 +1,0 @@
-enum WorkoutTypeEnum {
-    FOR_TIME
-    AMRAP
-    FOR_WEIGHT
-}

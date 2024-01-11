@@ -1,4 +1,4 @@
-MovementDetail:
+ImplementTypeOfAdjustableMeasureUnit:
   type: object
   config:
     fields:

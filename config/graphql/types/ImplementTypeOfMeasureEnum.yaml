@@ -1,0 +1,4 @@
+MeasureUnitEnum:
+  type: enum
+  config:
+    enumClass: App\Enum\MeasureUnitEnum
