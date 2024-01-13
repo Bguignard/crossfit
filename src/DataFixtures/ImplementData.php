@@ -2,8 +2,9 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Workout\Enum\ImplementEnum;
+use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
 use App\Entity\Workout\Implement;
-use App\Enum\ImplementEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -46,7 +47,7 @@ class ImplementData extends Fixture
     public function load(ObjectManager $manager)
     {
         foreach ($this->getImplements() as $reference => $implementEnum) {
-            $implementObject = new Implement($implementEnum);
+            $implementObject = new Implement($implementEnum['name'], $implementEnum['typeOfAdjustableMeasure']);
             $manager->persist($implementObject);
             $this->addReference($reference, $implementObject);
         }
@@ -56,39 +57,138 @@ class ImplementData extends Fixture
     private function getImplements(): array
     {
         return [
-            self::IMPLEMENT_BARBELL => ImplementEnum::BARBELL,
-            self::IMPLEMENT_DUMBBELL => ImplementEnum::DUMBBELL,
-            self::IMPLEMENT_KETTLEBELL => ImplementEnum::KETTLEBELL,
-            self::IMPLEMENT_ASSAULT_BIKE => ImplementEnum::ASSAULT_BIKE,
-            self::IMPLEMENT_SKI_ERG => ImplementEnum::SKI_ERG,
-            self::IMPLEMENT_BIKE_ERG => ImplementEnum::BIKE_ERG,
-            self::IMPLEMENT_ROWER => ImplementEnum::ROWER,
-            self::IMPLEMENT_PULL_UP_BAR => ImplementEnum::PULL_UP_BAR,
-            self::IMPLEMENT_MEDICINE_BALL => ImplementEnum::MEDICINE_BALL,
-            self::IMPLEMENT_BOX => ImplementEnum::BOX,
-            self::IMPLEMENT_JUMP_ROPE => ImplementEnum::JUMP_ROPE,
-            self::IMPLEMENT_BENCH => ImplementEnum::BENCH,
-            self::IMPLEMENT_ROPE => ImplementEnum::ROPE,
-            self::IMPLEMENT_DOUBLE_KETTLEBELLS => ImplementEnum::DOUBLE_KETTLEBELLS,
-            self::IMPLEMENT_DOUBLE_DUMBBELLS => ImplementEnum::DOUBLE_DUMBBELLS,
-            self::IMPLEMENT_ECHO_BIKE => ImplementEnum::ECHO_BIKE,
-            self::IMPLEMENT_PLATE => ImplementEnum::PLATE,
-            self::IMPLEMENT_PARALLETTE => ImplementEnum::PARALLETTE,
-            self::IMPLEMENT_SLAM_BALL => ImplementEnum::SLAM_BALL,
-            self::IMPLEMENT_SLED => ImplementEnum::SLED,
-            self::IMPLEMENT_TIRE => ImplementEnum::TIRE,
-            self::IMPLEMENT_HAMMER => ImplementEnum::HAMMER,
-            self::IMPLEMENT_SLEDGE => ImplementEnum::SLEDGE,
-            self::IMPLEMENT_SAND_BAG => ImplementEnum::SAND_BAG,
-            self::IMPLEMENT_HUSAFELL_BAG => ImplementEnum::HUSAFELL_BAG,
-            self::IMPLEMENT_YOKE => ImplementEnum::YOKE,
-            self::IMPLEMENT_HEAVY_JUMP_ROPE => ImplementEnum::HEAVY_JUMP_ROPE,
-            self::IMPLEMENT_RINGS => ImplementEnum::RINGS,
-            self::IMPLEMENT_WORM => ImplementEnum::WORM,
-            self::IMPLEMENT_BAND => ImplementEnum::BAND,
-            self::IMPLEMENT_STICK => ImplementEnum::STICK,
-            self::IMPLEMENT_AXLE_BARBELL => ImplementEnum::AXLE_BARBELL,
-            self::IMPLEMENT_PIG => ImplementEnum::PIG,
+            self::IMPLEMENT_BARBELL => [
+                'name' => ImplementEnum::BARBELL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_DUMBBELL => [
+                'name' => ImplementEnum::DUMBBELL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_KETTLEBELL => [
+                'name' => ImplementEnum::KETTLEBELL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_ASSAULT_BIKE => [
+                'name' => ImplementEnum::ASSAULT_BIKE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_SKI_ERG => [
+                'name' => ImplementEnum::SKI_ERG,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_BIKE_ERG => [
+                'name' => ImplementEnum::BIKE_ERG,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_ROWER => [
+                'name' => ImplementEnum::ROWER,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_PULL_UP_BAR => [
+                'name' => ImplementEnum::PULL_UP_BAR,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_MEDICINE_BALL => [
+                'name' => ImplementEnum::MEDICINE_BALL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_BOX => [
+                'name' => ImplementEnum::BOX,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                ],
+            self::IMPLEMENT_JUMP_ROPE => [
+                'name' => ImplementEnum::JUMP_ROPE,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_BENCH => [
+                'name' => ImplementEnum::BENCH,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_ROPE => [
+                'name' => ImplementEnum::ROPE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                ],
+            self::IMPLEMENT_DOUBLE_KETTLEBELLS => [
+                'name' => ImplementEnum::DOUBLE_KETTLEBELLS,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_DOUBLE_DUMBBELLS => [
+                'name' => ImplementEnum::DOUBLE_DUMBBELLS,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_ECHO_BIKE => [
+                'name' => ImplementEnum::ECHO_BIKE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_PLATE => [
+                'name' => ImplementEnum::PLATE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_PARALLETTE => [
+                'name' => ImplementEnum::PARALLETTE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                ],
+            self::IMPLEMENT_SLAM_BALL => [
+                'name' => ImplementEnum::SLAM_BALL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_SLED => [
+                'name' => ImplementEnum::SLED,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_TIRE => [
+                'name' => ImplementEnum::TIRE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_HAMMER => [
+                'name' => ImplementEnum::HAMMER,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_SLEDGE => [
+                'name' => ImplementEnum::SLEDGE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_SAND_BAG => [
+                'name' => ImplementEnum::SAND_BAG,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_HUSAFELL_BAG => [
+                'name' => ImplementEnum::HUSAFELL_BAG,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_YOKE => [
+                'name' => ImplementEnum::YOKE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_HEAVY_JUMP_ROPE => [
+                'name' => ImplementEnum::HEAVY_JUMP_ROPE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_RINGS => [
+                'name' => ImplementEnum::RINGS,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_WORM => [
+                'name' => ImplementEnum::WORM,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_BAND => [
+                'name' => ImplementEnum::BAND,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                ],
+            self::IMPLEMENT_STICK => [
+                'name' => ImplementEnum::STICK,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_AXLE_BARBELL => [
+                'name' => ImplementEnum::AXLE_BARBELL,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_PIG => [
+                'name' => ImplementEnum::PIG,
+                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
         ];
     }
 }

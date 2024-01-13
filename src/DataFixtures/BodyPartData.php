@@ -3,7 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
-use App\Enum\BodyPartEnum;
+use App\Entity\Workout\Enum\BodyPartEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 

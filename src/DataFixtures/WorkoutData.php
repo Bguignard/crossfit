@@ -3,15 +3,14 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Block;
+use App\Entity\Workout\Enum\MeasureUnitEnum;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
-use App\Entity\Workout\MovementDetail;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
-use App\Enum\RepUnitEnum;
-use App\Enum\WorkoutOriginNameEnum;
-use App\Enum\WorkoutTypeEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -88,21 +87,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustment' => 43.0,
+                                'implementTypeOfAdjustableMeasureUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustment' => null,
+                                'implementTypeOfAdjustableMeasureUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -116,21 +114,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                    ],
+                                'implementIntensityAdjustment' => 43.0,
+                                'implementTypeOfAdjustableMeasureUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustment' => null,
+                                'implementTypeOfAdjustableMeasureUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -144,21 +141,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustment' => 43.0,
+                                'implementTypeOfAdjustableMeasureUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustment' => null,
+                                'implementTypeOfAdjustableMeasureUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -186,21 +182,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustment' => 43.0,
+                                'implementTypeOfAdjustableMeasureUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 35,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustment' => null,
+                                'implementTypeOfAdjustableMeasureUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_JUMP_ROPE,
                                 ],

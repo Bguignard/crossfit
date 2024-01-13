@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;

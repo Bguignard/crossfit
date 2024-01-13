@@ -3,8 +3,8 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
+use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Movement;
-use App\Enum\MovementTypeEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;

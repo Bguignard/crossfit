@@ -1,20 +1,18 @@
 <?php
 
-namespace App\Enum;
+namespace App\Entity\Workout\Enum;
 
-enum RepUnitEnum: string
+enum MeasureUnitEnum: string
 {
     case METER = 'meter';
+    case CENTIMETER = 'centimeter';
     case REPETITION = 'repetition';
     case SECOND = 'second';
     case KILOGRAM = 'kilogram';
-    case POUND = 'pound';
-    case FEET = 'feet';
-    case INCH = 'inch';
     case CALORIE = 'calorie';
-    case YARD = 'yard';
-    case MILE = 'mile';
     case KILOMETER = 'kilometer';
     case MINUTE = 'minute';
     case HOUR = 'hour';
+    case PERCENT = 'percent';
+    case RPE = 'RPE';
 }

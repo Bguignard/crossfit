@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\WorkoutOriginNameEnum;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Repository\Workout\WorkoutOriginRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;

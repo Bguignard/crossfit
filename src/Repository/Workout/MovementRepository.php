@@ -20,4 +20,20 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
     {
         parent::__construct($registry, Movement::class);
     }
+
+    public function getRandomMovement(?int $maximumDifficulty = 100, ?array $forbiddenMovements = []): Movement
+    {
+        $queryBuilder = $this->createQueryBuilder('m')
+            ->where('m.difficulty <= :maximumDifficulty')
+            ->setParameter('maximumDifficulty', $maximumDifficulty)
+            ->orderBy('RAND()')
+            ->setMaxResults(1);
+
+        if (!empty($forbiddenMovements)) {
+            $queryBuilder->andWhere('m.id NOT IN (:forbiddenMovements)')
+                ->setParameter('forbiddenMovements', array_map(fn (Movement $movement) => $movement->getId(), $forbiddenMovements));
+        }
+
+        return $queryBuilder->getQuery()->getSingleResult();
+    }
 }
