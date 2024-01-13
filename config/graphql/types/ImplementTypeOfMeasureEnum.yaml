@@ -1,4 +1,4 @@
-MeasureUnitEnum:
+ImplementTypeOfMeasureEnum:
   type: enum
   config:
-    enumClass: App\Enum\MeasureUnitEnum
+    enumClass: App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum

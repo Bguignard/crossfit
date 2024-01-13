@@ -21,9 +21,9 @@ class Implement
     private string $name;
 
     #[ORM\Column(type: 'string', nullable: true, enumType: ImplementTypeOfMeasureEnum::class)]
-    private ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure;
+    private ?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure;
 
-    public function __construct(ImplementEnum $name, ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure)
+    public function __construct(ImplementEnum $name, ?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure)
     {
         $this->name = $name->value;
         $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
@@ -44,12 +44,12 @@ class Implement
         return ImplementEnum::from($this->name);
     }
 
-    public function getImplementTypeOfAdjustableMeasure(): ImplementTypeOfMeasureEnum
+    public function getImplementTypeOfAdjustableMeasure(): ?ImplementTypeOfMeasureEnum
     {
         return $this->implementTypeOfAdjustableMeasure;
     }
 
-    public function setImplementTypeOfAdjustableMeasure(ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure): Implement
+    public function setImplementTypeOfAdjustableMeasure(?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure): Implement
     {
         $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
 

@@ -2,9 +2,9 @@
 
 namespace App\Dto\Workout;
 
+use App\Entity\Workout\Enum\BodyPartEnum;
+use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Movement;
-use App\Enum\BodyPartEnum;
-use App\Enum\MovementTypeEnum;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class MovementDTO

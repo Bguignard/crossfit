@@ -1,4 +1,4 @@
 WorkoutTypeEnum:
   type: enum
   config:
-    enumClass: App\Enum\WorkoutTypeEnum
+    enumClass: App\Entity\Workout\Enum\WorkoutTypeEnum

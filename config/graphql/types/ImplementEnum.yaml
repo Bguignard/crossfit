@@ -1,4 +1,4 @@
 ImplementEnum:
   type: enum
   config:
-    enumClass: App\Enum\ImplementEnum
+    enumClass: App\Entity\Workout\Enum\ImplementEnum

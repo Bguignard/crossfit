@@ -11,7 +11,7 @@ use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 final class WorkoutOriginsResolver implements QueryInterface
 {
     public function __construct(
-        private WorkoutOriginRepositoryInterface $workoutOriginRepository,
+        private readonly WorkoutOriginRepositoryInterface $workoutOriginRepository,
     ) {
     }
 

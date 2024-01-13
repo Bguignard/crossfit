@@ -2,8 +2,8 @@
 
 namespace App\Dto\Workout;
 
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Workout;
-use App\Enum\WorkoutTypeEnum;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class WorkoutDTO

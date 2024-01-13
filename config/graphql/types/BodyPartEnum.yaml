@@ -1,4 +1,4 @@
 BodyPartEnum:
   type: enum
   config:
-    enumClass: App\Enum\BodyPartEnum
+    enumClass: App\Entity\Workout\Enum\BodyPartEnum

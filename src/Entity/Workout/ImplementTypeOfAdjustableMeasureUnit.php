@@ -17,10 +17,10 @@ class ImplementTypeOfAdjustableMeasureUnit
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     private ?Uuid $id = null;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: ImplementTypeOfMeasureEnum::class)]
+    #[ORM\Column(type: 'string', nullable: false, enumType: ImplementTypeOfMeasureEnum::class)]
     private ImplementTypeOfMeasureEnum $implementTypeOfMeasureEnum;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: MeasureUnitEnum::class)]
+    #[ORM\Column(type: 'string', nullable: false, enumType: MeasureUnitEnum::class)]
     private MeasureUnitEnum $measureUnitEnum;
 
     public function __construct(

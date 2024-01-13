@@ -11,7 +11,7 @@ use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 final class WorkoutResolver implements QueryInterface
 {
     public function __construct(
-        private WorkoutRepositoryInterface $workoutRepository,
+        private readonly WorkoutRepositoryInterface $workoutRepository,
     ) {
     }
 
@@ -37,16 +37,6 @@ final class WorkoutResolver implements QueryInterface
         }
 
         return $workout;
-
-        //        return [
-        //            'id' => '123',
-        //            'name' => 'test',
-        //            'numberOfRounds' => 1,
-        //            'blocks' => [],
-        //            'timeCap' => 1,
-        //            'workoutType' => 'test',
-        //            'workoutOrigin' => 'test',
-        //        ];
     }
 
     public function getWorkoutById(string $id): ?WorkoutDTO

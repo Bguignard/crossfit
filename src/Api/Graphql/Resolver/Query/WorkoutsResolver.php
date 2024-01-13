@@ -15,8 +15,8 @@ use Symfony\Component\Uid\Uuid;
 final class WorkoutsResolver implements QueryInterface
 {
     public function __construct(
-        private WorkoutRepositoryInterface $workoutRepository,
-        private WorkoutOriginRepositoryInterface $workoutOriginRepository,
+        private readonly WorkoutRepositoryInterface $workoutRepository,
+        private readonly WorkoutOriginRepositoryInterface $workoutOriginRepository,
     ) {
     }
 

@@ -3,5 +3,5 @@ ImplementTypeOfAdjustableMeasureUnit:
   config:
     fields:
       id: ID!
-      movementIntensity:  Float
-      repUnit:  RepUnitEnum!
+      implementTypeOfMeasureEnum: String
+      measureUnitEnum: String
