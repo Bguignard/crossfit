@@ -2,9 +2,9 @@
 
 namespace App\Controller;
 
-use App\Enum\MovementTypeEnum;
-use App\Enum\WorkoutOriginNameEnum;
-use App\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Enum\MovementTypeEnum;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Repository\Workout\BlockRepositoryInterface;
 use App\Repository\Workout\BodyPartRepositoryInterface;
 use App\Repository\Workout\ImplementRepositoryInterface;

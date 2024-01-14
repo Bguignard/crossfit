@@ -4,6 +4,7 @@ namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
 use App\Entity\Workout\Enum\MovementTypeEnum;
+use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -120,12 +121,17 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 fn ($bodyPart) => $this->getReference($bodyPart, BodyPart::class),
                 $movement['bodyParts']
             );
+            $possibleImplements = array_map(
+                fn ($implement) => $this->getReference($implement, Implement::class),
+                $movement['implements'] ?? []
+            );
             $movementObject = (new Movement(
                 $movement['name'],
                 $movement['difficulty'],
                 $movement['movementType'],
             ))
-                ->setBodyparts($bodyParts);
+                ->setBodyparts($bodyParts)
+                ->setPossibleImplements($possibleImplements);
             $this->addReference($movement['reference'], $movementObject);
             $manager->persist($movementObject);
         }

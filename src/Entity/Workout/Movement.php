@@ -30,11 +30,15 @@ class Movement
     #[ORM\Column(type: 'string', enumType: MovementTypeEnum::class)]
     private MovementTypeEnum $movementType;
 
+    #[ORM\ManyToMany(targetEntity: Implement::class, inversedBy: 'movements')]
+    private Collection $possibleImplements;
+
     public function __construct(
         string $name,
         int $difficulty,
         MovementTypeEnum $movementType,
     ) {
+        $this->possibleImplements = new ArrayCollection();
         $this->bodyParts = new ArrayCollection();
         $this->name = $name;
         $this->difficulty = $difficulty;
@@ -106,5 +110,28 @@ class Movement
         }
 
         return $this;
+    }
+
+    public function addPossibleImplement(Implement $implement): Movement
+    {
+        if (!$this->possibleImplements->contains($implement)) {
+            $this->possibleImplements->add($implement);
+        }
+
+        return $this;
+    }
+
+    public function setPossibleImplements(array $possibleImplements): Movement
+    {
+        foreach ($possibleImplements as $possibleImplement) {
+            $this->addPossibleImplement($possibleImplement);
+        }
+
+        return $this;
+    }
+
+    public function getPossibleImplements(): Collection
+    {
+        return $this->possibleImplements;
     }
 }

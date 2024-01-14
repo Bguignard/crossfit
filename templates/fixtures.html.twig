@@ -59,6 +59,13 @@
                         </li>
                     {% endfor %}
                 </ul>
+                <ul>
+                    {% for possibleImplements in movement.possibleImplements %}
+                        <li>
+                            {{ possibleImplements.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
             </li>
         {% endfor %}
     </ul>
