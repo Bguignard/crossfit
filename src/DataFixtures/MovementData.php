@@ -42,6 +42,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const MOVEMENT_FRONT_RACK_WALKING_LUNGE = 'movement-front-rack-walking-lunge';
     public const MOVEMENT_OVERHEAD_WALKING_LUNGE = 'movement-overhead-walking-lunge';
     public const MOVEMENT_BACK_RACK_WALKING_LUNGE = 'movement-back-rack-walking-lunge';
+    public const MOVEMENT_SQUAT = 'movement-squat';
     public const MOVEMENT_FRONT_SQUAT = 'movement-front-squat';
     public const MOVEMENT_BACK_SQUAT = 'movement-back-squat';
     public const MOVEMENT_SINGLE_UNDER = 'movement-single-under';
@@ -73,10 +74,12 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const MOVEMENT_BURPEE_TARGET = 'movement-burpee-target';
     public const MOVEMENT_BURPEE_PULL_OVER = 'movement-burpee-pull-over';
     public const MOVEMENT_WALL_FACING_HANDSTAND_PUSH_UP = 'movement-wall-facing-handstand-push-up';
+    public const MOVEMENT_WALL_FACING_STRICT_HANDSTAND_PUSH_UP = 'movement-wall-facing-strict-handstand-push-up';
+    public const MOVEMENT_WALL_FACING_DEFICIT_HANDSTAND_PUSH_UP = 'movement-wall-facing-deficit-handstand-push-up';
+    public const MOVEMENT_WALL_FACING_DEFICIT_STRICT_HANDSTAND_PUSH_UP = 'movement-wall-facing-deficit-strict-handstand-push-up';
     public const MOVEMENT_HANDSTAND_PIROUETTE = 'movement-handstand-pirouette';
     public const MOVEMENT_HANDSTAND_WALK = 'movement-handstand-walk';
     public const MOVEMENT_STRICT_HANDSTAND_PUSH_UP = 'movement-strict-handstand-push-up';
-    public const MOVEMENT_KIPPING_HANDSTAND_PUSH_UP = 'movement-kipping-handstand-push-up';
     public const MOVEMENT_TOES_TO_BAR = 'movement-toes-to-bar';
     public const MOVEMENT_TOES_TO_RING = 'movement-toes-to-ring';
     public const MOVEMENT_STRICT_TOES_TO_BAR = 'movement-strict-toes-to-bar';
@@ -102,6 +105,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const MOVEMENT_BOX_STEP_UP = 'movement-box-step-up';
     public const MOVEMENT_WALL_WALK = 'movement-wall-walk';
     public const MOVEMENT_DEFICIT_HANDSTAND_PUSH_UP = 'movement-deficit-handstand-push-up';
+    public const MOVEMENT_DEFICIT_STRICT_HANDSTAND_PUSH_UP = 'movement-deficit-strict_handstand-push-up';
     public const MOVEMENT_BROAD_JUMP = 'movement-broad-jump';
     public const MOVEMENT_BURPEE_BROAD_JUMP = 'movement-burpee-broad-jump';
     public const MOVEMENT_PUSH_UP = 'movement-push-up';
@@ -154,6 +158,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_BENCH,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
                 ],
             ],
             [
@@ -166,6 +172,12 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::BODYBUILDING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_BENCH,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PULL_UP,
@@ -192,6 +204,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SHOULDER_PRESS,
@@ -202,6 +223,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_CHIN_UP,
@@ -213,6 +243,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_CHEST_TO_BAR_PULL_UP,
@@ -225,6 +258,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_THRUSTER,
@@ -238,6 +274,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_PRESS,
@@ -251,6 +296,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_JERK,
@@ -264,6 +318,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_CLEAN,
@@ -277,6 +340,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 40,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_POWER_CLEAN,
@@ -290,6 +362,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_CLEAN,
@@ -303,6 +384,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 35,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_CLEAN,
@@ -316,6 +406,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 35,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_CLEAN,
@@ -329,6 +428,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 45,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_POWER_CLEAN,
@@ -342,6 +450,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 35,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_SQUAT_CLEAN,
@@ -355,6 +471,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 45,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_POWER_CLEAN,
@@ -368,6 +492,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 35,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_SQUAT_CLEAN,
@@ -381,6 +514,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 45,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_SNATCH,
@@ -397,6 +538,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_POWER_SNATCH,
@@ -412,6 +561,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SNATCH,
@@ -427,6 +584,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 55,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_SNATCH,
@@ -442,6 +607,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 55,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_SNATCH,
@@ -457,6 +630,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 65,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_CLEAN,
@@ -470,6 +651,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_SNATCH,
@@ -480,6 +670,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_SQUAT,
@@ -494,6 +692,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_RACK_WALKING_LUNGE,
@@ -507,6 +714,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_WALKING_LUNGE,
@@ -520,6 +735,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BACK_RACK_WALKING_LUNGE,
@@ -532,6 +755,38 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_SQUAT,
+                'name' => 'Front Squat',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_QUADRICEPS,
+                    BodyPartData::BODY_PART_GLUTES,
+                    BodyPartData::BODY_PART_HAMSTRINGS,
+                    BodyPartData::BODY_PART_LOWER_BACK,
+                    BodyPartData::BODY_PART_SHOULDERS,
+                ],
+                'difficulty' => 20,
+                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                    ImplementData::IMPLEMENT_WORM,
+                    ImplementData::IMPLEMENT_HUSAFELL_BAG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_SQUAT,
@@ -545,6 +800,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::BODYBUILDING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BACK_SQUAT,
@@ -557,6 +821,15 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::BODYBUILDING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SINGLE_UNDER,
@@ -570,6 +843,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_JUMP_ROPE,
+                    ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_DOUBLE_UNDER,
@@ -583,6 +860,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_JUMP_ROPE,
+                    ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_CROSS_OVER,
@@ -596,6 +877,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_JUMP_ROPE,
+                    ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP_OVER,
@@ -607,6 +892,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP,
@@ -618,6 +906,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_BALL_SHOT,
@@ -632,6 +923,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_AMERICAN_SWING,
@@ -643,6 +937,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_RUSSIAN_SWING,
@@ -654,6 +952,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_RUN,
@@ -666,6 +968,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_ROW,
@@ -684,6 +988,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_ROWER,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BIKE_ERG,
@@ -696,6 +1003,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BIKE_ERG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_ASSAULT_BIKE,
@@ -712,6 +1022,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_ASSAULT_BIKE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SKI_ERG,
@@ -726,6 +1039,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_SKI_ERG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE,
@@ -743,6 +1059,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BOX_JUMP_OVER,
@@ -760,6 +1078,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER,
@@ -777,6 +1098,16 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 15,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_LINE,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER_FACING,
@@ -794,6 +1125,16 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 15,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_LINE,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_UP,
@@ -811,6 +1152,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 55,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_MUSCLE_UP,
@@ -828,6 +1172,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 75,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_CHEST_TO_BAR_PULL_UP,
@@ -845,6 +1192,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 65,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_CHEST_TO_BAR_PULL_UP,
@@ -857,6 +1207,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_PULL_UP,
@@ -869,6 +1222,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_UP,
@@ -883,6 +1239,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 80,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PULL_OVER,
@@ -897,6 +1256,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_DIP,
@@ -909,6 +1271,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_RINGS,
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PUSH_UP,
@@ -921,6 +1287,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_TARGET,
@@ -934,6 +1302,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_RINGS,
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_OVER,
@@ -949,17 +1321,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
-            ],
-            [
-                'reference' => self::MOVEMENT_WALL_FACING_HANDSTAND_PUSH_UP,
-                'name' => 'Wall Facing Handstand Push Up',
-                'bodyParts' => [
-                    BodyPartData::BODY_PART_SHOULDERS,
-                    BodyPartData::BODY_PART_TRICEPS,
-                    BodyPartData::BODY_PART_PECTORALS,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PIROUETTE,
@@ -971,6 +1335,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 80,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_WALK,
@@ -982,6 +1348,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_HANDSTAND_PUSH_UP,
@@ -993,17 +1361,94 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 80,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
-                'reference' => self::MOVEMENT_KIPPING_HANDSTAND_PUSH_UP,
-                'name' => 'Kipping Handstand Push Up',
+                'reference' => self::MOVEMENT_DEFICIT_HANDSTAND_PUSH_UP,
+                'name' => 'Deficit Handstand Push Up',
                 'bodyParts' => [
                     BodyPartData::BODY_PART_SHOULDERS,
                     BodyPartData::BODY_PART_TRICEPS,
                     BodyPartData::BODY_PART_PECTORALS,
                 ],
-                'difficulty' => 70,
+                'difficulty' => 80,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PARALLETTE,
+                    ImplementData::IMPLEMENT_PLATE,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
+                'name' => 'Deficit Handstand Push Up',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_SHOULDERS,
+                    BodyPartData::BODY_PART_TRICEPS,
+                    BodyPartData::BODY_PART_PECTORALS,
+                ],
+                'difficulty' => 80,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PARALLETTE,
+                    ImplementData::IMPLEMENT_PLATE,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_WALL_FACING_HANDSTAND_PUSH_UP,
+                'name' => 'Wall Facing Handstand Push Up',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_SHOULDERS,
+                    BodyPartData::BODY_PART_TRICEPS,
+                    BodyPartData::BODY_PART_PECTORALS,
+                ],
+                'difficulty' => 80,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_WALL_FACING_STRICT_HANDSTAND_PUSH_UP,
+                'name' => 'Wall Facing Handstand Push Up',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_SHOULDERS,
+                    BodyPartData::BODY_PART_TRICEPS,
+                    BodyPartData::BODY_PART_PECTORALS,
+                ],
+                'difficulty' => 80,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_HANDSTAND_PUSH_UP,
+                'name' => 'Deficit Handstand Push Up',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_SHOULDERS,
+                    BodyPartData::BODY_PART_TRICEPS,
+                    BodyPartData::BODY_PART_PECTORALS,
+                ],
+                'difficulty' => 80,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PARALLETTE,
+                    ImplementData::IMPLEMENT_PLATE,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
+                'name' => 'Deficit Handstand Push Up',
+                'bodyParts' => [
+                    BodyPartData::BODY_PART_SHOULDERS,
+                    BodyPartData::BODY_PART_TRICEPS,
+                    BodyPartData::BODY_PART_PECTORALS,
+                ],
+                'difficulty' => 80,
+                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PARALLETTE,
+                    ImplementData::IMPLEMENT_PLATE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_BAR,
@@ -1017,6 +1462,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 40,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_RING,
@@ -1030,6 +1478,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 40,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_RINGS,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_TOES_TO_BAR,
@@ -1043,6 +1494,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_KNEES_TO_ELBOWS,
@@ -1056,6 +1510,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_ALTERNATE_PISTOL_SQUAT,
@@ -1067,6 +1524,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PISTOL_SQUAT,
@@ -1078,6 +1537,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_TURKISH_GET_UP,
@@ -1091,6 +1552,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 60,
                 'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_SIT_UP,
@@ -1102,6 +1566,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_GHD,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_BACK_EXTENSION,
@@ -1113,6 +1580,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_GHD,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_HIP_EXTENSION,
@@ -1124,6 +1594,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 50,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_GHD,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_CARRY,
@@ -1139,6 +1612,17 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                    ImplementData::IMPLEMENT_HUSAFELL_BAG,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_DRAG,
@@ -1155,6 +1639,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_SLED,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PUSH,
@@ -1172,6 +1659,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_SLED,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PULL,
@@ -1189,6 +1679,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_SLED,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SIT_UP,
@@ -1199,6 +1692,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SHUTTLE_RUN,
@@ -1212,6 +1707,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BIKE,
@@ -1225,6 +1722,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BIKE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_RUN_AND_BIKE,
@@ -1238,6 +1738,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BIKE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SWIM,
@@ -1253,6 +1756,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PADDLE,
@@ -1267,6 +1772,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PADDLE,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP,
@@ -1279,6 +1787,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP_OVER,
@@ -1291,6 +1802,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_STEP_UP,
@@ -1303,6 +1817,16 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 10,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_SAND_BAG,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_WALK,
@@ -1316,17 +1840,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 70,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
-            ],
-            [
-                'reference' => self::MOVEMENT_DEFICIT_HANDSTAND_PUSH_UP,
-                'name' => 'Deficit Handstand Push Up',
-                'bodyParts' => [
-                    BodyPartData::BODY_PART_SHOULDERS,
-                    BodyPartData::BODY_PART_TRICEPS,
-                    BodyPartData::BODY_PART_PECTORALS,
+                'implements' => [
+                    ImplementData::IMPLEMENT_LINE,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
             ],
             [
                 'reference' => self::MOVEMENT_BROAD_JUMP,
@@ -1337,6 +1853,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 20,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BAND,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BROAD_JUMP,
@@ -1347,6 +1866,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'implements' => [
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_UP,
@@ -1359,6 +1880,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'difficulty' => 30,
                 'movementType' => MovementTypeEnum::GYMNASTIC,
+                'implements' => [
+                ],
             ],
         ];
     }

@@ -37,4 +37,8 @@ enum ImplementEnum: string
     case STICK = 'stick';
     case AXLE_BARBELL = 'axle barbell';
     case PIG = 'pig';
+    case LINE = 'line';
+    case GHD = 'ghd';
+    case BIKE = 'bike';
+    case PADDLE = 'paddle';
 }

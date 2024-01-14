@@ -31,10 +31,9 @@
                         {{ implement.name }}
                     {% endfor %}
                         {{ movementCluster.movement.name }}
-                         - {{ movementCluster.movement.movementType.value }}
-                    {% if movementCluster.movementDetail is not null %}
-                        ( {{ movementCluster.movementDetail.movementIntensity }} {{ movementCluster.movementDetail.movementIntensityUnit.value }} )
-                    {% endif %}
+                        {% if movementCluster.movementDetailIntensityUnit is not null %}
+                            ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.movementDetailIntensityUnit.measureUnitEnum.value }} )
+                        {% endif %}
                     </p>
                 {% endfor %}
                 {% if block.restTime is not null %}
@@ -50,8 +49,8 @@
     <ul>
         {% for movement in movements %}
             <li>
-                {{ movement.name }}
-                ({{ movement.difficulty }})
+                <h4>{{ movement.name }} ({{ movement.difficulty }})</h4>
+                <p>Body parts</p>
                 <ul>
                     {% for bodyPart in movement.bodyParts %}
                         <li>
@@ -59,6 +58,7 @@
                         </li>
                     {% endfor %}
                 </ul>
+                <p>Possible implements</p>
                 <ul>
                     {% for possibleImplements in movement.possibleImplements %}
                         <li>

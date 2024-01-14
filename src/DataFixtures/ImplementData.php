@@ -43,6 +43,10 @@ class ImplementData extends Fixture
     public const IMPLEMENT_STICK = 'implement-stick';
     public const IMPLEMENT_AXLE_BARBELL = 'implement-axle-barbell';
     public const IMPLEMENT_PIG = 'implement-pig';
+    public const IMPLEMENT_LINE = 'implement-line';
+    public const IMPLEMENT_GHD = 'implement-ghd';
+    public const IMPLEMENT_BIKE = 'implement-bike';
+    public const IMPLEMENT_PADDLE = 'implement-paddle';
 
     public function load(ObjectManager $manager)
     {
@@ -188,6 +192,22 @@ class ImplementData extends Fixture
             self::IMPLEMENT_PIG => [
                 'name' => ImplementEnum::PIG,
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                ],
+            self::IMPLEMENT_LINE => [
+                'name' => ImplementEnum::LINE,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_GHD => [
+                'name' => ImplementEnum::GHD,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_BIKE => [
+                'name' => ImplementEnum::BIKE,
+                'typeOfAdjustableMeasure' => null,
+                ],
+            self::IMPLEMENT_PADDLE => [
+                'name' => ImplementEnum::PADDLE,
+                'typeOfAdjustableMeasure' => null,
                 ],
         ];
     }
