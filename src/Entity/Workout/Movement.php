@@ -33,16 +33,22 @@ class Movement
     #[ORM\ManyToMany(targetEntity: Implement::class, inversedBy: 'movements')]
     private Collection $possibleImplements;
 
+    // The time to execute one rep of the movement in millisecond at 50% of the max intensity
+    #[ORM\Column(nullable: false)]
+    private int $executionSpeed;
+
     public function __construct(
         string $name,
         int $difficulty,
         MovementTypeEnum $movementType,
+        int $executionSpeed,
     ) {
         $this->possibleImplements = new ArrayCollection();
         $this->bodyParts = new ArrayCollection();
         $this->name = $name;
         $this->difficulty = $difficulty;
         $this->movementType = $movementType;
+        $this->executionSpeed = $executionSpeed;
     }
 
     public function getId(): Uuid
@@ -134,4 +140,10 @@ class Movement
     {
         return $this->possibleImplements;
     }
+
+    public function getExecutionSpeed(): int
+    {
+        return $this->executionSpeed;
+    }
+
 }
