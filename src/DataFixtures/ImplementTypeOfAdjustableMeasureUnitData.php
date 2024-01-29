@@ -3,26 +3,29 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
-use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Entity\Workout\ImplementTypeOfAdjustableMeasureUnit;
+use App\Entity\Workout\MeasureUnit;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
-class ImplementTypeOfAdjustableMeasureUnitData extends Fixture
+class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements DependentFixtureInterface
 {
-    public const WEIGHT_KILOGRAM = 'weight-kilogram';
-    public const DISTANCE_METER = 'distance-meter';
-    public const DISTANCE_KILOMETER = 'distance-kilometer';
-    public const HEIGHT_CENTIMETER = 'height-centimeter';
-    public const PERCENTAGE_OF_1_RM_PERCENT = 'percentage-of-1-rm-percent';
-    public const ENERGY_CALORIE = 'energy-calorie';
-    public const RESISTANCE_PERCENT = 'resistance-percent';
-    public const DIFFICULTY_RPE = 'difficulty-rpe';
+    public const IMPLEMENT_ADJUSTABLE_WEIGHT = 'implement-adjustable-weight';
+    public const IMPLEMENT_ADJUSTABLE_DISTANCE = 'implement-adjustable-distance';
+    public const IMPLEMENT_ADJUSTABLE_HEIGHT = 'implement-adjustable-height';
+    public const IMPLEMENT_ADJUSTABLE_PERCENTAGE_OF_1_RM = 'implement-adjustable-percentage-of-1-rm';
+    public const IMPLEMENT_ADJUSTABLE_ENERGY = 'implement-adjustable-energy';
+    public const IMPLEMENT_ADJUSTABLE_RESISTANCE = 'implement-adjustable-resistance';
+    public const IMPLEMENT_ADJUSTABLE_DIFFICULTY = 'implement-adjustable-difficulty';
 
     public function load(ObjectManager $manager)
     {
         foreach ($this->getImplementTypeOfAdjustableMeasureUnit() as $reference => $implementTypesUnit) {
-            $implementObject = new ImplementTypeOfAdjustableMeasureUnit($implementTypesUnit['typeOfAdjustableMeasure'], $implementTypesUnit['measureUnit']);
+            $implementObject = new ImplementTypeOfAdjustableMeasureUnit($implementTypesUnit['typeOfAdjustableMeasure']);
+            foreach ($implementTypesUnit['measureUnit'] as $measureUnit) {
+                $implementObject->addMeasureUnit($this->getReference($measureUnit, MeasureUnit::class));
+            }
             $manager->persist($implementObject);
             $this->addReference($reference, $implementObject);
         }
@@ -32,38 +35,44 @@ class ImplementTypeOfAdjustableMeasureUnitData extends Fixture
     private function getImplementTypeOfAdjustableMeasureUnit(): array
     {
         return [
-            self::WEIGHT_KILOGRAM => [
+            self::IMPLEMENT_ADJUSTABLE_WEIGHT => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
-                'measureUnit' => MeasureUnitEnum::KILOGRAM,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_KILOGRAM],
                 ],
-            self::DISTANCE_METER => [
+            self::IMPLEMENT_ADJUSTABLE_DISTANCE => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::DISTANCE,
-                'measureUnit' => MeasureUnitEnum::METER,
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_METER,
+                    MeasureUnitData::MEASURE_UNIT_KILOMETER,
                 ],
-            self::DISTANCE_KILOMETER => [
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::DISTANCE,
-                'measureUnit' => MeasureUnitEnum::KILOMETER,
                 ],
-            self::HEIGHT_CENTIMETER => [
+            self::IMPLEMENT_ADJUSTABLE_HEIGHT => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
-                'measureUnit' => MeasureUnitEnum::CENTIMETER,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_CENTIMETER],
                 ],
-            self::PERCENTAGE_OF_1_RM_PERCENT => [
+            self::IMPLEMENT_ADJUSTABLE_PERCENTAGE_OF_1_RM => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::PERCENTAGE_OF_1_RM,
-                'measureUnit' => MeasureUnitEnum::PERCENT,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_PERCENT],
                 ],
-            self::ENERGY_CALORIE => [
+            self::IMPLEMENT_ADJUSTABLE_ENERGY => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::ENERGY,
-                'measureUnit' => MeasureUnitEnum::CALORIE,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_CALORIE],
                 ],
-            self::RESISTANCE_PERCENT => [
+            self::IMPLEMENT_ADJUSTABLE_RESISTANCE => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
-                'measureUnit' => MeasureUnitEnum::PERCENT,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_PERCENT],
                 ],
-            self::DIFFICULTY_RPE => [
+            self::IMPLEMENT_ADJUSTABLE_DIFFICULTY => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::DIFFICULTY,
-                'measureUnit' => MeasureUnitEnum::RPE,
+                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_RPE],
                 ],
+        ];
+    }
+
+    public function getDependencies()
+    {
+        return [
+            MeasureUnitData::class,
         ];
     }
 }

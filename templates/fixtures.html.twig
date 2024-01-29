@@ -32,7 +32,7 @@
                     {% endfor %}
                         {{ movementCluster.movement.name }}
                         {% if movementCluster.movementDetailIntensityUnit is not null %}
-                            ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.movementDetailIntensityUnit.measureUnitEnum.value }} )
+                            ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.movementDetailIntensityUnit.value }} )
                         {% endif %}
                     </p>
                 {% endfor %}
@@ -49,7 +49,17 @@
     <ul>
         {% for movement in movements %}
             <li>
-                <h4>{{ movement.name }} ({{ movement.difficulty }})</h4>
+                <h4>{{ movement.name }}</h4>
+                <ul>
+                    <li>Difficulté : {{ movement.difficulty }}</li>
+                    <ul> Temps de réalisation selon l'unité de mesure à 50% intensité
+                        {% for movementExecutionTimeForMeasureUnit in movement.movementExecutionTimeForMeasureUnits %}
+                            <li>
+                                {{ movementExecutionTimeForMeasureUnit.measureUnit.value }} : {{ movementExecutionTimeForMeasureUnit.executionTimeInMilliseconds }} ms
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </ul>
                 <p>Body parts</p>
                 <ul>
                     {% for bodyPart in movement.bodyParts %}
@@ -93,6 +103,16 @@
         {% for implement in implements %}
             <li>
                 {{ implement.name }}
+                <ul>
+                    {% if implement.implementTypeOfAdjustableMeasure is not null %}
+                        {{ implement.implementTypeOfAdjustableMeasure.implementTypeOfMeasureEnum.value }}
+                        {% for measureUnit in implement.implementTypeOfAdjustableMeasure.measureUnits %}
+                            <li>
+                                {{ measureUnit.name }}
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
             </li>
         {% endfor %}
     </ul>

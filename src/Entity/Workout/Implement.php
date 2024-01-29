@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use App\Entity\Workout\Enum\ImplementEnum;
-use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
 use App\Repository\Workout\ImplementRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -20,10 +19,11 @@ class Implement
     #[ORM\Column(length: 255, nullable: false)]
     private string $name;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: ImplementTypeOfMeasureEnum::class)]
-    private ?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure;
 
-    public function __construct(ImplementEnum $name, ?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure)
+    public function __construct(ImplementEnum $name, ?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure)
     {
         $this->name = $name->value;
         $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
@@ -44,12 +44,12 @@ class Implement
         return ImplementEnum::from($this->name);
     }
 
-    public function getImplementTypeOfAdjustableMeasure(): ?ImplementTypeOfMeasureEnum
+    public function getImplementTypeOfAdjustableMeasure(): ?ImplementTypeOfAdjustableMeasureUnit
     {
         return $this->implementTypeOfAdjustableMeasure;
     }
 
-    public function setImplementTypeOfAdjustableMeasure(?ImplementTypeOfMeasureEnum $implementTypeOfAdjustableMeasure): Implement
+    public function setImplementTypeOfAdjustableMeasure(?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure): Implement
     {
         $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
 

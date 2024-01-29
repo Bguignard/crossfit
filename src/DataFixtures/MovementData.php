@@ -3,9 +3,11 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\BodyPart;
+use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
+use App\Entity\Workout\MovementExecutionTimeForMeasureUnit;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -129,14 +131,24 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 fn ($implement) => $this->getReference($implement, Implement::class),
                 $movement['implements'] ?? []
             );
+            $movementExecutionTimeForMeasureUnits = [];
+            foreach ($movement['movementExecutionTimeForMeasureUnits'] as $measureUnit => $time) {
+                $movementExecutionTimeForMeasureUnit = new MovementExecutionTimeForMeasureUnit(
+                    MeasureUnitEnum::from($measureUnit),
+                    $time
+                );
+                $manager->persist($movementExecutionTimeForMeasureUnit);
+                $movementExecutionTimeForMeasureUnits[] = $movementExecutionTimeForMeasureUnit;
+            }
+            $manager->flush();
             $movementObject = (new Movement(
                 $movement['name'],
                 $movement['difficulty'],
                 $movement['movementType'],
-                $movement['executionSpeed'],
             ))
                 ->setBodyparts($bodyParts)
-                ->setPossibleImplements($possibleImplements);
+                ->setPossibleImplements($possibleImplements)
+                ->setMovementExecutionTimeForMeasureUnits($movementExecutionTimeForMeasureUnits);
             $this->addReference($movement['reference'], $movementObject);
             $manager->persist($movementObject);
         }
@@ -162,7 +174,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_DUMBBELL,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                MeasureUnitEnum::REPETITION->value => 2000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_INCLINE_BENCH_PRESS,
@@ -180,7 +194,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_DUMBBELL,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_PULL_UP,
@@ -195,7 +211,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 1500,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_DEADLIFT,
@@ -217,7 +235,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_SAND_BAG,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SHOULDER_PRESS,
@@ -237,7 +257,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2300,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2300,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_CHIN_UP,
@@ -252,7 +274,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 3000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_CHEST_TO_BAR_PULL_UP,
@@ -268,7 +292,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_THRUSTER,
@@ -291,7 +317,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2500,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_PRESS,
@@ -314,7 +342,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 1700,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1700,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_JERK,
@@ -337,7 +367,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_CLEAN,
@@ -360,7 +392,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 3000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_POWER_CLEAN,
@@ -383,7 +417,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_CLEAN,
@@ -406,7 +442,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_CLEAN,
@@ -429,7 +467,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 1200,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1200,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_CLEAN,
@@ -452,7 +492,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2500,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_POWER_CLEAN,
@@ -474,7 +516,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_LOW_HANG_SQUAT_CLEAN,
@@ -496,7 +540,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 3500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_POWER_CLEAN,
@@ -519,7 +565,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 1500,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_HANG_SQUAT_CLEAN,
@@ -541,7 +589,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT_SNATCH,
@@ -566,7 +616,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_POWER_SNATCH,
@@ -590,7 +642,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SNATCH,
@@ -614,7 +668,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_POWER_SNATCH,
@@ -638,7 +694,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANG_SQUAT_SNATCH,
@@ -662,7 +720,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_CLEAN,
@@ -685,7 +745,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_SNATCH,
@@ -704,7 +766,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_SQUAT,
@@ -728,7 +792,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_RACK_WALKING_LUNGE,
@@ -750,7 +816,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_OVERHEAD_WALKING_LUNGE,
@@ -772,7 +840,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BACK_RACK_WALKING_LUNGE,
@@ -793,7 +863,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT,
@@ -818,7 +890,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_WORM,
                     ImplementData::IMPLEMENT_HUSAFELL_BAG,
                 ],
-                'executionSpeed' => 1000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_FRONT_SQUAT,
@@ -841,7 +915,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_SAND_BAG,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BACK_SQUAT,
@@ -863,7 +939,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_SAND_BAG,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SINGLE_UNDER,
@@ -881,7 +959,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
                 ],
-                'executionSpeed' => 500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_DOUBLE_UNDER,
@@ -899,7 +979,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
                 ],
-                'executionSpeed' => 700,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 700,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_CROSS_OVER,
@@ -917,7 +999,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
                 ],
-                'executionSpeed' => 700,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 700,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP_OVER,
@@ -932,7 +1016,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_JUMP,
@@ -947,7 +1033,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_BALL_SHOT,
@@ -965,7 +1053,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_AMERICAN_SWING,
@@ -981,7 +1071,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_KETTLEBELL,
                     ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_RUSSIAN_SWING,
@@ -997,7 +1089,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_KETTLEBELL,
                     ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_RUN,
@@ -1012,7 +1106,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::CARDIO,
                 'implements' => [
                 ],
-                'executionSpeed' => 370,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 370,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_ROW,
@@ -1034,7 +1130,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_ROWER,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 240,
+                    MeasureUnitEnum::CALORIE->value => 2000,
+                    MeasureUnitEnum::KILOMETER->value => 240000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BIKE_ERG,
@@ -1050,7 +1150,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE_ERG,
                 ],
-                'executionSpeed' => 2700,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 240,
+                    MeasureUnitEnum::CALORIE->value => 2700,
+                    MeasureUnitEnum::KILOMETER->value => 240000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_ASSAULT_BIKE,
@@ -1070,7 +1174,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_ASSAULT_BIKE,
                 ],
-                'executionSpeed' => 2000,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 240,
+                    MeasureUnitEnum::CALORIE->value => 2000,
+                    MeasureUnitEnum::KILOMETER->value => 240000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_SKI_ERG,
@@ -1088,7 +1196,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_SKI_ERG,
                 ],
-                'executionSpeed' => 2500,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 300,
+                    MeasureUnitEnum::CALORIE->value => 2300,
+                    MeasureUnitEnum::KILOMETER->value => 300000,
+                ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE,
@@ -1108,7 +1220,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::CARDIO,
                 'implements' => [
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BOX_JUMP_OVER,
@@ -1129,7 +1243,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER,
@@ -1157,7 +1273,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_LINE,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_OVER_FACING,
@@ -1185,7 +1303,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_LINE,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 3500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_UP,
@@ -1206,7 +1326,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 5000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 5000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_MUSCLE_UP,
@@ -1227,7 +1349,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 6000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 6000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_CHEST_TO_BAR_PULL_UP,
@@ -1248,7 +1372,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 4500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_CHEST_TO_BAR_PULL_UP,
@@ -1264,7 +1390,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_PULL_UP,
@@ -1280,7 +1408,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_MUSCLE_UP,
@@ -1298,7 +1428,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PULL_OVER,
@@ -1316,7 +1448,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_DIP,
@@ -1333,7 +1467,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_RINGS,
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PUSH_UP,
@@ -1348,7 +1484,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_TARGET,
@@ -1366,7 +1504,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_RINGS,
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 3500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_PULL_OVER,
@@ -1385,7 +1525,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 6500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 6500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_PIROUETTE,
@@ -1399,7 +1541,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 5000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 5000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HANDSTAND_WALK,
@@ -1413,7 +1557,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 1500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_HANDSTAND_PUSH_UP,
@@ -1427,7 +1573,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_DEFICIT_HANDSTAND_PUSH_UP,
@@ -1443,7 +1591,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
@@ -1459,7 +1609,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_HANDSTAND_PUSH_UP,
@@ -1473,7 +1625,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_STRICT_HANDSTAND_PUSH_UP,
@@ -1487,7 +1641,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_HANDSTAND_PUSH_UP,
@@ -1503,7 +1659,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
@@ -1519,7 +1677,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_BAR,
@@ -1536,7 +1696,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_TOES_TO_RING,
@@ -1553,7 +1715,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_RINGS,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_STRICT_TOES_TO_BAR,
@@ -1570,7 +1734,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_KNEES_TO_ELBOWS,
@@ -1587,7 +1753,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_ALTERNATE_PISTOL_SQUAT,
@@ -1601,7 +1769,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PISTOL_SQUAT,
@@ -1615,7 +1785,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_TURKISH_GET_UP,
@@ -1632,7 +1804,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_KETTLEBELL,
                 ],
-                'executionSpeed' => 10000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 10000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_SIT_UP,
@@ -1647,7 +1821,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
-                'executionSpeed' => 2500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_BACK_EXTENSION,
@@ -1662,7 +1838,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_GHD_HIP_EXTENSION,
@@ -1677,7 +1855,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
-                'executionSpeed' => 2000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_CARRY,
@@ -1704,7 +1884,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_HUSAFELL_BAG,
                     ImplementData::IMPLEMENT_WORM,
                 ],
-                'executionSpeed' => 700,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 700,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_DRAG,
@@ -1724,7 +1906,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
-                'executionSpeed' => 1000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PUSH,
@@ -1745,7 +1929,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
-                'executionSpeed' => 700,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 700,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SLED_PULL,
@@ -1766,7 +1952,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
-                'executionSpeed' => 1000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SIT_UP,
@@ -1779,7 +1967,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SHUTTLE_RUN,
@@ -1795,7 +1985,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::CARDIO,
                 'implements' => [
                 ],
-                'executionSpeed' => 10000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 10000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BIKE,
@@ -1812,7 +2004,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE,
                 ],
-                'executionSpeed' => 200,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 200,
+                    MeasureUnitEnum::KILOMETER->value => 200000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_RUN_AND_BIKE,
@@ -1829,7 +2024,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE,
                 ],
-                'executionSpeed' => 370,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 370,
+                    MeasureUnitEnum::KILOMETER->value => 370000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_SWIM,
@@ -1847,7 +2045,10 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::CARDIO,
                 'implements' => [
                 ],
-                'executionSpeed' => 1200,
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 1200,
+                    MeasureUnitEnum::KILOMETER->value => 1200000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PADDLE,
@@ -1865,7 +2066,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PADDLE,
                 ],
-                'executionSpeed' => 1000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP,
@@ -1881,7 +2084,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
-                'executionSpeed' => 3500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_HIGH_BOX_JUMP_OVER,
@@ -1897,7 +2102,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
-                'executionSpeed' => 3500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BOX_STEP_UP,
@@ -1920,7 +2127,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                     ImplementData::IMPLEMENT_SAND_BAG,
                 ],
-                'executionSpeed' => 3000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_WALL_WALK,
@@ -1937,7 +2146,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_LINE,
                 ],
-                'executionSpeed' => 5000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 5000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BROAD_JUMP,
@@ -1951,7 +2162,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_BAND,
                 ],
-                'executionSpeed' => 1000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_BURPEE_BROAD_JUMP,
@@ -1964,7 +2177,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::PLYOMETRIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 4000,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
+                    ],
             ],
             [
                 'reference' => self::MOVEMENT_PUSH_UP,
@@ -1979,7 +2194,9 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'movementType' => MovementTypeEnum::GYMNASTIC,
                 'implements' => [
                 ],
-                'executionSpeed' => 1500,
+                                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                    ],
             ],
         ];
     }

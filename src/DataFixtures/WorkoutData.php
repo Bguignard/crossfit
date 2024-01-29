@@ -7,7 +7,6 @@ use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
-use App\Entity\Workout\ImplementTypeOfAdjustableMeasureUnit;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
@@ -42,7 +41,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         $this->getImplementsArrayFromReferences($movementCluster['implements']),
                         $this->getReference($movementCluster['movement'], Movement::class),
                         $movementCluster['implementIntensityAdjustmentValue'],
-                        null === $movementCluster['implementIntensityUnit'] ? null : $this->getReference($movementCluster['implementIntensityUnit'], ImplementTypeOfAdjustableMeasureUnit::class)
+                        $movementCluster['implementIntensityUnit'],
                     );
                 }, $block['movementClusters']);
 
@@ -88,7 +87,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                                 'repetitions' => 21,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'implementIntensityAdjustmentValue' => 43.0,
-                                'implementIntensityUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
                                 'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -115,7 +114,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                                 'repetitions' => 15,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'implementIntensityAdjustmentValue' => 43.0,
-                                'implementIntensityUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
                                 'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -142,7 +141,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                                 'repetitions' => 9,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'implementIntensityAdjustmentValue' => 43.0,
-                                'implementIntensityUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
                                 'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
@@ -183,7 +182,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                                 'repetitions' => 9,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
                                 'implementIntensityAdjustmentValue' => 43.0,
-                                'implementIntensityUnit' => ImplementTypeOfAdjustableMeasureUnitData::WEIGHT_KILOGRAM,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
                                 'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,

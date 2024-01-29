@@ -3,12 +3,13 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Enum\ImplementEnum;
-use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
 use App\Entity\Workout\Implement;
+use App\Entity\Workout\ImplementTypeOfAdjustableMeasureUnit;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
-class ImplementData extends Fixture
+class ImplementData extends Fixture implements DependentFixtureInterface
 {
     public const IMPLEMENT_BARBELL = 'implement-barbell';
     public const IMPLEMENT_DUMBBELL = 'implement-dumbbell';
@@ -51,7 +52,8 @@ class ImplementData extends Fixture
     public function load(ObjectManager $manager)
     {
         foreach ($this->getImplements() as $reference => $implementEnum) {
-            $implementObject = new Implement($implementEnum['name'], $implementEnum['typeOfAdjustableMeasure']);
+            $typeOfAdjustableMeasure = null !== $implementEnum['typeOfAdjustableMeasure'] ? $this->getReference($implementEnum['typeOfAdjustableMeasure'], ImplementTypeOfAdjustableMeasureUnit::class) : null;
+            $implementObject = new Implement($implementEnum['name'], $typeOfAdjustableMeasure);
             $manager->persist($implementObject);
             $this->addReference($reference, $implementObject);
         }
@@ -63,31 +65,31 @@ class ImplementData extends Fixture
         return [
             self::IMPLEMENT_BARBELL => [
                 'name' => ImplementEnum::BARBELL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_DUMBBELL => [
                 'name' => ImplementEnum::DUMBBELL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_KETTLEBELL => [
                 'name' => ImplementEnum::KETTLEBELL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_ASSAULT_BIKE => [
                 'name' => ImplementEnum::ASSAULT_BIKE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_SKI_ERG => [
                 'name' => ImplementEnum::SKI_ERG,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_BIKE_ERG => [
                 'name' => ImplementEnum::BIKE_ERG,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_ROWER => [
                 'name' => ImplementEnum::ROWER,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_PULL_UP_BAR => [
                 'name' => ImplementEnum::PULL_UP_BAR,
@@ -95,11 +97,11 @@ class ImplementData extends Fixture
                 ],
             self::IMPLEMENT_MEDICINE_BALL => [
                 'name' => ImplementEnum::MEDICINE_BALL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_BOX => [
                 'name' => ImplementEnum::BOX,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_HEIGHT,
                 ],
             self::IMPLEMENT_JUMP_ROPE => [
                 'name' => ImplementEnum::JUMP_ROPE,
@@ -107,67 +109,67 @@ class ImplementData extends Fixture
                 ],
             self::IMPLEMENT_BENCH => [
                 'name' => ImplementEnum::BENCH,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_ROPE => [
                 'name' => ImplementEnum::ROPE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_HEIGHT,
                 ],
             self::IMPLEMENT_DOUBLE_KETTLEBELLS => [
                 'name' => ImplementEnum::DOUBLE_KETTLEBELLS,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_DOUBLE_DUMBBELLS => [
                 'name' => ImplementEnum::DOUBLE_DUMBBELLS,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_ECHO_BIKE => [
                 'name' => ImplementEnum::ECHO_BIKE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_PLATE => [
                 'name' => ImplementEnum::PLATE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_PARALLETTE => [
                 'name' => ImplementEnum::PARALLETTE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_HEIGHT,
                 ],
             self::IMPLEMENT_SLAM_BALL => [
                 'name' => ImplementEnum::SLAM_BALL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_SLED => [
                 'name' => ImplementEnum::SLED,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_TIRE => [
                 'name' => ImplementEnum::TIRE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_HAMMER => [
                 'name' => ImplementEnum::HAMMER,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_SLEDGE => [
                 'name' => ImplementEnum::SLEDGE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_SAND_BAG => [
                 'name' => ImplementEnum::SAND_BAG,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_HUSAFELL_BAG => [
                 'name' => ImplementEnum::HUSAFELL_BAG,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_YOKE => [
                 'name' => ImplementEnum::YOKE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_HEAVY_JUMP_ROPE => [
                 'name' => ImplementEnum::HEAVY_JUMP_ROPE,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_RINGS => [
                 'name' => ImplementEnum::RINGS,
@@ -175,11 +177,11 @@ class ImplementData extends Fixture
                 ],
             self::IMPLEMENT_WORM => [
                 'name' => ImplementEnum::WORM,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_BAND => [
                 'name' => ImplementEnum::BAND,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_RESISTANCE,
                 ],
             self::IMPLEMENT_STICK => [
                 'name' => ImplementEnum::STICK,
@@ -187,11 +189,11 @@ class ImplementData extends Fixture
                 ],
             self::IMPLEMENT_AXLE_BARBELL => [
                 'name' => ImplementEnum::AXLE_BARBELL,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_PIG => [
                 'name' => ImplementEnum::PIG,
-                'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
+                'typeOfAdjustableMeasure' => ImplementTypeOfAdjustableMeasureUnitData::IMPLEMENT_ADJUSTABLE_WEIGHT,
                 ],
             self::IMPLEMENT_LINE => [
                 'name' => ImplementEnum::LINE,
@@ -209,6 +211,13 @@ class ImplementData extends Fixture
                 'name' => ImplementEnum::PADDLE,
                 'typeOfAdjustableMeasure' => null,
                 ],
+        ];
+    }
+
+    public function getDependencies()
+    {
+        return [
+            ImplementTypeOfAdjustableMeasureUnitData::class,
         ];
     }
 }
