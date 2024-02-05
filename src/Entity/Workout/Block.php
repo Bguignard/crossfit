@@ -33,7 +33,7 @@ class Block
         int $rounds,
         int $orderInWorkout,
         array $movementClusters,
-        int $restTime = null,
+        ?int $restTime = null,
     ) {
         $this->rounds = $rounds;
         $this->orderInWorkout = $orderInWorkout;

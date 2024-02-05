@@ -42,8 +42,8 @@ class MovementCluster
         MeasureUnitEnum $repUnit,
         array $implements,
         Movement $movement,
-        float $implementIntensityAdjustmentValue = null,
-        MeasureUnitEnum $implementIntensityUnit = null,
+        ?float $implementIntensityAdjustmentValue = null,
+        ?MeasureUnitEnum $implementIntensityUnit = null,
     ) {
         $this->implements = new ArrayCollection();
         $this->repetitions = $repetitions;

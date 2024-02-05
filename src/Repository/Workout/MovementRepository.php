@@ -52,20 +52,22 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
             ->where('m.difficulty <= :maxDifficulty')
             ->setParameter('maxDifficulty', $maxDifficulty)
             ->andWhere('m.movementType = :movementType')
-            ->setParameter('movementType', $movementType)
-            ->orderBy('RAND()')
-            ->setMaxResults(1);
+            ->setParameter('movementType', $movementType);
 
         if (!empty($forbiddenMovements)) {
             $queryBuilder->andWhere('m.id NOT IN (:forbiddenMovements)')
-                ->setParameter('forbiddenMovements', array_map(fn (Movement $movement) => $movement->getId(), $forbiddenMovements));
+                ->setParameter('forbiddenMovements', $forbiddenMovements);
         }
 
         if (!empty($availableImplements)) {
-            $queryBuilder->andWhere('m.possibleImplements IN (:availableImplements) OR m.possibleImplements IS EMPTY')
-                ->setParameter('availableImplements', array_map(fn (Implement $implement) => $implement->getId(), $availableImplements));
+            $queryBuilder->leftJoin('m.possibleImplements', 'i')
+            ->andwhere('i.id IN (:availableImplementsIds)')
+            ->setParameter('availableImplementsIds', array_map(fn (Implement $implement) => $implement->getId()->toBinary(), $availableImplements))
+            ->orWhere('i.id IS NULL');
         }
 
-        return $queryBuilder->getQuery()->getSingleResult();
+        $result = $queryBuilder->getQuery()->getResult();
+
+        return $result[rand(0, count($result) - 1)];
     }
 }
