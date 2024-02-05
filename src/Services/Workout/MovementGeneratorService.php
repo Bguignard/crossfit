@@ -6,7 +6,7 @@ use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Movement;
 use App\Repository\Workout\MovementRepositoryInterface;
 
-readonly class MovementGeneratorService
+readonly class MovementGeneratorService implements MovementGeneratorServiceInterface
 {
     public function __construct(
         private MovementRepositoryInterface $movementRepository
