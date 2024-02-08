@@ -2,3 +2,15 @@ fixtures_list:
     path: /fixtures
     defaults:
         _controller: 'App\Controller\FixturesController'
+movement_generator:
+    path: /movement-generator
+    defaults:
+        _controller: 'App\Controller\MovementController'
+movement_cluster_generator:
+    path: /movement-cluster-generator
+    defaults:
+        _controller: 'App\Controller\MovementClusterController'
+workout_generator:
+    path: /workout-generator
+    defaults:
+        _controller: 'App\Controller\WorkoutController'

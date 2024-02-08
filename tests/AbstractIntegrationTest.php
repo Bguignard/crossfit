@@ -2,7 +2,6 @@
 
 namespace App\Tests;
 
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\DataFixtures\ReferenceRepository;
 use Doctrine\ORM\EntityManager;
 use Doctrine\Persistence\ObjectRepository;
@@ -39,7 +38,7 @@ abstract class AbstractIntegrationTest extends WebTestCase
         return $this->getEntityManager()->getRepository($repositoryClassName);
     }
 
-    protected function getReference(string $name, string $class = null): object
+    protected function getReference(string $name, ?string $class = null): object
     {
         return $this->getReferenceRepository()->getReference($name, $class);
     }
