@@ -12,10 +12,10 @@ final readonly class MovementClusterDTO
     public function __construct(
         public ?Uuid $id,
         public int $repetitions,
+        public MeasureUnitEnum $repUnit,
         public MovementDTO $movement,
         public ?float $implementIntensityAdjustmentValue,
-        public ?ImplementTypeOfAdjustableMeasureUnitDTO $movementDetailIntensityUnit,
-        public MeasureUnitEnum $repUnit,
+        public MeasureUnitEnum $implementIntensityUnit,
         /**
          * @var Implement[]
          */
@@ -28,10 +28,10 @@ final readonly class MovementClusterDTO
         return new self(
             $movementCluster->getId(),
             $movementCluster->getRepetitions(),
+            $movementCluster->getRepUnit(),
             MovementDTO::createFromEntity($movementCluster->getMovement()),
             $movementCluster->getImplementIntensityAdjustmentValue(),
-            null === $movementCluster->getMovementDetailIntensityUnit() ? null : ImplementTypeOfAdjustableMeasureUnitDTO::createFromEntity($movementCluster->getMovementDetailIntensityUnit()),
-            $movementCluster->getRepUnit(),
+            $movementCluster->getImplementIntensityUnit(),
             $movementCluster->getImplements()->toArray(),
         );
     }

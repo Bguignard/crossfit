@@ -1,0 +1,60 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Workout generator {% endblock %}
+
+{% block body %}
+    <h1>Generate a movement</h1>
+    {% if errors is not empty %}
+        {{ include('partials/errors.html.twig', { 'errors': errors }) }}
+    {% endif %}
+    <form action="{{ postAddress }}" method="POST">
+        <div>
+            <label for="movement">Movements :</label>
+            <select name="movement" id="movement" required>
+                {% for movement in movements %}
+                    <option value="{{ movement.id }}">{{ movement.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="measureUnitOfMovement">Measure unit of the movement (rep, meter...):</label>
+            <select name="measureUnitOfMovement" id="measureUnitOfMovement">
+                {% for measureUnit in measureUnits %}
+                    <option value="{{ measureUnit }}">{{ measureUnit }}</option>
+                {% endfor%}
+            </select>
+        </div>
+        <div>
+            <label for="implements">Implements for the movement (can be null):</label>
+            <select name="implements" id="implements">
+                <option value="" selected="selected">Aucun</option>
+                {% for implement in implements %}
+                    <option value="{{ implement.id }}">{{ implement.name }}</option>
+                {% endfor%}
+            </select>
+        </div>
+        <div>
+            <label for="implementIntensityValue">Implement adjustment intensity (weight ...):</label>
+            <input type="number" name="implementIntensityValue" id="implementIntensityValue" value="0">
+        </div>
+        <div>
+            <label for="measureUnitOfImplement">Measure unit of the implement (kgs for dumbell etc...):</label>
+            <select name="measureUnitOfImplement" id="measureUnitOfImplement">
+                {% for measureUnit in measureUnits %}
+                    <option value="{{ measureUnit }}">{{ measureUnit }}</option>
+                {% endfor%}
+            </select>
+        </div>
+        <div>
+            <label for="allowedTimeInSeconds">Allowed time in seconds:</label>
+            <input type="number" name="allowedTimeInSeconds" id="allowedTimeInSeconds" value="0">
+        </div>
+        <div>
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+
+    {% if generatedMovementCluster is not null %}
+        {{ include('partials/movementCluster.html.twig', { 'generatedMovementCluster': generatedMovementCluster }) }}
+    {% endif %}
+{% endblock %}

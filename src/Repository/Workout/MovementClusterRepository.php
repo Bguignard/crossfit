@@ -20,4 +20,9 @@ class MovementClusterRepository extends ServiceEntityRepository implements Movem
     {
         parent::__construct($registry, MovementCluster::class);
     }
+
+    public function persist(MovementCluster $movementCluster): void
+    {
+        $this->_em->persist($movementCluster);
+    }
 }

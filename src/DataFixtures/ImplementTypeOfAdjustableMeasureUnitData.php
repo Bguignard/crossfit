@@ -37,18 +37,25 @@ class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements Depend
         return [
             self::IMPLEMENT_ADJUSTABLE_WEIGHT => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::WEIGHT,
-                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_KILOGRAM],
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_KILOGRAM,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                ],
                 ],
             self::IMPLEMENT_ADJUSTABLE_DISTANCE => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::DISTANCE,
                 'measureUnit' => [
                     MeasureUnitData::MEASURE_UNIT_METER,
                     MeasureUnitData::MEASURE_UNIT_KILOMETER,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
                 ],
                 ],
             self::IMPLEMENT_ADJUSTABLE_HEIGHT => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::HEIGHT,
-                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_CENTIMETER],
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_CENTIMETER,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                    ],
                 ],
             self::IMPLEMENT_ADJUSTABLE_PERCENTAGE_OF_1_RM => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::PERCENTAGE_OF_1_RM,
@@ -56,15 +63,24 @@ class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements Depend
                 ],
             self::IMPLEMENT_ADJUSTABLE_ENERGY => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::ENERGY,
-                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_CALORIE],
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_CALORIE,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                    ],
                 ],
             self::IMPLEMENT_ADJUSTABLE_RESISTANCE => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::RESISTANCE,
-                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_PERCENT],
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                    ],
                 ],
             self::IMPLEMENT_ADJUSTABLE_DIFFICULTY => [
                 'typeOfAdjustableMeasure' => ImplementTypeOfMeasureEnum::DIFFICULTY,
-                'measureUnit' => [MeasureUnitData::MEASURE_UNIT_RPE],
+                'measureUnit' => [
+                    MeasureUnitData::MEASURE_UNIT_RPE,
+                    MeasureUnitData::MEASURE_UNIT_PERCENT,
+                    ],
                 ],
         ];
     }

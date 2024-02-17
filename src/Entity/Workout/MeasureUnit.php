@@ -33,4 +33,9 @@ class MeasureUnit
     {
         return $this->name;
     }
+
+    public function getNameAsEnum(): MeasureUnitEnum
+    {
+        return MeasureUnitEnum::from($this->name);
+    }
 }

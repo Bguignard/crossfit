@@ -8,7 +8,7 @@
         <div>
             <label for="availableImplements">Implements you have:</label>
             <select name="availableImplements" id="availableImplements">
-                <option value="null" selected="selected">Tous</option>
+                <option value="" selected="selected">Tous</option>
                 {% for implement in implements %}
                     <option value="{{ implement.id }}">{{ implement.name }}</option>
                 {% endfor%}
@@ -18,7 +18,7 @@
         <div>
             <label for="forbiddenMovements">Movements to exclude:</label>
             <select name="forbiddenMovements" id="forbiddenMovements">
-                <option value="null" selected="selected">Aucun</option>
+                <option value="" selected="selected">Aucun</option>
                 {% for movement in movements %}
                     <option value="{{ movement.id }}">{{ movement.name }}</option>
                 {% endfor %}
@@ -44,6 +44,6 @@
     </form>
 
     {% if generatedMovement is not null %}
-        {{ include('partials/generatedMovement.html.twig', { 'generatedMovement': generatedMovement }) }}
+        {{ include('partials/movement.html.twig', { 'generatedMovement': generatedMovement }) }}
     {% endif %}
 {% endblock %}

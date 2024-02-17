@@ -21,6 +21,9 @@ class MovementCluster
     #[ORM\Column]
     private int $repetitions; // For example 5 reps, 10 reps, etc. if its 500m run its 500 rep
 
+    #[ORM\Column(type: 'string', nullable: false, enumType: MeasureUnitEnum::class)]
+    private MeasureUnitEnum $repUnit; // For example reps, kg, lbs, meters, feet, etc. of movement execution (not implement)
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private Movement $movement;
@@ -29,10 +32,7 @@ class MovementCluster
     private ?float $implementIntensityAdjustmentValue; // For example the weight, the distance, the height, etc.
 
     #[ORM\Column(type: 'string', nullable: true, enumType: MeasureUnitEnum::class)]
-    private ?MeasureUnitEnum $movementDetailIntensityUnit; // For example kg, lbs, meters, feet, etc. of MOVEMENT INTENSITY
-
-    #[ORM\Column(type: 'string', nullable: false, enumType: MeasureUnitEnum::class)]
-    private MeasureUnitEnum $repUnit; // For example kg, lbs, meters, feet, etc. of REPETITIONS
+    private ?MeasureUnitEnum $implementIntensityUnit; // For example kg, lbs, meters, feet, etc. of IMPLEMENT INTENSITY
 
     #[ORM\ManyToMany(targetEntity: Implement::class)]
     private Collection $implements;
@@ -53,7 +53,7 @@ class MovementCluster
         $this->movement = $movement;
         $this->repUnit = $repUnit;
         $this->implementIntensityAdjustmentValue = $implementIntensityAdjustmentValue;
-        $this->movementDetailIntensityUnit = $implementIntensityUnit;
+        $this->implementIntensityUnit = $implementIntensityUnit;
     }
 
     public function getId(): Uuid
@@ -95,8 +95,8 @@ class MovementCluster
         return $this->implementIntensityAdjustmentValue;
     }
 
-    public function getMovementDetailIntensityUnit(): ?MeasureUnitEnum
+    public function getImplementIntensityUnit(): ?MeasureUnitEnum
     {
-        return $this->movementDetailIntensityUnit;
+        return $this->implementIntensityUnit;
     }
 }
