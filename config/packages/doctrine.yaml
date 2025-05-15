@@ -1,21 +1,25 @@
 doctrine:
     dbal:
-        default_connection: default
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+        use_savepoints: true
+
+          #        default_connection: default
         # IMPORTANT: You MUST configure your server version,
         # either here or in the DATABASE_URL env var (see .env file)
 
-        connections:
-            default:
-                driver: pdo_mysql
-                use_savepoints: true
-                dbname: '%env(resolve:MYSQL_DATABASE)%'
-                host: '%env(resolve:DATABASE_HOST)%'
-                port: '%env(resolve:DATABASE_PORT)%'
-                user: '%env(resolve:MYSQL_USER)%'
-                password: '%env(resolve:MYSQL_PASSWORD)%'
-                server_version: '8.0.33'
-                profiling_collect_backtrace: '%kernel.debug%'
-                charset: 'utf8mb4'
+#        connections:
+#            default:
+#                driver: pdo_mysql
+#                use_savepoints: true
+#                dbname: '%env(resolve:MYSQL_DATABASE)%'
+#                host: '%env(resolve:DATABASE_HOST)%'
+#                port: '%env(resolve:DATABASE_PORT)%'
+#                user: '%env(resolve:MYSQL_USER)%'
+#                password: '%env(resolve:MYSQL_PASSWORD)%'
+#                server_version: '8.0.33'
+#                profiling_collect_backtrace: '%kernel.debug%'
+#                charset: 'utf8mb4'
                 #DATABASE_URL="mysql://bruno:test@db:3306/crossfit_test?serverVersion=8.0.33&charset=utf8mb4":
 
     orm:
@@ -24,6 +28,8 @@ doctrine:
         report_fields_where_declared: true
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+#        identity_generation_preferences:
+#            Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
         auto_mapping: true
         mappings:
             App:

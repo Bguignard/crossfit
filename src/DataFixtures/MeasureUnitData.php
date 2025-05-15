@@ -21,7 +21,7 @@ class MeasureUnitData extends Fixture
     public const MEASURE_UNIT_PERCENT = 'measure-unit-percent';
     public const MEASURE_UNIT_RPE = 'measure-unit-RPE';
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach ($this->getMeasureUnits() as $reference => $measureUnit) {
             $measureUnitEntity = new MeasureUnit($measureUnit);

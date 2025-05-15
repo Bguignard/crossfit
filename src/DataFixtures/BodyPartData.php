@@ -26,7 +26,7 @@ class BodyPartData extends Fixture
     public const BODY_PART_LATISSIMUS_DORSI = 'body-part-latissimus-dorsi';
     public const BODY_PART_HIP_FLEXORS = 'body-part-hip-flexors';
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach ($this->getBodyParts() as $reference => $bodyPartName) {
             $bodyPartEntity = new BodyPart($bodyPartName);

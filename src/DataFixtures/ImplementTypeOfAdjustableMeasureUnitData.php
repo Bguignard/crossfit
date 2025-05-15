@@ -19,7 +19,7 @@ class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements Depend
     public const IMPLEMENT_ADJUSTABLE_RESISTANCE = 'implement-adjustable-resistance';
     public const IMPLEMENT_ADJUSTABLE_DIFFICULTY = 'implement-adjustable-difficulty';
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach ($this->getImplementTypeOfAdjustableMeasureUnit() as $reference => $implementTypesUnit) {
             $implementObject = new ImplementTypeOfAdjustableMeasureUnit($implementTypesUnit['typeOfAdjustableMeasure']);
@@ -85,7 +85,7 @@ class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements Depend
         ];
     }
 
-    public function getDependencies()
+    public function getDependencies(): array
     {
         return [
             MeasureUnitData::class,

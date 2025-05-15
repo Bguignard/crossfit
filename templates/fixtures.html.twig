@@ -30,10 +30,10 @@
                     {% for implement in movementCluster.implements %}
                         {{ implement.name }}
                     {% endfor %}
-                        {{ movementCluster.movement.name }}
-                        {% if movementCluster.movementDetailIntensityUnit is not null %}
-                            ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.movementDetailIntensityUnit.value }} )
-                        {% endif %}
+                    {{ movementCluster.movement.name }}
+                    {% if movementCluster.implementIntensityUnit is not null %}
+                        ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.implementIntensityUnit.value }} )
+                    {% endif %}
                     </p>
                 {% endfor %}
                 {% if block.restTime is not null %}

@@ -49,7 +49,7 @@ class ImplementData extends Fixture implements DependentFixtureInterface
     public const IMPLEMENT_BIKE = 'implement-bike';
     public const IMPLEMENT_PADDLE = 'implement-paddle';
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach ($this->getImplements() as $reference => $implementEnum) {
             $typeOfAdjustableMeasure = null !== $implementEnum['typeOfAdjustableMeasure'] ? $this->getReference($implementEnum['typeOfAdjustableMeasure'], ImplementTypeOfAdjustableMeasureUnit::class) : null;
@@ -214,7 +214,7 @@ class ImplementData extends Fixture implements DependentFixtureInterface
         ];
     }
 
-    public function getDependencies()
+    public function getDependencies(): array
     {
         return [
             ImplementTypeOfAdjustableMeasureUnitData::class,

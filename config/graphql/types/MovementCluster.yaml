@@ -6,6 +6,6 @@ MovementCluster:
       repetitions: Int!
       movement: Movement!
       implementIntensityAdjustmentValue: Float
-      movementDetailIntensityUnit: ImplementTypeOfAdjustableMeasureUnit
+      implementIntensityUnit: MeasureUnitEnum
       repUnit: MeasureUnitEnum!
       implements: "[Implement]!"
