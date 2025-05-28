@@ -1,4 +1,4 @@
-{% extends "../base.html.twig" %}
+{% extends "/base.html.twig" %}
 
 {% block title %}Workout generator {% endblock %}
 
@@ -44,6 +44,6 @@
     </form>
 
     {% if generatedMovement is not null %}
-        {{ include('partials/movement.html.twig', { 'generatedMovement': generatedMovement }) }}
+        {{ include('/admin/partials/movement.html.twig', { 'generatedMovement': generatedMovement }) }}
     {% endif %}
 {% endblock %}

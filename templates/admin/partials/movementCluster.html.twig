@@ -6,7 +6,7 @@
         {% endfor %}
     {% endif %}
     {% if generatedMovementCluster.movement is not null %}
-        {{ include('partials/movement.html.twig', { 'generatedMovement': generatedMovementCluster.movement }) }}
+        {{ include('/admin/partials/movement.html.twig', { 'generatedMovement': generatedMovementCluster.movement }) }}
     {% endif %}
     {% if generatedMovementCluster.implementIntensityAdjustmentValue is not null %}
         {{ generatedMovementCluster.implementIntensityAdjustmentValue }} {{ generatedMovementCluster.implementIntensityUnit.name }}

@@ -1,4 +1,4 @@
-{% extends "../base.html.twig" %}
+{% extends "/base.html.twig" %}
 
 {% block title %}Fixtures{% endblock %}
 
@@ -60,11 +60,11 @@
                         {% endfor %}
                     </ul>
                 </ul>
-                <p>Body parts</p>
+                <p>Muscles</p>
                 <ul>
-                    {% for bodyPart in movement.bodyParts %}
+                    {% for muscle in movement.muscles %}
                         <li>
-                            {{ bodyPart.name }}
+                            {{ muscle.name }} ( {{ muscle.bodyPart.name }} )
                         </li>
                     {% endfor %}
                 </ul>

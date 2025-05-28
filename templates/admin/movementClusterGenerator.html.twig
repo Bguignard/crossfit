@@ -1,11 +1,11 @@
-{% extends "../base.html.twig" %}
+{% extends "/base.html.twig" %}
 
 {% block title %}Workout generator {% endblock %}
 
 {% block body %}
     <h1>Generate a movement</h1>
     {% if errors is not empty %}
-        {{ include('partials/errors.html.twig', { 'errors': errors }) }}
+        {{ include('/admin/partials/errors.html.twig', { 'errors': errors }) }}
     {% endif %}
     <form action="{{ postAddress }}" method="POST">
         <div>
@@ -55,6 +55,6 @@
     </form>
 
     {% if generatedMovementCluster is not null %}
-        {{ include('partials/movementCluster.html.twig', { 'generatedMovementCluster': generatedMovementCluster }) }}
+        {{ include('/admin/partials/movementCluster.html.twig', { 'generatedMovementCluster': generatedMovementCluster }) }}
     {% endif %}
 {% endblock %}
