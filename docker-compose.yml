@@ -1,31 +1,35 @@
-version: "3"
-
 services:
   db:
-    image: mysql:8.0.33
-    platform: linux/x86_64
-    command: --default-authentication-plugin=mysql_native_password
-    volumes:
-      - "db_app:/var/lib/mysql"
+    container_name: crossfit-pgsql
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-crossfit}
+      # You should definitely change the password in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-d", "${POSTGRES_DB:-crossfit}", "-U", "${POSTGRES_USER:-app}" ]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - "db_app:/var/lib/postgresql/data:rw"
     ports:
-      - 3306:3306
+      - "5432:5432"
     networks:
       - crossfit
   php:
+    container_name: crossfit-php
     build:
       context: .docker/php
       args:
-        TIMEZONE: ${TIMEZONE}
+        TIMEZONE: Europe/Madrid
     volumes:
       - .:/var/www/symfony:cached
     networks:
       - crossfit
   nginx:
+    container_name: crossfit-nginx
     build:
       context: .docker/nginx
     volumes:
@@ -37,8 +41,9 @@ services:
         aliases:
           - admin.crossfit.local
     env_file:
-      - .docker/.env.nginx.local
+      - .docker/.env.nginx
   mailer:
+    container_name: crossfit-mailcatcher
     image: schickling/mailcatcher
     ports: ["1025", "1080"]
 
@@ -47,3 +52,4 @@ volumes:
 
 networks:
   crossfit:
+    driver: bridge

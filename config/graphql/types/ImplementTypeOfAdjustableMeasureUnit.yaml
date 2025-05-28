@@ -1,0 +1,7 @@
+ImplementTypeOfAdjustableMeasureUnit:
+  type: object
+  config:
+    fields:
+      id: ID!
+      implementTypeOfMeasureEnum: String
+      measureUnitEnum: String

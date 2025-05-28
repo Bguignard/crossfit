@@ -1,4 +1,4 @@
 MovementTypeEnum:
   type: enum
   config:
-    enumClass: App\Enum\MovementTypeEnum
+    enumClass: App\Entity\Workout\Enum\MovementTypeEnum

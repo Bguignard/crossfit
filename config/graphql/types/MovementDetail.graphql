@@ -1,5 +1,0 @@
-type MovementDetail {
-    Id: ID!
-    movementIntensity: Float
-    repUnit: RepUnitEnum!
-}

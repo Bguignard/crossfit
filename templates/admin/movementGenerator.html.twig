@@ -1,0 +1,49 @@
+{% extends "/base.html.twig" %}
+
+{% block title %}Workout generator {% endblock %}
+
+{% block body %}
+    <h1>Generate a movement</h1>
+    <form action="{{ postAddress }}" method="POST">
+        <div>
+            <label for="availableImplements">Implements you have:</label>
+            <select name="availableImplements" id="availableImplements">
+                <option value="" selected="selected">Tous</option>
+                {% for implement in implements %}
+                    <option value="{{ implement.id }}">{{ implement.name }}</option>
+                {% endfor%}
+            </select>
+        </div>
+
+        <div>
+            <label for="forbiddenMovements">Movements to exclude:</label>
+            <select name="forbiddenMovements" id="forbiddenMovements">
+                <option value="" selected="selected">Aucun</option>
+                {% for movement in movements %}
+                    <option value="{{ movement.id }}">{{ movement.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="maxDifficulty">Maximum difficulty:</label>
+            <input name="maxDifficulty" id="maxDifficulty" type="range" min="0" max="100"></input>
+        </div>
+
+        <div>
+            <label for="movementType">Movement type :</label>
+            <select name="movementType" id="movementType">
+                {% for movementType in movementTypes %}
+                    <option value="{{ movementType }}">{{ movementType }}</option>
+                {% endfor %}
+            </select>            </div>
+
+        <div>
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+
+    {% if generatedMovement is not null %}
+        {{ include('/admin/partials/movement.html.twig', { 'generatedMovement': generatedMovement }) }}
+    {% endif %}
+{% endblock %}

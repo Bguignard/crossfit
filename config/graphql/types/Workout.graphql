@@ -1,9 +1,0 @@
-type Workout {
-    id: ID!
-    name: String
-    numberOfRounds: Int
-    blocks: [Block]!
-    timeCap: Int
-    workoutType: WorkoutTypeEnum
-    workoutOrigin: WorkoutOrigin
-}

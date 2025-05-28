@@ -1,0 +1,15 @@
+<ul>
+    {{ generatedMovementCluster.repetitions }}
+    {% if generatedMovementCluster.implements is not empty %}
+        {% for implement in generatedMovementCluster.implements %}
+            {{ implement.name }}
+        {% endfor %}
+    {% endif %}
+    {% if generatedMovementCluster.movement is not null %}
+        {{ include('/admin/partials/movement.html.twig', { 'generatedMovement': generatedMovementCluster.movement }) }}
+    {% endif %}
+    {% if generatedMovementCluster.implementIntensityAdjustmentValue is not null %}
+        {{ generatedMovementCluster.implementIntensityAdjustmentValue }} {{ generatedMovementCluster.implementIntensityUnit.name }}
+    {% endif %}
+</ul>
+

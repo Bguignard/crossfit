@@ -1,0 +1,20 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Workouts By Source{% endblock %}
+
+{% block body %}
+    <h1>Search Workout by source</h1>
+
+    <ul>
+        {% for source in workoutsSourceNames %}
+            <li>
+{#                <a href="{{ path('workouts_by_source', { 'source': source }) }}">{{ source }}</a>#}
+                <a href="">{{ source }}</a>
+            </li>
+        {% endfor %}
+{#        <li>Girls workouts</li>#}
+{#        <li>Hero workouts</li>#}
+{#        <li>Crossfit Semifinals</li>#}
+{#        <li>Crossfit Games</li>#}
+    </ul>
+{% endblock %}

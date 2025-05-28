@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -28,7 +28,7 @@ class Workout
     private Collection $blocks;
 
     #[ORM\Column(nullable: true)]
-    private ?int $timeCap;
+    private ?int $timeCap; // time cap in minutes
 
     #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutTypeEnum::class)]
     private ?WorkoutTypeEnum $workoutType;

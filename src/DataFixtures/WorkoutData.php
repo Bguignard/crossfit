@@ -3,33 +3,33 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Block;
+use App\Entity\Workout\Enum\MeasureUnitEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
-use App\Entity\Workout\MovementDetail;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
-use App\Enum\RepUnitEnum;
-use App\Enum\WorkoutOriginNameEnum;
-use App\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\WorkoutOriginName;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
 class WorkoutData extends Fixture implements DependentFixtureInterface
 {
-    public const WORKOUT_FRAN = 'workout-fran';
-    public const WORKOUT_OPEN_17_5 = 'workout-open-17-5';
+    public const string WORKOUT_FRAN = 'workout-fran';
+    public const string WORKOUT_OPEN_17_5 = 'workout-open-17-5';
 
     public function getDependencies(): array
     {
         return [
             ImplementData::class,
             MovementData::class,
+            ImplementTypeOfAdjustableMeasureUnitData::class,
         ];
     }
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach ($this->getWorkouts() as $workout) {
             $blocks = [];
@@ -40,11 +40,8 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         $movementCluster['repUnit'],
                         $this->getImplementsArrayFromReferences($movementCluster['implements']),
                         $this->getReference($movementCluster['movement'], Movement::class),
-                        $movementCluster['movementDetail'] ?
-                            new MovementDetail(
-                                $movementCluster['movementDetail']['movementIntensity'],
-                                $movementCluster['movementDetail']['movementIntensityUnit'],
-                            ) : null,
+                        $movementCluster['implementIntensityAdjustmentValue'],
+                        $movementCluster['implementIntensityUnit'],
                     );
                 }, $block['movementClusters']);
 
@@ -62,7 +59,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 $workout['timeCap'],
                 $workout['workoutType'],
                 new WorkoutOrigin(
-                    $workout['workoutOrigin']['name'],
+                    $this->getReference($workout['workoutOrigin']['name'], WorkoutOriginName::class),
                     $workout['workoutOrigin']['year'],
                 ),
                 $blocks,
@@ -88,21 +85,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustmentValue' => 43.0,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 21,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustmentValue' => null,
+                                'implementIntensityUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -116,21 +112,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                    ],
+                                'implementIntensityAdjustmentValue' => 43.0,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 15,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustmentValue' => null,
+                                'implementIntensityUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -144,21 +139,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustmentValue' => 43.0,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_PULL_UP,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustmentValue' => null,
+                                'implementIntensityUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                                 ],
@@ -170,7 +164,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 'timeCap' => 10,
                 'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginNameEnum::GIRLS_WORKOUT,
+                    'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_GIRLS_WORKOUT,
                     'year' => 2010,
                 ],
             ],
@@ -186,21 +180,20 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                         'movementClusters' => [
                             [
                                 'repetitions' => 9,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_THRUSTER,
-                                'movementDetail' => [
-                                    'movementIntensity' => 43,
-                                    'movementIntensityUnit' => RepUnitEnum::KILOGRAM,
-                                ],
+                                'implementIntensityAdjustmentValue' => 43.0,
+                                'implementIntensityUnit' => MeasureUnitEnum::KILOGRAM,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_BARBELL,
                                 ],
                             ],
                             [
                                 'repetitions' => 35,
-                                'repUnit' => RepUnitEnum::REPETITION,
                                 'movement' => MovementData::MOVEMENT_DOUBLE_UNDER,
-                                'movementDetail' => null,
+                                'implementIntensityAdjustmentValue' => null,
+                                'implementIntensityUnit' => null,
+                                'repUnit' => MeasureUnitEnum::REPETITION,
                                 'implements' => [
                                     ImplementData::IMPLEMENT_JUMP_ROPE,
                                 ],
@@ -212,7 +205,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 'timeCap' => 40,
                 'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginNameEnum::CROSSFIT_OPEN_WORKOUT,
+                    'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,
                 ],
             ],

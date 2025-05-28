@@ -2,7 +2,7 @@
 
 namespace App\Api\Graphql\Resolver\Query;
 
-use App\Enum\WorkoutOriginNameEnum;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 

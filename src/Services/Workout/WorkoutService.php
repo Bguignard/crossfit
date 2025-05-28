@@ -7,7 +7,7 @@ use App\Repository\Workout\WorkoutRepositoryInterface;
 readonly class WorkoutService
 {
     public function __construct(
-        public WorkoutRepositoryInterface $workoutRepository
+        public WorkoutRepositoryInterface $workoutRepository,
     ) {
     }
 }

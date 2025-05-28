@@ -1,4 +1,4 @@
 WorkoutOriginNameEnum:
   type: enum
   config:
-    enumClass: App\Enum\WorkoutOriginNameEnum
+    enumClass: App\Entity\Workout\Enum\WorkoutOriginNameEnum

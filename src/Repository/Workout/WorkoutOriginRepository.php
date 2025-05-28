@@ -20,4 +20,12 @@ class WorkoutOriginRepository extends ServiceEntityRepository implements Workout
     {
         parent::__construct($registry, WorkoutOrigin::class);
     }
+
+    public function persist(WorkoutOrigin $workoutOrigin): WorkoutOrigin
+    {
+        $this->getEntityManager()->persist($workoutOrigin);
+        $this->getEntityManager()->flush();
+
+        return $workoutOrigin;
+    }
 }

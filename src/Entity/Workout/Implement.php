@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\ImplementEnum;
+use App\Entity\Workout\Enum\ImplementEnum;
 use App\Repository\Workout\ImplementRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -19,9 +19,14 @@ class Implement
     #[ORM\Column(length: 255, nullable: false)]
     private string $name;
 
-    public function __construct(ImplementEnum $name)
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure;
+
+    public function __construct(ImplementEnum $name, ?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure)
     {
         $this->name = $name->value;
+        $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
     }
 
     public function getId(): Uuid
@@ -37,5 +42,17 @@ class Implement
     public function getNameAsEnum(): ImplementEnum
     {
         return ImplementEnum::from($this->name);
+    }
+
+    public function getImplementTypeOfAdjustableMeasure(): ?ImplementTypeOfAdjustableMeasureUnit
+    {
+        return $this->implementTypeOfAdjustableMeasure;
+    }
+
+    public function setImplementTypeOfAdjustableMeasure(?ImplementTypeOfAdjustableMeasureUnit $implementTypeOfAdjustableMeasure): Implement
+    {
+        $this->implementTypeOfAdjustableMeasure = $implementTypeOfAdjustableMeasure;
+
+        return $this;
     }
 }

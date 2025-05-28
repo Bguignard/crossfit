@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\MovementTypeEnum;
+use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -21,8 +21,8 @@ class Movement
     #[ORM\Column(length: 255, nullable: false)]
     private string $name;
 
-    #[ORM\ManyToMany(targetEntity: BodyPart::class, inversedBy: 'movements')]
-    private Collection $bodyParts;
+    #[ORM\ManyToMany(targetEntity: Muscle::class, inversedBy: 'movements')]
+    private Collection $muscles;
 
     #[ORM\Column(nullable: false)]
     private int $difficulty;
@@ -30,12 +30,20 @@ class Movement
     #[ORM\Column(type: 'string', enumType: MovementTypeEnum::class)]
     private MovementTypeEnum $movementType;
 
+    #[ORM\ManyToMany(targetEntity: Implement::class, inversedBy: 'movements')]
+    private Collection $possibleImplements;
+
+    #[ORM\ManyToMany(targetEntity: MovementExecutionTimeForMeasureUnit::class, inversedBy: 'movements')]
+    private Collection $movementExecutionTimeForMeasureUnits;
+
     public function __construct(
         string $name,
         int $difficulty,
         MovementTypeEnum $movementType,
     ) {
-        $this->bodyParts = new ArrayCollection();
+        $this->possibleImplements = new ArrayCollection();
+        $this->muscles = new ArrayCollection();
+        $this->movementExecutionTimeForMeasureUnits = new ArrayCollection();
         $this->name = $name;
         $this->difficulty = $difficulty;
         $this->movementType = $movementType;
@@ -59,25 +67,25 @@ class Movement
     }
 
     /**
-     * @return Collection<int, BodyPart>
+     * @return Collection<int, Muscle>
      */
-    public function getBodyParts(): Collection
+    public function getMuscles(): Collection
     {
-        return $this->bodyParts;
+        return $this->muscles;
     }
 
-    public function addBodyPart(BodyPart $bodyPart): static
+    public function addMuscle(Muscle $muscle): static
     {
-        if (!$this->bodyParts->contains($bodyPart)) {
-            $this->bodyParts->add($bodyPart);
+        if (!$this->muscles->contains($muscle)) {
+            $this->muscles->add($muscle);
         }
 
         return $this;
     }
 
-    public function removeBodyPart(BodyPart $bodyPart): static
+    public function removeMuscle(Muscle $muscle): static
     {
-        $this->bodyParts->removeElement($bodyPart);
+        $this->muscles->removeElement($muscle);
 
         return $this;
     }
@@ -99,10 +107,56 @@ class Movement
         return $this->movementType;
     }
 
-    public function setBodyParts(array $bodyParts): Movement
+    public function setMuscles(array $muscles): Movement
     {
-        foreach ($bodyParts as $bodyPart) {
-            $this->addBodyPart($bodyPart);
+        foreach ($muscles as $bodyPart) {
+            $this->addMuscle($bodyPart);
+        }
+
+        return $this;
+    }
+
+    public function addPossibleImplement(Implement $implement): Movement
+    {
+        if (!$this->possibleImplements->contains($implement)) {
+            $this->possibleImplements->add($implement);
+        }
+
+        return $this;
+    }
+
+    public function setPossibleImplements(array $possibleImplements): Movement
+    {
+        foreach ($possibleImplements as $possibleImplement) {
+            $this->addPossibleImplement($possibleImplement);
+        }
+
+        return $this;
+    }
+
+    public function getPossibleImplements(): Collection
+    {
+        return $this->possibleImplements;
+    }
+
+    public function getMovementExecutionTimeForMeasureUnits(): Collection
+    {
+        return $this->movementExecutionTimeForMeasureUnits;
+    }
+
+    public function addMovementExecutionTimeForMeasureUnits(MovementExecutionTimeForMeasureUnit $movementExecutionTimeForMeasureUnit): Movement
+    {
+        if (!$this->movementExecutionTimeForMeasureUnits->contains($movementExecutionTimeForMeasureUnit)) {
+            $this->movementExecutionTimeForMeasureUnits->add($movementExecutionTimeForMeasureUnit);
+        }
+
+        return $this;
+    }
+
+    public function setMovementExecutionTimeForMeasureUnits(array $movementExecutionTimeForMeasureUnits): Movement
+    {
+        foreach ($movementExecutionTimeForMeasureUnits as $movementExecutionTimeForMeasureUnit) {
+            $this->addMovementExecutionTimeForMeasureUnits($movementExecutionTimeForMeasureUnit);
         }
 
         return $this;

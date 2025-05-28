@@ -4,7 +4,8 @@ MovementCluster:
     fields:
       id: ID!
       repetitions: Int!
-      repUnit: RepUnitEnum!
-      implements: "[Implement]!"
       movement: Movement!
-      movementDetail: MovementDetail
+      implementIntensityAdjustmentValue: Float
+      implementIntensityUnit: MeasureUnitEnum
+      repUnit: MeasureUnitEnum!
+      implements: "[Implement]!"

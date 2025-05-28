@@ -2,7 +2,7 @@
 
 namespace App\Entity\Workout;
 
-use App\Enum\RepUnitEnum;
+use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Repository\Workout\MovementClusterRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -21,26 +21,29 @@ class MovementCluster
     #[ORM\Column]
     private int $repetitions; // For example 5 reps, 10 reps, etc. if its 500m run its 500 rep
 
+    #[ORM\Column(type: 'string', nullable: false, enumType: MeasureUnitEnum::class)]
+    private MeasureUnitEnum $repUnit; // For example reps, kg, lbs, meters, feet, etc. of movement execution (not implement)
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private Movement $movement;
 
-    #[ORM\OneToOne(targetEntity: MovementDetail::class, cascade: ['persist'], orphanRemoval: true)]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?MovementDetail $movementDetail;
+    #[ORM\Column(nullable: true)]
+    private ?float $implementIntensityAdjustmentValue; // For example the weight, the distance, the height, etc.
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: RepUnitEnum::class)]
-    private RepUnitEnum $repUnit; // For example kg, lbs, meters, feet, etc. of REPETITIONS
+    #[ORM\Column(type: 'string', nullable: true, enumType: MeasureUnitEnum::class)]
+    private ?MeasureUnitEnum $implementIntensityUnit; // For example kg, lbs, meters, feet, etc. of IMPLEMENT INTENSITY
 
     #[ORM\ManyToMany(targetEntity: Implement::class)]
     private Collection $implements;
 
     public function __construct(
         int $repetitions,
-        RepUnitEnum $repUnit,
+        MeasureUnitEnum $repUnit,
         array $implements,
         Movement $movement,
-        MovementDetail $movementDetail = null
+        ?float $implementIntensityAdjustmentValue = null,
+        ?MeasureUnitEnum $implementIntensityUnit = null,
     ) {
         $this->implements = new ArrayCollection();
         $this->repetitions = $repetitions;
@@ -49,7 +52,8 @@ class MovementCluster
         }
         $this->movement = $movement;
         $this->repUnit = $repUnit;
-        $this->movementDetail = $movementDetail;
+        $this->implementIntensityAdjustmentValue = $implementIntensityAdjustmentValue;
+        $this->implementIntensityUnit = $implementIntensityUnit;
     }
 
     public function getId(): Uuid
@@ -62,7 +66,7 @@ class MovementCluster
         return $this->movement;
     }
 
-    public function getRepUnit(): RepUnitEnum
+    public function getRepUnit(): MeasureUnitEnum
     {
         return $this->repUnit;
     }
@@ -86,8 +90,13 @@ class MovementCluster
         return $this->repetitions;
     }
 
-    public function getMovementDetail(): ?MovementDetail
+    public function getImplementIntensityAdjustmentValue(): ?float
     {
-        return $this->movementDetail;
+        return $this->implementIntensityAdjustmentValue;
+    }
+
+    public function getImplementIntensityUnit(): ?MeasureUnitEnum
+    {
+        return $this->implementIntensityUnit;
     }
 }

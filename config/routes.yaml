@@ -1,4 +1,0 @@
-fixtures_list:
-    path: /fixtures
-    defaults:
-        _controller: 'App\Controller\FixturesController'
