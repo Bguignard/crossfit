@@ -38,10 +38,13 @@ jobs:
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
       - name: Create Database
-        run: |
-          mkdir -p data
-          touch data/database.sqlite
+        run: bin/console doctrine:database:create --if-not-exists --env=test
+#          mkdir -p data
+#          touch data/database.sqlite
+      - name: Load Fixtures
+        run: bin/console do:fix:load --no-interaction --env=test
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         env:
-          DATABASE_URL: sqlite:///%kernel.project_dir%/data/database.sqlite
+#          DATABASE_URL: sqlite:///%kernel.project_dir%/data/database.sqlite
+          DATABASE_URL: postgresql://app:!ChangeMe!@db:5432/crossfit_test?serverVersion=16&charset=utf8
         run: vendor/bin/phpunit
