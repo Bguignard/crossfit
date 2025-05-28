@@ -20,7 +20,7 @@ class MovementGeneratorServiceTest extends AbstractIntegrationTest
 
     public function testGenerateMovementWithAllParameters(): void
     {
-        $availableImplements = $this->getRepository(Implement::class)->findBy(['name' => [ImplementEnum::PULL_UP_BAR, ImplementEnum::BARBELL]]);
+        $availableImplements = $this->getRepository(Implement::class)->findBy(['name' => [ImplementEnum::PULL_UP_BAR->name, ImplementEnum::BARBELL->name]]);
         $forbiddenMovements = $this->getRepository(Movement::class)->findBy(['name' => 'Pull Up']);
         $maxDifficulty = 80;
         $movementType = MovementTypeEnum::GYMNASTIC;
