@@ -11,24 +11,24 @@ use Doctrine\Persistence\ObjectManager;
 
 class MuscleData extends Fixture implements DependentFixtureInterface
 {
-    public const MUSCLE_TRAPEZIUS = 'muscle-trapezius';
-    public const MUSCLE_DELTOIDS = 'muscle-deltoids';
-    public const MUSCLE_RHOMBOIDS = 'muscle-rhomboids';
-    public const MUSCLE_BICEPS = 'muscle-biceps';
-    public const MUSCLE_TRICEPS = 'muscle-triceps';
-    public const MUSCLE_FOREARMS = 'muscle-forearms';
-    public const MUSCLE_PECTORALS = 'muscle-pectorals';
-    public const MUSCLE_RECTUS_ABDOMINIS = 'muscle-rectus-abdominis';
-    public const MUSCLE_OBLIQUES = 'muscle-obliques';
-    public const MUSCLE_TRANSVERSUS_ABDOMINIS = 'muscle-transversus-abdominis';
-    public const MUSCLE_HIP_FLEXORS = 'muscle-hip flexors';
-    public const MUSCLE_LATISSIMUS_DORSI = 'muscle-latissimus-dorsi';
-    public const MUSCLE_SPINAL_ERECTORS = 'muscle-spinal-erectors';
-    public const MUSCLE_GLUTEUS_MAXIMUS = 'muscle-gluteus-maximus';
-    public const MUSCLE_GLUTEUS_MEDIUS = 'muscle-gluteus-medius';
-    public const MUSCLE_HAMSTRINGS = 'muscle-hamstrings';
-    public const MUSCLE_QUADRICEPS = 'muscle-quadriceps';
-    public const MUSCLE_CALVES = 'muscle-calves';
+    public const string MUSCLE_TRAPEZIUS = 'muscle-trapezius';
+    public const string MUSCLE_DELTOIDS = 'muscle-deltoids';
+    public const string MUSCLE_RHOMBOIDS = 'muscle-rhomboids';
+    public const string MUSCLE_BICEPS = 'muscle-biceps';
+    public const string MUSCLE_TRICEPS = 'muscle-triceps';
+    public const string MUSCLE_FOREARMS = 'muscle-forearms';
+    public const string MUSCLE_PECTORALS = 'muscle-pectorals';
+    public const string MUSCLE_RECTUS_ABDOMINIS = 'muscle-rectus-abdominis';
+    public const string MUSCLE_OBLIQUES = 'muscle-obliques';
+    public const string MUSCLE_TRANSVERSUS_ABDOMINIS = 'muscle-transversus-abdominis';
+    public const string MUSCLE_HIP_FLEXORS = 'muscle-hip flexors';
+    public const string MUSCLE_LATISSIMUS_DORSI = 'muscle-latissimus-dorsi';
+    public const string MUSCLE_SPINAL_ERECTORS = 'muscle-spinal-erectors';
+    public const string MUSCLE_GLUTEUS_MAXIMUS = 'muscle-gluteus-maximus';
+    public const string MUSCLE_GLUTEUS_MEDIUS = 'muscle-gluteus-medius';
+    public const string MUSCLE_HAMSTRINGS = 'muscle-hamstrings';
+    public const string MUSCLE_QUADRICEPS = 'muscle-quadriceps';
+    public const string MUSCLE_CALVES = 'muscle-calves';
 
     public function getDependencies(): array
     {

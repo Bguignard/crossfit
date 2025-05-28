@@ -9,17 +9,17 @@ use Doctrine\Persistence\ObjectManager;
 
 class MeasureUnitData extends Fixture
 {
-    public const MEASURE_UNIT_METER = 'measure-unit-meter';
-    public const MEASURE_UNIT_CENTIMETER = 'measure-unit-centimeter';
-    public const MEASURE_UNIT_REPETITION = 'measure-unit-repetition';
-    public const MEASURE_UNIT_SECOND = 'measure-unit-second';
-    public const MEASURE_UNIT_KILOGRAM = 'measure-unit-kilogram';
-    public const MEASURE_UNIT_CALORIE = 'measure-unit-calorie';
-    public const MEASURE_UNIT_KILOMETER = 'measure-unit-kilometer';
-    public const MEASURE_UNIT_MINUTE = 'measure-unit-minute';
-    public const MEASURE_UNIT_HOUR = 'measure-unit-hour';
-    public const MEASURE_UNIT_PERCENT = 'measure-unit-percent';
-    public const MEASURE_UNIT_RPE = 'measure-unit-RPE';
+    public const string MEASURE_UNIT_METER = 'measure-unit-meter';
+    public const string MEASURE_UNIT_CENTIMETER = 'measure-unit-centimeter';
+    public const string MEASURE_UNIT_REPETITION = 'measure-unit-repetition';
+    public const string MEASURE_UNIT_SECOND = 'measure-unit-second';
+    public const string MEASURE_UNIT_KILOGRAM = 'measure-unit-kilogram';
+    public const string MEASURE_UNIT_CALORIE = 'measure-unit-calorie';
+    public const string MEASURE_UNIT_KILOMETER = 'measure-unit-kilometer';
+    public const string MEASURE_UNIT_MINUTE = 'measure-unit-minute';
+    public const string MEASURE_UNIT_HOUR = 'measure-unit-hour';
+    public const string MEASURE_UNIT_PERCENT = 'measure-unit-percent';
+    public const string MEASURE_UNIT_RPE = 'measure-unit-RPE';
 
     public function load(ObjectManager $manager): void
     {

@@ -9,15 +9,15 @@ use Doctrine\Persistence\ObjectManager;
 
 class BodyPartData extends Fixture
 {
-    public const BODY_PART_LEGS = 'body-part-legs';
-    public const BODY_PART_LOWER_BACK = 'body-part-lower-back';
-    public const BODY_PART_UPPER_BACK = 'body-part-upper-back';
-    public const BODY_PART_SHOULDERS = 'body-part-shoulders';
-    public const BODY_PART_ARMS = 'body-part-arms';
-    public const BODY_PART_FOREARMS = 'body-part-forearms';
-    public const BODY_PART_ABS = 'body-part-abs';
-    public const BODY_PART_CHEST = 'body-part-chest';
-    public const BODY_PART_GLUTES = 'body-part-glutes';
+    public const string BODY_PART_LEGS = 'body-part-legs';
+    public const string BODY_PART_LOWER_BACK = 'body-part-lower-back';
+    public const string BODY_PART_UPPER_BACK = 'body-part-upper-back';
+    public const string BODY_PART_SHOULDERS = 'body-part-shoulders';
+    public const string BODY_PART_ARMS = 'body-part-arms';
+    public const string BODY_PART_FOREARMS = 'body-part-forearms';
+    public const string BODY_PART_ABS = 'body-part-abs';
+    public const string BODY_PART_CHEST = 'body-part-chest';
+    public const string BODY_PART_GLUTES = 'body-part-glutes';
 
     public function load(ObjectManager $manager): void
     {

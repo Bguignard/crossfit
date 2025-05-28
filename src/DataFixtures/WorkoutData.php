@@ -17,8 +17,8 @@ use Doctrine\Persistence\ObjectManager;
 
 class WorkoutData extends Fixture implements DependentFixtureInterface
 {
-    public const WORKOUT_FRAN = 'workout-fran';
-    public const WORKOUT_OPEN_17_5 = 'workout-open-17-5';
+    public const string WORKOUT_FRAN = 'workout-fran';
+    public const string WORKOUT_OPEN_17_5 = 'workout-open-17-5';
 
     public function getDependencies(): array
     {

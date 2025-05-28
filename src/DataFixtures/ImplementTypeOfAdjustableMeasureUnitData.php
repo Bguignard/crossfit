@@ -11,13 +11,13 @@ use Doctrine\Persistence\ObjectManager;
 
 class ImplementTypeOfAdjustableMeasureUnitData extends Fixture implements DependentFixtureInterface
 {
-    public const IMPLEMENT_ADJUSTABLE_WEIGHT = 'implement-adjustable-weight';
-    public const IMPLEMENT_ADJUSTABLE_DISTANCE = 'implement-adjustable-distance';
-    public const IMPLEMENT_ADJUSTABLE_HEIGHT = 'implement-adjustable-height';
-    public const IMPLEMENT_ADJUSTABLE_PERCENTAGE_OF_1_RM = 'implement-adjustable-percentage-of-1-rm';
-    public const IMPLEMENT_ADJUSTABLE_ENERGY = 'implement-adjustable-energy';
-    public const IMPLEMENT_ADJUSTABLE_RESISTANCE = 'implement-adjustable-resistance';
-    public const IMPLEMENT_ADJUSTABLE_DIFFICULTY = 'implement-adjustable-difficulty';
+    public const string IMPLEMENT_ADJUSTABLE_WEIGHT = 'implement-adjustable-weight';
+    public const string IMPLEMENT_ADJUSTABLE_DISTANCE = 'implement-adjustable-distance';
+    public const string IMPLEMENT_ADJUSTABLE_HEIGHT = 'implement-adjustable-height';
+    public const string IMPLEMENT_ADJUSTABLE_PERCENTAGE_OF_1_RM = 'implement-adjustable-percentage-of-1-rm';
+    public const string IMPLEMENT_ADJUSTABLE_ENERGY = 'implement-adjustable-energy';
+    public const string IMPLEMENT_ADJUSTABLE_RESISTANCE = 'implement-adjustable-resistance';
+    public const string IMPLEMENT_ADJUSTABLE_DIFFICULTY = 'implement-adjustable-difficulty';
 
     public function load(ObjectManager $manager): void
     {

@@ -9,16 +9,16 @@ use Doctrine\Persistence\ObjectManager;
 
 class WorkoutOriginNameData extends Fixture
 {
-    public const WORKOUT_ORIGIN_NAME_CROSSFIT_GAMES = 'workout-origin-name-crossfit-games';
-    public const WORKOUT_ORIGIN_NAME_CROSSFIT_REGIONALS = 'workout-origin-name-crossfit-regionals';
-    public const WORKOUT_ORIGIN_NAME_CROSSFIT_SEMIFINALS = 'workout-origin-name-crossfit-semifinals';
-    public const WORKOUT_ORIGIN_NAME_CROSSFIT_QUARTERFINALS = 'workout-origin-name-crossfit-quarterfinals';
-    public const WORKOUT_ORIGIN_NAME_CROSSFIT_OPEN_WORKOUT = 'workout-origin-name-crossfit-open-workout';
-    public const WORKOUT_ORIGIN_NAME_GIRLS_WORKOUT = 'workout-origin-name-girls-workout';
-    public const WORKOUT_ORIGIN_NAME_HERO_WORKOUT = 'workout-origin-name-hero-workout';
-    public const WORKOUT_ORIGIN_NAME_SANCTIONAL_EVENTS = 'workout-origin-name-sanctional-events';
-    public const WORKOUT_ORIGIN_NAME_OTHER = 'workout-origin-name-other';
-    public const WORKOUT_ORIGIN_NAME_CUSTOM = 'workout-origin-name-custom';
+    public const string WORKOUT_ORIGIN_NAME_CROSSFIT_GAMES = 'workout-origin-name-crossfit-games';
+    public const string WORKOUT_ORIGIN_NAME_CROSSFIT_REGIONALS = 'workout-origin-name-crossfit-regionals';
+    public const string WORKOUT_ORIGIN_NAME_CROSSFIT_SEMIFINALS = 'workout-origin-name-crossfit-semifinals';
+    public const string WORKOUT_ORIGIN_NAME_CROSSFIT_QUARTERFINALS = 'workout-origin-name-crossfit-quarterfinals';
+    public const string WORKOUT_ORIGIN_NAME_CROSSFIT_OPEN_WORKOUT = 'workout-origin-name-crossfit-open-workout';
+    public const string WORKOUT_ORIGIN_NAME_GIRLS_WORKOUT = 'workout-origin-name-girls-workout';
+    public const string WORKOUT_ORIGIN_NAME_HERO_WORKOUT = 'workout-origin-name-hero-workout';
+    public const string WORKOUT_ORIGIN_NAME_SANCTIONAL_EVENTS = 'workout-origin-name-sanctional-events';
+    public const string WORKOUT_ORIGIN_NAME_OTHER = 'workout-origin-name-other';
+    public const string WORKOUT_ORIGIN_NAME_CUSTOM = 'workout-origin-name-custom';
 
     public function load(ObjectManager $manager): void
     {
