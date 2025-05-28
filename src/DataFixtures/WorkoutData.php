@@ -4,13 +4,13 @@ namespace App\DataFixtures;
 
 use App\Entity\Workout\Block;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
-use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
+use App\Entity\Workout\WorkoutOriginName;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -59,7 +59,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 $workout['timeCap'],
                 $workout['workoutType'],
                 new WorkoutOrigin(
-                    $workout['workoutOrigin']['name'],
+                    $this->getReference($workout['workoutOrigin']['name'], WorkoutOriginName::class),
                     $workout['workoutOrigin']['year'],
                 ),
                 $blocks,
@@ -164,7 +164,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 'timeCap' => 10,
                 'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginNameEnum::GIRLS_WORKOUT,
+                    'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_GIRLS_WORKOUT,
                     'year' => 2010,
                 ],
             ],
@@ -205,7 +205,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 'timeCap' => 40,
                 'workoutType' => WorkoutTypeEnum::FOR_TIME,
                 'workoutOrigin' => [
-                    'name' => WorkoutOriginNameEnum::CROSSFIT_OPEN_WORKOUT,
+                    'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,
                 ],
             ],

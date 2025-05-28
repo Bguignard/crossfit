@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Admin;
 
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
@@ -11,6 +11,7 @@ use App\Repository\Workout\ImplementRepositoryInterface;
 use App\Repository\Workout\MovementClusterRepositoryInterface;
 use App\Repository\Workout\MovementRepositoryInterface;
 use App\Repository\Workout\MovementTypeRepositoryInterface;
+use App\Repository\Workout\MuscleRepositoryInterface;
 use App\Repository\Workout\WorkoutOriginRepositoryInterface;
 use App\Repository\Workout\WorkoutRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,16 +28,18 @@ class FixturesController extends AbstractController
         public readonly MovementTypeRepositoryInterface $movementTypeRepository,
         public readonly WorkoutRepositoryInterface $workoutRepository,
         public readonly WorkoutOriginRepositoryInterface $workoutOriginRepository,
+        public readonly MuscleRepositoryInterface $muscleRepository,
     ) {
     }
 
     public function __invoke(): Response
     {
-        return $this->render('fixtures.html.twig', [
+        return $this->render('admin/fixtures.html.twig', [
             'workoutOriginsNames' => array_column(WorkoutOriginNameEnum::cases(), 'value'),
             'workouts' => $this->workoutRepository->findAll(),
             'movements' => $this->movementRepository->findAll(),
             'bodyParts' => $this->bodyPartRepository->findAll(),
+            'muscles' => $this->muscleRepository->findAll(),
             'movementTypes' => array_column(MovementTypeEnum::cases(), 'value'),
             'implements' => $this->implementRepository->findAll(),
             'workoutTypes' => array_column(WorkoutTypeEnum::cases(), 'value'),

@@ -3,6 +3,7 @@
 namespace App\Repository\Workout;
 
 use App\Entity\Workout\BodyPart;
+use App\Entity\Workout\Muscle;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,5 +20,17 @@ class BodyPartRepository extends ServiceEntityRepository implements BodyPartRepo
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, BodyPart::class);
+    }
+
+    /**
+     * @return Muscle[]
+     */
+    public function getMuscles(): array
+    {
+        return $this->createQueryBuilder('b')
+            ->select('m')
+            ->join('b.muscles', 'm')
+            ->getQuery()
+            ->getResult();
     }
 }

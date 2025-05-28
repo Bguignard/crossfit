@@ -21,8 +21,8 @@ class Movement
     #[ORM\Column(length: 255, nullable: false)]
     private string $name;
 
-    #[ORM\ManyToMany(targetEntity: BodyPart::class, inversedBy: 'movements')]
-    private Collection $bodyParts;
+    #[ORM\ManyToMany(targetEntity: Muscle::class, inversedBy: 'movements')]
+    private Collection $muscles;
 
     #[ORM\Column(nullable: false)]
     private int $difficulty;
@@ -42,7 +42,7 @@ class Movement
         MovementTypeEnum $movementType,
     ) {
         $this->possibleImplements = new ArrayCollection();
-        $this->bodyParts = new ArrayCollection();
+        $this->muscles = new ArrayCollection();
         $this->movementExecutionTimeForMeasureUnits = new ArrayCollection();
         $this->name = $name;
         $this->difficulty = $difficulty;
@@ -67,25 +67,25 @@ class Movement
     }
 
     /**
-     * @return Collection<int, BodyPart>
+     * @return Collection<int, Muscle>
      */
-    public function getBodyParts(): Collection
+    public function getMuscles(): Collection
     {
-        return $this->bodyParts;
+        return $this->muscles;
     }
 
-    public function addBodyPart(BodyPart $bodyPart): static
+    public function addMuscle(Muscle $muscle): static
     {
-        if (!$this->bodyParts->contains($bodyPart)) {
-            $this->bodyParts->add($bodyPart);
+        if (!$this->muscles->contains($muscle)) {
+            $this->muscles->add($muscle);
         }
 
         return $this;
     }
 
-    public function removeBodyPart(BodyPart $bodyPart): static
+    public function removeMuscle(Muscle $muscle): static
     {
-        $this->bodyParts->removeElement($bodyPart);
+        $this->muscles->removeElement($muscle);
 
         return $this;
     }
@@ -107,10 +107,10 @@ class Movement
         return $this->movementType;
     }
 
-    public function setBodyParts(array $bodyParts): Movement
+    public function setMuscles(array $muscles): Movement
     {
-        foreach ($bodyParts as $bodyPart) {
-            $this->addBodyPart($bodyPart);
+        foreach ($muscles as $bodyPart) {
+            $this->addMuscle($bodyPart);
         }
 
         return $this;

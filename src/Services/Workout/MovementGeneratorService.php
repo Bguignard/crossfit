@@ -9,7 +9,7 @@ use App\Repository\Workout\MovementRepositoryInterface;
 readonly class MovementGeneratorService implements MovementGeneratorServiceInterface
 {
     public function __construct(
-        private MovementRepositoryInterface $movementRepository
+        private MovementRepositoryInterface $movementRepository,
     ) {
     }
 

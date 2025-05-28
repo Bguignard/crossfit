@@ -28,7 +28,7 @@ class Workout
     private Collection $blocks;
 
     #[ORM\Column(nullable: true)]
-    private ?int $timeCap;
+    private ?int $timeCap; // time cap in minutes
 
     #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutTypeEnum::class)]
     private ?WorkoutTypeEnum $workoutType;

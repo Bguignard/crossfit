@@ -6,6 +6,8 @@ use App\Entity\Workout\Block;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
 
@@ -15,6 +17,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         private MovementClusterGeneratorService $movementClusterGeneratorService,
         private int $maxNumberOfRounds,
         private WorkoutOriginServiceInterface $workoutOriginService,
+        private MovementGeneratorServiceInterface $movementGeneratorService,
     ) {
     }
 
@@ -52,7 +55,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         ?int $intervalsRestTime,
         ?array $mandatoryMovements,
         ?array $mandatoryImplements,
-        ?int $maxDifficulty
+        ?int $maxDifficulty,
     ): Workout {
         $name = $name ?? $this->generateWorkoutName();
         $workoutType = $workoutType ?? $this->setRandWorkoutType();
@@ -85,12 +88,19 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         return 'Custom workout';
     }
 
-    /**  @return Block[] */
+    /**
+     * @param Movement[]|null  $mandatoryMovements
+     * @param Implement[]|null $availableImplements
+     *
+     * @return Block[]
+     */
     private function generateBlocks(
         int $numberOfDifferentMovements,
         ?array $mandatoryMovements,
         ?int $maxDifficulty,
         ?array $availableImplements,
+        ?array $forbiddenMovements = null,
+        ?int $maximumTimeAllowedInSeconds = null,
     ): array {
         $blocks = [];
         $order = 1;
@@ -102,6 +112,8 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
                 $mandatoryMovements,
                 $maxDifficulty,
                 $availableImplements,
+                $forbiddenMovements,
+                $maximumTimeAllowedInSeconds,
             ),
             null,
         );
@@ -109,24 +121,56 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         return $blocks;
     }
 
-    /**  @return MovementCluster[] */
+    /**
+     * @param Movement[]|null  $mandatoryMovements
+     * @param Movement[]|null  $forbiddenMovements
+     * @param Implement[]|null $availableImplements
+     *
+     * @return MovementCluster[]
+     */
     private function generateWorkoutMovementsClusters(
         int $numberOfDifferentMovements,
         ?array $mandatoryMovements,
         ?int $maxDifficulty,
         ?array $availableImplements,
+        ?array $forbiddenMovements = null,
+        ?int $maximumTimeAllowedInSeconds = null,
     ): array {
         $numberOfGeneratedMovements = 0;
         $movementClusters = [];
+        if (null === $maximumTimeAllowedInSeconds) {
+            $maximumTimeAllowedInSeconds = rand(3, 15);
+        }
 
-        // todo : for each movement cluster, determine the movement type  (gym, cardio, wl) to generate it
+        if (null !== $mandatoryMovements && count($mandatoryMovements) > 0) {
+            shuffle($mandatoryMovements);
+        } else {
+            // todo : for each movement cluster, determine the movement type  (gym, cardio, wl) to generate it
+            $mandatoryMovements = [];
+
+            while (count($mandatoryMovements) < $numberOfDifferentMovements) {
+                $mandatoryMovements[] = $this->movementGeneratorService->generateMovement(
+                    $availableImplements,
+                    $maxDifficulty,
+                    $forbiddenMovements,
+                    $this->getTypeOfMovements());
+            }
+        }
 
         while ($numberOfGeneratedMovements < $numberOfDifferentMovements) {
+            $movement = array_pop($mandatoryMovements);
+            $possibleImplements = $movement->getPossibleImplements();
+            shuffle($possibleImplements);
+            $implement = $possibleImplements[0];
+            $implementMeasureUnit = $implement->getImplementTypeOfAdjustableMeasure()->getMeasureUnits()->first()->getNameAsEnum();
+
             $movementClusters[] = $this->movementClusterGeneratorService->generateMovementCluster(
-                $availableImplements,
-                $maxDifficulty,
-                $mandatoryMovements,
-                $this->getTypeOfMovements(),
+                $movement,
+                $movement->getMovementExecutionTimeForMeasureUnits()->first()->getMeasureUnit(),
+                $maximumTimeAllowedInSeconds,
+                $implement,
+                $implementMeasureUnit,
+                null, // todo : add the intensity value depending on the rx standard
             );
             ++$numberOfGeneratedMovements;
         }

@@ -47,9 +47,4 @@ class MeasureUnitData extends Fixture
             self::MEASURE_UNIT_RPE => MeasureUnitEnum::RPE,
         ];
     }
-
-    public function getByReference(string $reference): MeasureUnitEnum
-    {
-        return $this->getReference($reference);
-    }
 }

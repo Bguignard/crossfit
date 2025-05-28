@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Admin;
 
 use App\Dto\Workout\ImplementDTO;
 use App\Dto\Workout\MovementDTO;
@@ -9,15 +9,17 @@ use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Repository\Workout\ImplementRepositoryInterface;
 use App\Repository\Workout\MovementRepositoryInterface;
+use App\Services\Workout\MovementGeneratorServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class WorkoutController extends AbstractController
+class MovementController extends AbstractController
 {
     public function __construct(
         private ImplementRepositoryInterface $implementRepository,
         private MovementRepositoryInterface $movementRepository,
+        private MovementGeneratorServiceInterface $movementGeneratorService,
     ) {
     }
 
@@ -34,15 +36,15 @@ class WorkoutController extends AbstractController
         );
 
         if ($request->isMethod('POST')) {
-            $movementType ??= MovementTypeEnum::from($request->request->get('movementType'));
-            $maxDifficulty ??= (int) $request->request->get('maxDifficulty');
-            $availableImplementsIds ??= $request->request->get('availableImplements');
-            $forbiddenMovementsIds ??= $request->request->get('forbiddenMovements');
+            $movementType = MovementTypeEnum::from($request->request->get('movementType'));
+            $maxDifficulty = (int) $request->request->get('maxDifficulty') ?? null;
+            $availableImplementsIds = $request->request->get('availableImplements') ?? null;
+            $forbiddenMovementsIds = $request->request->get('forbiddenMovements') ?? null;
 
             $availableImplements = [$this->implementRepository->find($availableImplementsIds)];
             $forbiddenMovements = [$this->movementRepository->find($forbiddenMovementsIds)];
 
-            $generatedMovement = $this->movementRepository->getMovementByDifficultyAndImplementsAndForbiddenMovementsAndType(
+            $generatedMovement = $this->movementGeneratorService->generateMovement(
                 $availableImplements,
                 $maxDifficulty,
                 $forbiddenMovements,
@@ -51,13 +53,13 @@ class WorkoutController extends AbstractController
             $generatedMovement = MovementDTO::createFromEntity($generatedMovement);
         }
 
-        return $this->render('movementGenerator.html.twig',
+        return $this->render('admin/movementGenerator.html.twig',
             [
-                'postAddress' => $this->generateUrl('workout_generator'),
+                'postAddress' => $this->generateUrl('movement_generator'),
                 'implements' => $implements,
                 'movements' => $movements,
                 'movementTypes' => array_column(MovementTypeEnum::cases(), 'value'),
                 'generatedMovement' => $generatedMovement,
-        ]);
+            ]);
     }
 }

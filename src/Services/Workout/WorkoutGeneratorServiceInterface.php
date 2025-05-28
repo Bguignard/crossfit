@@ -22,6 +22,6 @@ interface WorkoutGeneratorServiceInterface
         ?int $intervalsRestTime,
         ?array $mandatoryMovements,
         ?array $mandatoryImplements,
-        ?int $maxDifficulty
+        ?int $maxDifficulty,
     ): Workout;
 }

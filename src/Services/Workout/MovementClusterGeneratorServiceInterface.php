@@ -14,6 +14,6 @@ interface MovementClusterGeneratorServiceInterface
         int $allowedTimeInSeconds,
         array $implements,
         ?MeasureUnitEnum $chosenImplementMeasureUnit,
-        ?float $implementIntensityValue
+        ?float $implementIntensityValue,
     ): MovementCluster;
 }

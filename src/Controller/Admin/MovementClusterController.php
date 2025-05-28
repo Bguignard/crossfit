@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Admin;
 
 use App\Dto\Workout\ImplementDTO;
 use App\Dto\Workout\MovementClusterDTO;
@@ -41,9 +41,9 @@ class MovementClusterController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $selectedImplements = [];
-            $movementId ??= $request->request->get('movement');
+            $movementId = $request->request->get('movement') ?? '';
             $allowedTimeInSeconds = (int) $request->request->get('allowedTimeInSeconds');
-            $selectedImplementsIds ??= $request->request->get('implements');
+            $selectedImplementsIds = $request->request->get('implements') ?? null;
             $measureUnitOfMovement = MeasureUnitEnum::from($request->request->get('measureUnitOfMovement'));
             $measureUnitOfImplement = MeasureUnitEnum::from($request->request->get('measureUnitOfImplement'));
             $implementIntensityValue = (float) $request->request->get('implementIntensityValue');
@@ -72,7 +72,7 @@ class MovementClusterController extends AbstractController
             }
         }
 
-        return $this->render('movementClusterGenerator.html.twig',
+        return $this->render('admin/movementClusterGenerator.html.twig',
             [
                 'errors' => $errors,
                 'postAddress' => $this->generateUrl('movement_cluster_generator'),
@@ -80,6 +80,6 @@ class MovementClusterController extends AbstractController
                 'movements' => $movements,
                 'measureUnits' => array_column(MeasureUnitEnum::cases(), 'value'),
                 'generatedMovementCluster' => $generatedMovementCluster,
-        ]);
+            ]);
     }
 }

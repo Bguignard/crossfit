@@ -16,7 +16,7 @@ readonly class MovementClusterGeneratorService implements MovementClusterGenerat
         int $allowedTimeInSeconds,
         array $implements,
         ?MeasureUnitEnum $chosenImplementMeasureUnit,
-        ?float $implementIntensityValue
+        ?float $implementIntensityValue,
     ): MovementCluster {
         // Implement
         $possibleImplementsIds = array_map(

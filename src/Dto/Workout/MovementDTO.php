@@ -27,7 +27,7 @@ final readonly class MovementDTO
             $movement->getId(),
             $movement->getName(),
             $movement->getDifficulty(),
-            $movement->getBodyParts()->toArray(),
+            $movement->getMuscles()->toArray(),
             $movement->getMovementType(),
         );
     }

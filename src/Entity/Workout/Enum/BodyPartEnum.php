@@ -4,20 +4,13 @@ namespace App\Entity\Workout\Enum;
 
 enum BodyPartEnum: string
 {
-    case PECTORALS = 'pectorals';
-    case LOWER_BACK = 'lower back';
-    case SHOULDERS = 'shoulders';
-    case BICEPS = 'biceps';
-    case TRICEPS = 'triceps';
     case LEGS = 'legs';
-    case ABDOMINALS = 'abdominals';
-    case GLUTES = 'glutes';
-    case HAMSTRINGS = 'hamstrings';
-    case QUADRICEPS = 'quadriceps';
-    case TRAPEZIUS = 'trapezius';
-    case CALVES = 'calves';
-    case RHOMBOIDS = 'rhomboids';
+    case LOWER_BACK = 'lower back';
+    case UPPER_BACK = 'upper back';
+    case SHOULDERS = 'shoulders';
+    case ARMS = 'arms';
     case FOREARMS = 'forearms';
-    case LATISSIMUS_DORSI = 'latissimus dorsi';
-    case HIP_FLEXORS = 'hip flexors';
+    case ABS = 'abs';
+    case CHEST = 'chest';
+    case GLUTES = 'glutes';
 }
