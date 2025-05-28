@@ -12,15 +12,17 @@ use App\Repository\Workout\MovementRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 
 class WorkoutController extends AbstractController
 {
     public function __construct(
-        private ImplementRepositoryInterface $implementRepository,
-        private MovementRepositoryInterface $movementRepository,
+        private readonly ImplementRepositoryInterface $implementRepository,
+        private readonly MovementRepositoryInterface $movementRepository,
     ) {
     }
 
+    #[Route('/workout-generator', name: 'workout-generator')]
     public function __invoke(Request $request): Response
     {
         $generatedMovement = null;
@@ -42,13 +44,13 @@ class WorkoutController extends AbstractController
             $availableImplements = [];
             $forbiddenMovements = [];
 
-            if (null === $maxDifficulty) {
+            if ($maxDifficulty === null) {
                 throw new \InvalidArgumentException('Max difficulty is required');
             } else {
                 $maxDifficulty = (int) $maxDifficulty;
             }
 
-            if (null === $availableImplementsIds) {
+            if ($availableImplementsIds === null) {
                 throw new \InvalidArgumentException('Available implements are required');
             } else {
                 foreach ($availableImplementsIds as $availableImplementsId) {
@@ -56,7 +58,7 @@ class WorkoutController extends AbstractController
                 }
             }
 
-            if (null === $forbiddenMovementsIds) {
+            if ($forbiddenMovementsIds === null) {
                 throw new \InvalidArgumentException('Forbidden movements are required');
             } else {
                 foreach ($forbiddenMovementsIds as $forbiddenMovementsId) {
@@ -75,7 +77,7 @@ class WorkoutController extends AbstractController
 
         return $this->render('admin/movementGenerator.html.twig',
             [
-                'postAddress' => $this->generateUrl('workout_generator'),
+                'postAddress' => $this->generateUrl('workout-generator'),
                 'implements' => $implements,
                 'movements' => $movements,
                 'movementTypes' => array_column(MovementTypeEnum::cases(), 'value'),

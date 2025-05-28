@@ -16,6 +16,7 @@ use App\Repository\Workout\WorkoutOriginRepositoryInterface;
 use App\Repository\Workout\WorkoutRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 
 class FixturesController extends AbstractController
 {
@@ -32,6 +33,7 @@ class FixturesController extends AbstractController
     ) {
     }
 
+    #[Route('/fixtures', name: 'fixtures_list')]
     public function __invoke(): Response
     {
         return $this->render('admin/fixtures.html.twig', [

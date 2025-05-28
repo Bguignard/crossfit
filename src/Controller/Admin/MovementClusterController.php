@@ -15,17 +15,19 @@ use App\Services\Workout\MovementClusterGeneratorServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 
 class MovementClusterController extends AbstractController
 {
     public function __construct(
-        private ImplementRepositoryInterface $implementRepository,
-        private MovementRepositoryInterface $movementRepository,
-        private MovementClusterRepositoryInterface $movementClusterRepository,
-        private MovementClusterGeneratorServiceInterface $movementClusterGeneratorService,
+        private readonly ImplementRepositoryInterface $implementRepository,
+        private readonly MovementRepositoryInterface $movementRepository,
+        private readonly MovementClusterRepositoryInterface $movementClusterRepository,
+        private readonly MovementClusterGeneratorServiceInterface $movementClusterGeneratorService,
     ) {
     }
 
+    #[Route('/movement-cluster-generator', name: 'movement_cluster_generator')]
     public function __invoke(Request $request): Response
     {
         $errors = [];
@@ -48,10 +50,10 @@ class MovementClusterController extends AbstractController
             $measureUnitOfImplement = MeasureUnitEnum::from($request->request->get('measureUnitOfImplement'));
             $implementIntensityValue = (float) $request->request->get('implementIntensityValue');
 
-            if ('' === $movementId) {
+            if ($movementId === '') {
                 throw new \InvalidArgumentException('Movement is required');
             }
-            if (null !== $selectedImplementsIds) {
+            if ($selectedImplementsIds !== null) {
                 $selectedImplements = $this->implementRepository->findBy(['id' => $selectedImplementsIds]);
             }
 

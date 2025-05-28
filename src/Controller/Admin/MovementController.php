@@ -13,16 +13,18 @@ use App\Services\Workout\MovementGeneratorServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 
 class MovementController extends AbstractController
 {
     public function __construct(
-        private ImplementRepositoryInterface $implementRepository,
-        private MovementRepositoryInterface $movementRepository,
-        private MovementGeneratorServiceInterface $movementGeneratorService,
+        private readonly ImplementRepositoryInterface $implementRepository,
+        private readonly MovementRepositoryInterface $movementRepository,
+        private readonly MovementGeneratorServiceInterface $movementGeneratorService,
     ) {
     }
 
+    #[Route('/movement_generator', name: 'movement_generator')]
     public function __invoke(Request $request): Response
     {
         $generatedMovement = null;
