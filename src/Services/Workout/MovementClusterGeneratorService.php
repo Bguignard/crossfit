@@ -34,7 +34,7 @@ readonly class MovementClusterGeneratorService implements MovementClusterGenerat
         }
 
         // Implement measure unit
-        $isImplementMeasureUnitMeasureUnitCorrect = null === $chosenImplementMeasureUnit;
+        $isImplementMeasureUnitMeasureUnitCorrect = $chosenImplementMeasureUnit === null;
         foreach ($implements as $implement) {
             if (!in_array($implement->getId()->toBinary(), $possibleImplementsIds)) {
                 throw new \InvalidArgumentException(sprintf('Implement with id %s is not allowed for movement with id %s', $implement->getId()->toBinary(), $movement->getId()->toBinary()));
@@ -45,7 +45,7 @@ readonly class MovementClusterGeneratorService implements MovementClusterGenerat
                 }
             }
         }
-        if (false === $isImplementMeasureUnitMeasureUnitCorrect) {
+        if ($isImplementMeasureUnitMeasureUnitCorrect === false) {
             throw new \InvalidArgumentException(sprintf('Main implement measure unit %s is not allowed for implement %s', $chosenImplementMeasureUnit->name, $movement->getName()));
         }
 

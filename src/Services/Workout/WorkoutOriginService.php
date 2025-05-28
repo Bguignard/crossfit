@@ -16,7 +16,7 @@ final readonly class WorkoutOriginService
     public function insertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
     {
         $workoutOrigin = $this->workoutOriginRepository->findOneBy(['name' => $name, 'year' => $year]);
-        if (null !== $workoutOrigin) {
+        if ($workoutOrigin !== null) {
             return $workoutOrigin;
         }
 

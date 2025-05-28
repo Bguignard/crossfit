@@ -32,7 +32,7 @@ final class WorkoutResolver implements QueryInterface
     public function resolve(string $id): WorkoutDTO
     {
         $workout = $this->getWorkoutById($id);
-        if (null === $workout) {
+        if ($workout === null) {
             throw new \DomainException(sprintf('Workout with id %s not found', $id));
         }
 

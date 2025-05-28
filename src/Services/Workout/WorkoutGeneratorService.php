@@ -59,7 +59,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
     ): Workout {
         $name = $name ?? $this->generateWorkoutName();
         $workoutType = $workoutType ?? $this->setRandWorkoutType();
-        if (WorkoutTypeEnum::FOR_TIME === $workoutType) {
+        if ($workoutType === WorkoutTypeEnum::FOR_TIME) {
             $workoutTimeCap = $workoutTimeCap ?? rand(5, 60);
         }
         $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
@@ -138,11 +138,11 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
     ): array {
         $numberOfGeneratedMovements = 0;
         $movementClusters = [];
-        if (null === $maximumTimeAllowedInSeconds) {
+        if ($maximumTimeAllowedInSeconds === null) {
             $maximumTimeAllowedInSeconds = rand(3, 15);
         }
 
-        if (null !== $mandatoryMovements && count($mandatoryMovements) > 0) {
+        if ($mandatoryMovements !== null && count($mandatoryMovements) > 0) {
             shuffle($mandatoryMovements);
         } else {
             // todo : for each movement cluster, determine the movement type  (gym, cardio, wl) to generate it
