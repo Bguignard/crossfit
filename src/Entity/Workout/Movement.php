@@ -2,6 +2,7 @@
 
 namespace App\Entity\Workout;
 
+use ApiPlatform\Metadata\ApiResource;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -10,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementRepository::class)]
+#[ApiResource]
 class Movement
 {
     #[ORM\Id]
