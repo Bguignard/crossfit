@@ -1,4 +1,0 @@
-BodyPartEnum:
-  type: enum
-  config:
-    enumClass: App\Entity\Workout\Enum\BodyPartEnum

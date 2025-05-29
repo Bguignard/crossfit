@@ -1,6 +1,0 @@
-BodyPart:
-  type: object
-  config:
-    fields:
-      id: ID!
-      name: String!
