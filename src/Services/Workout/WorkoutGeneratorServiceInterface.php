@@ -2,26 +2,26 @@
 
 namespace App\Services\Workout;
 
-use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutType;
 
 interface WorkoutGeneratorServiceInterface
 {
     public function generateWorkout(
-        ?string $name,
+        string $name,
         array $workoutMovementTypes,
-        ?WorkoutTypeEnum $workoutType,
+        WorkoutType $workoutTypeEntity,
         int $numberOfDifferentMovements,
         int $workoutTimeCap,
+        array $mandatoryMovements,
+        array $bannedMovements,
+        array $availableImplements,
         int $cardioIntensity,
         int $gymnasticIntensity,
         int $weightliftingIntensity,
         int $weightIntensity,
-        bool $intervals,
+        int $difficultyOfMovements,
         ?int $intervalsTime,
         ?int $intervalsRestTime,
-        ?array $mandatoryMovements,
-        ?array $mandatoryImplements,
-        ?int $maxDifficulty,
     ): Workout;
 }

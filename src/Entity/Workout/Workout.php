@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\ConvertibleToDTOInterface;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,7 +12,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
 #[ApiResource]
-class Workout
+class Workout implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -32,8 +32,8 @@ class Workout
     #[ORM\Column(nullable: true)]
     private ?int $timeCap; // time cap in minutes
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutTypeEnum::class)]
-    private ?WorkoutTypeEnum $workoutType;
+    #[ORM\ManyToOne(targetEntity: WorkoutType::class, cascade: ['persist'])]
+    private ?WorkoutType $workoutType;
 
     #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['persist'])]
     private WorkoutOrigin $workoutOrigin;
@@ -42,7 +42,7 @@ class Workout
         ?string $name,
         ?int $numberOfRounds,
         ?int $timeCap,
-        ?WorkoutTypeEnum $workoutType,
+        ?WorkoutType $workoutType,
         WorkoutOrigin $workoutOrigin,
         array $blocks,
     ) {
@@ -122,12 +122,12 @@ class Workout
         return $this;
     }
 
-    public function getWorkoutType(): ?WorkoutTypeEnum
+    public function getWorkoutType(): ?WorkoutType
     {
         return $this->workoutType;
     }
 
-    public function setWorkoutType(?WorkoutTypeEnum $workoutType): static
+    public function setWorkoutType(?WorkoutType $workoutType): static
     {
         $this->workoutType = $workoutType;
 

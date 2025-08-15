@@ -2,10 +2,10 @@
 
 namespace App\Dto\Workout;
 
-use App\Entity\Workout\Block;
+use App\Dto\DTOFromEntityInterface;
 use Symfony\Component\Uid\Uuid;
 
-final readonly class BlockDTO
+final readonly class BlockDTO implements DTOFromEntityInterface
 {
     public function __construct(
         public ?Uuid $id,
@@ -17,21 +17,5 @@ final readonly class BlockDTO
         public array $movementClusters,
         public ?int $restTime,
     ) {
-    }
-
-    public static function createFromEntity(Block $block): self
-    {
-        $movementClusters = [];
-        foreach ($block->getMovementClusters() as $movementCluster) {
-            $movementClusters[] = MovementClusterDTO::createFromEntity($movementCluster);
-        }
-
-        return new self(
-            $block->getId(),
-            $block->getRounds(),
-            $block->getOrderInWorkout(),
-            $movementClusters,
-            $block->getRestTime(),
-        );
     }
 }

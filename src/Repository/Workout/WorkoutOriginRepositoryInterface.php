@@ -6,5 +6,5 @@ use App\Entity\Workout\WorkoutOrigin;
 
 interface WorkoutOriginRepositoryInterface
 {
-    public function persist(WorkoutOrigin $workoutOrigin): WorkoutOrigin;
+    public function persist(WorkoutOrigin $workoutType): WorkoutOrigin;
 }

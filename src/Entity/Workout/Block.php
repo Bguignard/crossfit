@@ -2,6 +2,7 @@
 
 namespace App\Entity\Workout;
 
+use App\Entity\ConvertibleToDTOInterface;
 use App\Repository\Workout\BlockRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -9,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: BlockRepository::class)]
-class Block
+class Block implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

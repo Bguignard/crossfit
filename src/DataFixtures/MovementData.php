@@ -3,10 +3,11 @@
 namespace App\DataFixtures;
 
 use App\Entity\Workout\Enum\MeasureUnitEnum;
-use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
+use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementExecutionTimeForMeasureUnit;
+use App\Entity\Workout\MovementType;
 use App\Entity\Workout\Muscle;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -86,6 +87,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_TOES_TO_RING = 'movement-toes-to-ring';
     public const string MOVEMENT_STRICT_TOES_TO_BAR = 'movement-strict-toes-to-bar';
     public const string MOVEMENT_KNEES_TO_ELBOWS = 'movement-knees-to-elbows';
+    public const string MOVEMENT_KNEES_RAISE = 'movement-knees-raise';
     public const string MOVEMENT_ALTERNATE_PISTOL_SQUAT = 'movement-alternate-pistol-squat';
     public const string MOVEMENT_PISTOL_SQUAT = 'movement-pistol-squat';
     public const string MOVEMENT_TURKISH_GET_UP = 'movement-turkish-get-up';
@@ -117,6 +119,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
         return [
             MuscleData::class,
             ImplementData::class,
+            MovementTypeData::class,
+            MovementDifficultyData::class,
         ];
     }
 
@@ -141,11 +145,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 $movementExecutionTimeForMeasureUnits[] = $movementExecutionTimeForMeasureUnit;
             }
             $manager->flush();
-            $movementObject = (new Movement(
+            $movementObject = new Movement(
                 $movement['name'],
-                $movement['difficulty'],
-                $movement['movementType'],
-            ))
+                $this->getReference($movement['difficulty'], MovementDifficulty::class),
+                $this->getReference($movement['movementType'], MovementType::class),
+            )
                 ->setMuscles($bodyParts)
                 ->setPossibleImplements($possibleImplements)
                 ->setMovementExecutionTimeForMeasureUnits($movementExecutionTimeForMeasureUnits);
@@ -166,8 +170,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_BENCH,
@@ -186,8 +190,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_BENCH,
@@ -206,8 +210,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_BICEPS,
                     MuscleData::MUSCLE_FOREARMS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -225,8 +229,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_HAMSTRINGS,
                     MuscleData::MUSCLE_QUADRICEPS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -247,8 +251,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_TRICEPS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -270,8 +274,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_BICEPS,
                     MuscleData::MUSCLE_FOREARMS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -288,8 +292,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_RHOMBOIDS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -308,8 +312,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -334,8 +338,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -360,8 +364,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -386,8 +390,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 40,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -412,8 +416,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -438,8 +442,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 35,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -464,8 +468,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 35,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -490,8 +494,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 45,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -516,8 +520,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 35,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -541,8 +545,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 45,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -566,8 +570,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 35,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -592,8 +596,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 45,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -620,8 +624,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -647,8 +651,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -674,8 +678,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 55,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -701,8 +705,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 55,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -728,8 +732,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 65,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -753,8 +757,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -776,8 +780,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -802,8 +806,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -830,8 +834,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -857,8 +861,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -883,8 +887,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -908,8 +912,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -936,8 +940,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -961,8 +965,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::BODYBUILDING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -986,8 +990,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
@@ -1006,8 +1010,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
@@ -1026,8 +1030,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_JUMP_ROPE,
                     ImplementData::IMPLEMENT_HEAVY_JUMP_ROPE,
@@ -1045,8 +1049,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
@@ -1063,8 +1067,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
@@ -1084,8 +1088,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_MEDICINE_BALL,
                 ],
@@ -1102,8 +1106,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_HAMSTRINGS,
                     MuscleData::MUSCLE_FOREARMS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_KETTLEBELL,
                     ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
@@ -1121,8 +1125,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_HAMSTRINGS,
                     MuscleData::MUSCLE_FOREARMS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_KETTLEBELL,
                     ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
@@ -1141,8 +1145,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1167,8 +1171,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_ROWER,
                 ],
@@ -1188,8 +1192,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_HAMSTRINGS,
                     MuscleData::MUSCLE_CALVES,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE_ERG,
                 ],
@@ -1213,8 +1217,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_ASSAULT_BIKE,
                 ],
@@ -1238,8 +1242,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_BICEPS,
                     MuscleData::MUSCLE_TRICEPS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_SKI_ERG,
                 ],
@@ -1266,8 +1270,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1291,8 +1295,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
@@ -1317,8 +1321,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 15,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_DUMBBELL,
@@ -1350,8 +1354,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 15,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BARBELL,
                     ImplementData::IMPLEMENT_DUMBBELL,
@@ -1383,8 +1387,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 55,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1409,8 +1413,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 75,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1435,8 +1439,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 65,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1453,8 +1457,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_RHOMBOIDS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1471,8 +1475,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_RHOMBOIDS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1493,8 +1497,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_OBLIQUES,
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1515,8 +1519,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_OBLIQUES,
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1535,8 +1539,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_RINGS,
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
@@ -1556,8 +1560,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_OBLIQUES,
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1577,8 +1581,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_OBLIQUES,
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_RINGS,
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
@@ -1602,8 +1606,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_RHOMBOIDS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1619,8 +1623,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 90,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1635,8 +1639,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1651,8 +1655,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1667,8 +1671,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
@@ -1685,8 +1689,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 90,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_ELITE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
@@ -1703,8 +1707,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1719,8 +1723,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1735,8 +1739,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_ELITE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
@@ -1753,8 +1757,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 80,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_ELITE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
@@ -1775,8 +1779,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_HIP_FLEXORS,
                 ],
-                'difficulty' => 40,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1796,8 +1800,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_HIP_FLEXORS,
                 ],
-                'difficulty' => 40,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_RINGS,
                 ],
@@ -1817,8 +1821,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_HIP_FLEXORS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1838,8 +1842,29 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_FOREARMS,
                     MuscleData::MUSCLE_HIP_FLEXORS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2500,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_KNEES_RAISE,
+                'name' => 'Knees raise',
+                'muscles' => [
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_BICEPS,
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_HIP_FLEXORS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_PULL_UP_BAR,
                 ],
@@ -1856,8 +1881,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1873,8 +1898,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -1892,8 +1917,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRICEPS,
                     MuscleData::MUSCLE_PECTORALS,
                 ],
-                'difficulty' => 60,
-                'movementType' => MovementTypeEnum::WEIGHTLIFTING,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
                 'implements' => [
                     ImplementData::IMPLEMENT_KETTLEBELL,
                 ],
@@ -1911,8 +1936,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_HIP_FLEXORS,
                     MuscleData::MUSCLE_QUADRICEPS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
@@ -1929,8 +1954,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
@@ -1947,8 +1972,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 50,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_GHD,
                 ],
@@ -1968,8 +1993,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_QUADRICEPS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::STRONGMAN,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
                 'implements' => [
                     ImplementData::IMPLEMENT_KETTLEBELL,
                     ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
@@ -1998,8 +2023,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_QUADRICEPS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::STRONGMAN,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
@@ -2022,8 +2047,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::STRONGMAN,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
@@ -2046,8 +2071,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::STRONGMAN,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
                 'implements' => [
                     ImplementData::IMPLEMENT_SLED,
                 ],
@@ -2064,8 +2089,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_HIP_FLEXORS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -2083,8 +2108,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -2102,8 +2127,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE,
                 ],
@@ -2123,8 +2148,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_SPINAL_ERECTORS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_BIKE,
                 ],
@@ -2145,8 +2170,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_PECTORALS,
                     MuscleData::MUSCLE_LATISSIMUS_DORSI,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -2165,8 +2190,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRAPEZIUS,
                     MuscleData::MUSCLE_LATISSIMUS_DORSI,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::CARDIO,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
                 'implements' => [
                     ImplementData::IMPLEMENT_PADDLE,
                 ],
@@ -2184,8 +2209,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
@@ -2203,8 +2228,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                 ],
@@ -2223,8 +2248,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                     MuscleData::MUSCLE_HAMSTRINGS,
                 ],
-                'difficulty' => 10,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BOX,
                     ImplementData::IMPLEMENT_KETTLEBELL,
@@ -2251,8 +2276,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_TRAPEZIUS,
                 ],
-                'difficulty' => 70,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_LINE,
                 ],
@@ -2268,8 +2293,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 20,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                     ImplementData::IMPLEMENT_BAND,
                 ],
@@ -2285,8 +2310,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
                     MuscleData::MUSCLE_GLUTEUS_MEDIUS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::PLYOMETRIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_PLYOMETRIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
@@ -2304,8 +2329,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
                     MuscleData::MUSCLE_DELTOIDS,
                 ],
-                'difficulty' => 30,
-                'movementType' => MovementTypeEnum::GYMNASTIC,
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
                 ],
                 'movementExecutionTimeForMeasureUnits' => [

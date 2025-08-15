@@ -2,11 +2,11 @@
 
 namespace App\Dto\Workout;
 
+use App\Dto\DTOFromEntityInterface;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
-use App\Entity\Workout\Workout;
 use Symfony\Component\Uid\Uuid;
 
-final readonly class WorkoutDTO
+final readonly class WorkoutDTO implements DTOFromEntityInterface
 {
     public function __construct(
         public ?Uuid $id,
@@ -20,23 +20,5 @@ final readonly class WorkoutDTO
         public ?WorkoutTypeEnum $workoutType,
         public ?WorkoutOriginDTO $workoutOrigin,
     ) {
-    }
-
-    public static function createFromEntity(Workout $workout): self
-    {
-        $blocks = [];
-        foreach ($workout->getBlocks() as $block) {
-            $blocks[] = BlockDTO::createFromEntity($block);
-        }
-
-        return new self(
-            $workout->getId(),
-            $workout->getName(),
-            $workout->getNumberOfRounds(),
-            $blocks,
-            $workout->getTimeCap(),
-            $workout->getWorkoutType(),
-            WorkoutOriginDTO::createFromEntity($workout->getWorkoutOrigin()),
-        );
     }
 }

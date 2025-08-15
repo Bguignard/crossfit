@@ -2,12 +2,12 @@
 
 namespace App\Dto\Workout;
 
+use App\Dto\DTOFromEntityInterface;
 use App\Entity\Workout\Enum\BodyPartEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
-use App\Entity\Workout\Movement;
 use Symfony\Component\Uid\Uuid;
 
-final readonly class MovementDTO
+final readonly class MovementDTO implements DTOFromEntityInterface
 {
     public function __construct(
         public ?Uuid $id,
@@ -19,16 +19,5 @@ final readonly class MovementDTO
         public array $bodyParts,
         public MovementTypeEnum $movementType,
     ) {
-    }
-
-    public static function createFromEntity(Movement $movement): self
-    {
-        return new self(
-            $movement->getId(),
-            $movement->getName(),
-            $movement->getDifficulty(),
-            $movement->getMuscles()->toArray(),
-            $movement->getMovementType(),
-        );
     }
 }

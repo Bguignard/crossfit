@@ -2,12 +2,12 @@
 
 namespace App\Dto\Workout;
 
+use App\Dto\DTOFromEntityInterface;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Entity\Workout\Implement;
-use App\Entity\Workout\MovementCluster;
 use Symfony\Component\Uid\Uuid;
 
-final readonly class MovementClusterDTO
+final readonly class MovementClusterDTO implements DTOFromEntityInterface
 {
     public function __construct(
         public ?Uuid $id,
@@ -21,18 +21,5 @@ final readonly class MovementClusterDTO
          */
         public array $implements,
     ) {
-    }
-
-    public static function createFromEntity(MovementCluster $movementCluster): self
-    {
-        return new self(
-            $movementCluster->getId(),
-            $movementCluster->getRepetitions(),
-            $movementCluster->getRepUnit(),
-            MovementDTO::createFromEntity($movementCluster->getMovement()),
-            $movementCluster->getImplementIntensityAdjustmentValue(),
-            $movementCluster->getImplementIntensityUnit(),
-            $movementCluster->getImplements()->toArray(),
-        );
     }
 }

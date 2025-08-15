@@ -10,6 +10,8 @@ use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutType;
+use App\Repository\Workout\WorkoutTypeRepository;
 
 final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceInterface
 {
@@ -24,6 +26,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
     /**
      * How to generate a workout:
      * Criteria :
+     * - Workout name
      * - Workout movement types selection (gyms, cardio, etc.) and dominance (50% gyms, 50% cardio)
      * - Workout type (AMRAP, EMOM, for time, etc.)
      * - Workout time cap
@@ -41,51 +44,54 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
      * - Max Difficulty ?
      */
     public function generateWorkout(
-        ?string $name,
+        string $name,
         array $workoutMovementTypes,
-        ?WorkoutTypeEnum $workoutType,
+        WorkoutType $workoutTypeEntity,
         int $numberOfDifferentMovements,
         int $workoutTimeCap,
+        array $mandatoryMovements,
+        array $bannedMovements,
+        array $availableImplements,
         int $cardioIntensity,
         int $gymnasticIntensity,
         int $weightliftingIntensity,
         int $weightIntensity,
-        bool $intervals,
+        int $difficultyOfMovements,
         ?int $intervalsTime,
         ?int $intervalsRestTime,
-        ?array $mandatoryMovements,
-        ?array $mandatoryImplements,
-        ?int $maxDifficulty,
     ): Workout {
-        $name = $name ?? $this->generateWorkoutName();
-        $workoutType = $workoutType ?? $this->setRandWorkoutType();
-        if ($workoutType === WorkoutTypeEnum::FOR_TIME) {
-            $workoutTimeCap = $workoutTimeCap ?? rand(5, 60);
-        }
+
         $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
+
+        // if intervals we need the time and the rest time
+        if($workoutTypeEntity->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
+            if( $intervalsTime === null || $intervalsRestTime === null) {
+                throw new \InvalidArgumentException('Intervals time and rest time must be provided for INTERVALS workout type.');
+            }
+        }
+
+        $numberOfRounds = $this->getNumberOfForTimeWorkoutRounds($numberOfDifferentMovements);
+        $timePerBlock = $workoutTimeCap / $numberOfRounds;
 
         $workout = new Workout(
             $name,
-            $this->getNumberOfForTimeWorkoutRounds($numberOfDifferentMovements),
+            $numberOfRounds,
             $workoutTimeCap,
-            $workoutType,
+            $workoutTypeEntity,
             $workoutOrigin,
             $this->generateBlocks(
                 $numberOfDifferentMovements,
                 $mandatoryMovements,
-                $maxDifficulty,
-                $mandatoryImplements,
+                $difficultyOfMovements,
+                $availableImplements,
+                $bannedMovements,
+                $timePerBlock,
             ),
         );
 
         // todo : set reps
 
         return $workout;
-    }
-
-    private function generateWorkoutName(): string
-    {
-        return 'Custom workout';
     }
 
     /**
@@ -176,11 +182,6 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         }
 
         return $movementClusters;
-    }
-
-    private function setRandWorkoutType(): WorkoutTypeEnum
-    {
-        return WorkoutTypeEnum::cases()[rand(0, count(WorkoutTypeEnum::cases()) - 1)];
     }
 
     /*

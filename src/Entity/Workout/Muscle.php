@@ -3,6 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use App\Entity\ConvertibleToDTOInterface;
 use App\Entity\Workout\Enum\MuscleEnum;
 use App\Repository\Workout\MuscleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -12,7 +13,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MuscleRepository::class)]
 #[ApiResource]
-class Muscle
+class Muscle implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

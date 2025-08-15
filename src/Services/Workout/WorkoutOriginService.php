@@ -6,7 +6,7 @@ use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Repository\Workout\WorkoutOriginRepositoryInterface;
 
-final readonly class WorkoutOriginService
+final readonly class WorkoutOriginService implements WorkoutOriginServiceInterface
 {
     public function __construct(
         private WorkoutOriginRepositoryInterface $workoutOriginRepository,
@@ -21,7 +21,7 @@ final readonly class WorkoutOriginService
         }
 
         $workoutOrigin = new WorkoutOrigin(
-            WorkoutOriginNameEnum::CUSTOM,
+            $this->workoutOriginRepository->findOneBy(['name' => WorkoutOriginNameEnum::CUSTOM->value, 'year' => $year]),
             $year
         );
 

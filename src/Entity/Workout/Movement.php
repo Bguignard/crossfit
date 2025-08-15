@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\Workout\Enum\MovementTypeEnum;
+use App\Entity\ConvertibleToDTOInterface;
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,7 +12,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementRepository::class)]
 #[ApiResource]
-class Movement
+class Movement implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -26,11 +26,11 @@ class Movement
     #[ORM\ManyToMany(targetEntity: Muscle::class, inversedBy: 'movements')]
     private Collection $muscles;
 
-    #[ORM\Column(nullable: false)]
-    private int $difficulty;
+    #[ORM\ManyToOne(targetEntity: MovementDifficulty::class, cascade: ['persist'])]
+    private MovementDifficulty $difficulty;
 
-    #[ORM\Column(type: 'string', enumType: MovementTypeEnum::class)]
-    private MovementTypeEnum $movementType;
+    #[ORM\ManyToOne(targetEntity: MovementType::class, cascade: ['persist'])]
+    private MovementType $movementType;
 
     #[ORM\ManyToMany(targetEntity: Implement::class, inversedBy: 'movements')]
     private Collection $possibleImplements;
@@ -40,8 +40,8 @@ class Movement
 
     public function __construct(
         string $name,
-        int $difficulty,
-        MovementTypeEnum $movementType,
+        MovementDifficulty $difficulty,
+        MovementType $movementType,
     ) {
         $this->possibleImplements = new ArrayCollection();
         $this->muscles = new ArrayCollection();
@@ -92,19 +92,19 @@ class Movement
         return $this;
     }
 
-    public function getDifficulty(): ?int
+    public function getDifficulty(): MovementDifficulty
     {
         return $this->difficulty;
     }
 
-    public function setDifficulty(int $difficulty): static
+    public function setDifficulty(MovementDifficulty $difficulty): static
     {
         $this->difficulty = $difficulty;
 
         return $this;
     }
 
-    public function getMovementType(): MovementTypeEnum
+    public function getMovementType(): MovementType
     {
         return $this->movementType;
     }

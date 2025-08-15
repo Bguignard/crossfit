@@ -2,6 +2,7 @@
 
 namespace App\Entity\Workout;
 
+use App\Entity\ConvertibleToDTOInterface;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Repository\Workout\MovementClusterRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -10,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementClusterRepository::class)]
-class MovementCluster
+class MovementCluster implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
