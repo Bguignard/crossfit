@@ -2,9 +2,12 @@
 
 namespace App\Repository\Workout;
 
+use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
+use App\Entity\Workout\MovementDifficulty;
+use App\Entity\Workout\MovementType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -69,5 +72,21 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         $result = $queryBuilder->getQuery()->getResult();
 
         return $result[rand(0, count($result) - 1)];
+    }
+
+    /*
+     * @param MovementType[] $movementTypes
+     * @param MovementDifficulty[] $difficulties
+     * @return Movement[]
+     */
+    public function getMovementsByMovementTypesAndDifficulty(array $movementTypes, array $difficulties): array
+    {
+        return $this->createQueryBuilder('m')
+            ->where('m.movementType IN (:movementType)')
+            ->andWhere('m.difficulty IN (:difficulty)')
+            ->setParameter('difficulty', $difficulties)
+            ->setParameter('movementType', $movementTypes)
+            ->getQuery()
+            ->getResult();
     }
 }

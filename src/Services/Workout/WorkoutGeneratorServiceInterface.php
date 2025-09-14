@@ -23,5 +23,6 @@ interface WorkoutGeneratorServiceInterface
         int $difficultyOfMovements,
         ?int $intervalsTime,
         ?int $intervalsRestTime,
+        ?int $maxNumberOfRounds = 10,
     ): Workout;
 }

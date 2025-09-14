@@ -23,11 +23,11 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
-    App\Services\Workout\WorkoutGeneratorServiceInterface:
-        class: App\Services\Workout\WorkoutGeneratorService
-        public: true
-        arguments:
-            $maxNumberOfRounds: '%maxNumberOfRounds%'
+#    App\Services\Workout\WorkoutGeneratorServiceInterface:
+#        class: App\Services\Workout\WorkoutGeneratorService
+#        public: true
+#        arguments:
+#            $maxNumberOfRounds: '%maxNumberOfRounds%'
 
     App\Services\Workout\MovementGeneratorServiceInterface:
         class: App\Services\Workout\MovementGeneratorService

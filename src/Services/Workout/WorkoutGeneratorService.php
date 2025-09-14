@@ -17,7 +17,6 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
 {
     public function __construct(
         private MovementClusterGeneratorService $movementClusterGeneratorService,
-        private int $maxNumberOfRounds,
         private WorkoutOriginServiceInterface $workoutOriginService,
         private MovementGeneratorServiceInterface $movementGeneratorService,
     ) {
@@ -59,6 +58,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         int $difficultyOfMovements,
         ?int $intervalsTime,
         ?int $intervalsRestTime,
+        ?int $maxNumberOfRounds = 10,
     ): Workout {
 
         $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
