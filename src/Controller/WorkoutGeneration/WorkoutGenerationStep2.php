@@ -11,6 +11,7 @@ use App\Entity\Workout\WorkoutType;
 use App\Repository\Workout\MovementRepository;
 use App\Repository\WorkoutGeneration\WorkoutGenerationRepository;
 use App\Services\Workout\MovementDifficultyService;
+use App\Services\Workout\WorkoutGeneratorService;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
@@ -21,13 +22,12 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class WorkoutGenerationStep2 extends AbstractController
 {
-
     public function __construct(
         private readonly WorkoutGenerationRepository $workoutGenerationRepository,
         private readonly MovementRepository $movementRepository,
         private readonly MovementDifficultyService $movementDifficultyService,
-    )
-    {
+        private readonly WorkoutGeneratorService $workoutGeneratorService,
+    ) {
     }
 
     #[Route('/workout-generator-step-2', name: 'workout-generator-step-2')]
@@ -36,12 +36,13 @@ class WorkoutGenerationStep2 extends AbstractController
         $workoutGenerationId = $request->query->get('workout_generation_id') ?? null;
         if ($workoutGenerationId === null) {
             $this->addFlash('error', 'No workout generation ID provided. Please start from the beginning.');
+
             return $this->redirectToRoute('workout-generator');
         }
 
         $workoutGeneration = $this->workoutGenerationRepository->find($workoutGenerationId);
         $difficultiesEntitiesToGet = $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty());
-        $compatibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficulty($workoutGeneration->getMovementTypes()->toArray(), $difficultiesEntitiesToGet);
+        $compatibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficulty($workoutGeneration->getMovementTypes()->toArray(), $difficultiesEntitiesToGet, $workoutGeneration->getBannedMovements()->toArray());
         $form = $this->getForm($compatibleMovements, $workoutGeneration->getMovementGenerationType(), $workoutGeneration->getWorkoutType());
 
         $form->handleRequest($request);
@@ -52,41 +53,22 @@ class WorkoutGenerationStep2 extends AbstractController
 
             if ($errors->count() > 0) {
                 $this->addFlash('error', 'There were errors in your form submission.');
-//                return $this->redirectToRoute('workout-generator');
+                //                return $this->redirectToRoute('workout-generator');
             }
 
-            $workoutName = $data['workout_name'];
-            $timeCap = $data['timecap_in_seconds'];
-            $workoutType = $data['workout_type'];
-            $movementTypes = $data['movement_types'];
-            $numberOfDifferentMovements = $data['number_of_different_movements'];
-            $selectedMovements = $data['required_movements'];
-            $bannedMovements = $data['banned_movements'];
-            $selectedImplements = $data['implements_you_have'];
-            $bodyParts = $data['workout_for_the'];
+            if ($workoutGeneration->getMovementGenerationType() === WorkoutMovementGenerationTypeEnum::BODY_PART) {
+                $workoutGeneration->setMandatoryBodyParts($data['body_parts']);
+            } elseif ($workoutGeneration->getMovementGenerationType() === WorkoutMovementGenerationTypeEnum::MOVEMENT) {
+                $workoutGeneration->setMandatoryMovements($data['required_movements']);
+            }
 
-            dd(
-                $workoutName,
-                $movementTypes,
-                $workoutType,
-                $numberOfDifferentMovements,
-                $timeCap,
-                $selectedMovements,
-                $bannedMovements,
-                $selectedImplements,
-                $bodyParts,
-            );
+            $workoutGeneration->setBannedMovements($data['banned_movements']);
+            $workoutGeneration->setAvailableImplements($data['implements_you_have']);
 
-//            $this->workoutGeneratorService->generateWorkout(
-//                $workoutName,
-//                $movementTypes,
-//                $workoutType,
-//                $numberOfDifferentMovements,
-//                $timeCap,
-//                $selectedMovements,
-//                $bannedMovements,
-//                $selectedImplements,
-//            );
+            $workoutGeneration = $this->workoutGenerationRepository->save($workoutGeneration);
+
+            $generatedWorkout = $this->workoutGeneratorService->generateWorkout($workoutGeneration);
+            dd($generatedWorkout);
         }
 
         return $this->render('admin/movementGeneratorStep2.html.twig', [
@@ -99,8 +81,7 @@ class WorkoutGenerationStep2 extends AbstractController
         array $compatibleMovements,
         WorkoutMovementGenerationTypeEnum $buildWorkoutMovementsFrom,
         WorkoutType $workoutType,
-    ) : FormInterface
-    {
+    ): FormInterface {
         $form = $this->createFormBuilder()
             ->add('banned_movements', EntityType::class, [
                 'label' => 'Movements you do NOT want in your workout',
@@ -124,18 +105,19 @@ class WorkoutGenerationStep2 extends AbstractController
                 ],
             ]);
 
-        if($buildWorkoutMovementsFrom === WorkoutMovementGenerationTypeEnum::BODY_PART) {
+        if ($buildWorkoutMovementsFrom === WorkoutMovementGenerationTypeEnum::BODY_PART) {
             $form
-                ->add('workout_for_the', EntityType::class, [
+                ->add('mandatory_body_parts', EntityType::class, [
+                    'label' => 'Muscles you want to use in your workout',
                     'class' => BodyPart::class,
                     'choice_label' => 'name',
                     'multiple' => true,
                     'expanded' => true,
                 ]);
-        }
-        else{
+        } else {
             $form
                 ->add('required_movements', EntityType::class, [
+                    'label' => 'Movements you want in your workout (you can select or less than the number of different movements you chose in step 1)',
                     'class' => Movement::class,
                     'choice_label' => 'name',
                     'multiple' => true,
@@ -146,7 +128,7 @@ class WorkoutGenerationStep2 extends AbstractController
                     'choices' => $compatibleMovements,
                 ]);
         }
-        if($workoutType->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
+        if ($workoutType->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
             $form
                 ->add('intervals_time', IntegerType::class, [
                     'label' => 'Interval time (in seconds)',

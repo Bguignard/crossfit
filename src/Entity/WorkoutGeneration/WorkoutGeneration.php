@@ -80,8 +80,7 @@ class WorkoutGeneration
         WorkoutType $workoutType,
         MovementDifficulty $movementDifficulty,
         WorkoutMovementGenerationTypeEnum $movementGenerationType,
-    )
-    {
+    ) {
         $this->name = $name;
         $this->timeCap = $timeCap;
         $this->movementTypes = new ArrayCollection();
@@ -106,6 +105,7 @@ class WorkoutGeneration
     public function setId(?Uuid $id): WorkoutGeneration
     {
         $this->id = $id;
+
         return $this;
     }
 
@@ -117,6 +117,7 @@ class WorkoutGeneration
     public function setName(string $name): WorkoutGeneration
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -128,6 +129,7 @@ class WorkoutGeneration
     public function setTimeCap(int $timeCap): WorkoutGeneration
     {
         $this->timeCap = $timeCap;
+
         return $this;
     }
 
@@ -136,6 +138,7 @@ class WorkoutGeneration
         if (!$this->movementTypes->contains($movementType)) {
             $this->movementTypes->add($movementType);
         }
+
         return $this;
     }
 
@@ -147,6 +150,7 @@ class WorkoutGeneration
     public function setMovementTypes(Collection $movementTypes): WorkoutGeneration
     {
         $this->movementTypes = $movementTypes;
+
         return $this;
     }
 
@@ -158,6 +162,7 @@ class WorkoutGeneration
     public function setNumberOfDifferentMovements(int $numberOfDifferentMovements): WorkoutGeneration
     {
         $this->numberOfDifferentMovements = $numberOfDifferentMovements;
+
         return $this;
     }
 
@@ -169,6 +174,7 @@ class WorkoutGeneration
     public function setWorkoutType(WorkoutType $workoutType): WorkoutGeneration
     {
         $this->workoutType = $workoutType;
+
         return $this;
     }
 
@@ -180,6 +186,7 @@ class WorkoutGeneration
     public function setMovementDifficulty(MovementDifficulty $movementDifficulty): WorkoutGeneration
     {
         $this->movementDifficulty = $movementDifficulty;
+
         return $this;
     }
 
@@ -191,6 +198,7 @@ class WorkoutGeneration
     public function setMovementGenerationType(WorkoutMovementGenerationTypeEnum $movementGenerationType): WorkoutGeneration
     {
         $this->movementGenerationType = $movementGenerationType;
+
         return $this;
     }
 
@@ -199,6 +207,7 @@ class WorkoutGeneration
         if (!$this->bannedMovements->contains($bannedMovement)) {
             $this->bannedMovements->add($bannedMovement);
         }
+
         return $this;
     }
 
@@ -210,6 +219,7 @@ class WorkoutGeneration
     public function setBannedMovements(Collection $bannedMovements): WorkoutGeneration
     {
         $this->bannedMovements = $bannedMovements;
+
         return $this;
     }
 
@@ -218,6 +228,7 @@ class WorkoutGeneration
         if (!$this->availableImplements->contains($availableImplement)) {
             $this->availableImplements->add($availableImplement);
         }
+
         return $this;
     }
 
@@ -229,6 +240,7 @@ class WorkoutGeneration
     public function setAvailableImplements(Collection $availableImplements): WorkoutGeneration
     {
         $this->availableImplements = $availableImplements;
+
         return $this;
     }
 
@@ -237,6 +249,7 @@ class WorkoutGeneration
         if (!$this->mandatoryBodyParts->contains($mandatoryBodyPart)) {
             $this->mandatoryBodyParts->add($mandatoryBodyPart);
         }
+
         return $this;
     }
 
@@ -248,6 +261,7 @@ class WorkoutGeneration
     public function setMandatoryBodyParts(Collection $mandatoryBodyParts): WorkoutGeneration
     {
         $this->mandatoryBodyParts = $mandatoryBodyParts;
+
         return $this;
     }
 
@@ -261,12 +275,14 @@ class WorkoutGeneration
         if (!$this->mandatoryMovements->contains($mandatoryMovement)) {
             $this->mandatoryMovements->add($mandatoryMovement);
         }
+
         return $this;
     }
 
     public function setMandatoryMovements(Collection $mandatoryMovements): WorkoutGeneration
     {
         $this->mandatoryMovements = $mandatoryMovements;
+
         return $this;
     }
 
@@ -278,6 +294,7 @@ class WorkoutGeneration
     public function setIntervalsTime(?int $intervalsTime): WorkoutGeneration
     {
         $this->intervalsTime = $intervalsTime;
+
         return $this;
     }
 
@@ -289,6 +306,7 @@ class WorkoutGeneration
     public function setIntervalsRestTime(?int $intervalsRestTime): WorkoutGeneration
     {
         $this->intervalsRestTime = $intervalsRestTime;
+
         return $this;
     }
 
@@ -300,6 +318,7 @@ class WorkoutGeneration
     public function setNumberOfRounds(?int $numberOfRounds): WorkoutGeneration
     {
         $this->numberOfRounds = $numberOfRounds;
+
         return $this;
     }
 }

@@ -1683,7 +1683,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
             ],
             [
                 'reference' => self::MOVEMENT_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
-                'name' => 'Deficit Handstand Push Up',
+                'name' => 'Deficit Strict Handstand Push Up',
                 'muscles' => [
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_TRICEPS,
@@ -1694,6 +1694,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'implements' => [
                     ImplementData::IMPLEMENT_PARALLETTE,
                     ImplementData::IMPLEMENT_PLATE,
+                    ImplementData::IMPLEMENT_RINGS,
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 4000,
@@ -1733,7 +1734,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_HANDSTAND_PUSH_UP,
-                'name' => 'Deficit Handstand Push Up',
+                'name' => 'Wall Facing Deficit Handstand Push Up',
                 'muscles' => [
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_TRICEPS,
@@ -1751,7 +1752,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
             ],
             [
                 'reference' => self::MOVEMENT_WALL_FACING_DEFICIT_STRICT_HANDSTAND_PUSH_UP,
-                'name' => 'Deficit Handstand Push Up',
+                'name' => 'Wall facing Deficit Strict Handstand Push Up',
                 'muscles' => [
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_TRICEPS,

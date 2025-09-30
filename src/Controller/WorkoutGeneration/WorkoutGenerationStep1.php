@@ -20,12 +20,11 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class WorkoutGenerationStep1 extends AbstractController
 {
-
     public function __construct(
         private readonly WorkoutGenerationRepository $workoutGenerationRepository,
-    )
-    {
+    ) {
     }
+
     #[Route('/workout-generator', name: 'workout-generator')]
     public function new(Request $request): Response
     {
@@ -39,9 +38,9 @@ class WorkoutGenerationStep1 extends AbstractController
 
             if ($errors->count() > 0) {
                 $this->addFlash('error', 'There were errors in your form submission.');
-            }
-            else{
+            } else {
                 $generatedWorkout = $this->generateNewWorkout($data);
+
                 return $this->redirectToRoute('workout-generator-step-2', ['workout_generation_id' => $generatedWorkout->getId()->toString()]);
             }
         }
@@ -52,7 +51,7 @@ class WorkoutGenerationStep1 extends AbstractController
         ]);
     }
 
-    private function getForm() : FormInterface
+    private function getForm(): FormInterface
     {
         return $this->createFormBuilder()
             ->add(
@@ -83,12 +82,12 @@ class WorkoutGenerationStep1 extends AbstractController
                 ])
             ->add(
                 'movement_types', EntityType::class, [
-                'label' => 'What type of movements do you want in your workout?',
-                'class' => MovementType::class,
-                'choice_label' => 'name',
-                'multiple' => true,
-                'expanded' => true,
-            ])
+                    'label' => 'What type of movements do you want in your workout?',
+                    'class' => MovementType::class,
+                    'choice_label' => 'name',
+                    'multiple' => true,
+                    'expanded' => true,
+                ])
             ->add(
                 'number_of_different_movements',
                 IntegerType::class,
@@ -104,19 +103,19 @@ class WorkoutGenerationStep1 extends AbstractController
                 ])
             ->add(
                 'workout_type', EntityType::class, [
-                'class' => WorkoutType::class,
-                'choice_label' => 'name',
-                'multiple' => false,
-                'expanded' => true,
-            ])
+                    'class' => WorkoutType::class,
+                    'choice_label' => 'name',
+                    'multiple' => false,
+                    'expanded' => true,
+                ])
             ->add(
                 'difficulty_of_movements', EntityType::class, [
-                'label' => 'Difficulty of your workout?',
-                'class' => MovementDifficulty::class,
-                'choice_label' => 'name',
-                'multiple' => false,
-                'expanded' => true,
-            ])
+                    'label' => 'Difficulty of your workout?',
+                    'class' => MovementDifficulty::class,
+                    'choice_label' => 'name',
+                    'multiple' => false,
+                    'expanded' => true,
+                ])
             ->add('build_workout_movements_from', EnumType::class, [
                 'label' => 'Build the workout from',
                 'class' => WorkoutMovementGenerationTypeEnum::class,
@@ -127,7 +126,7 @@ class WorkoutGenerationStep1 extends AbstractController
             ->getForm();
     }
 
-    private function generateNewWorkout(array $data) : WorkoutGeneration
+    private function generateNewWorkout(array $data): WorkoutGeneration
     {
         $workoutName = $data['workout_name'];
         $timeCap = $data['timecap_in_seconds'];

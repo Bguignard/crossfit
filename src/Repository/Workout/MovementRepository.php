@@ -2,12 +2,9 @@
 
 namespace App\Repository\Workout;
 
-use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
-use App\Entity\Workout\MovementDifficulty;
-use App\Entity\Workout\MovementType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -77,15 +74,38 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
     /*
      * @param MovementType[] $movementTypes
      * @param MovementDifficulty[] $difficulties
+     * @param Movement[] $movementsToExclude
      * @return Movement[]
      */
-    public function getMovementsByMovementTypesAndDifficulty(array $movementTypes, array $difficulties): array
+    public function getMovementsByMovementTypesAndDifficulty(array $movementTypes, array $difficulties, array $movementsToExclude): array
     {
-        return $this->createQueryBuilder('m')
-            ->where('m.movementType IN (:movementType)')
-            ->andWhere('m.difficulty IN (:difficulty)')
-            ->setParameter('difficulty', $difficulties)
-            ->setParameter('movementType', $movementTypes)
+        $query = $this->createQueryBuilder('m');
+
+        $typeOrX = $query->expr()->orX();
+        foreach ($movementTypes as $idx => $movementType) {
+            $typeOrX->add('m.movementType = :movementType'.$idx);
+            $query->setParameter('movementType'.$idx, $movementType);
+        }
+        if (count($movementTypes) > 0) {
+            $query->andWhere($typeOrX);
+        }
+
+        $diffOrX = $query->expr()->orX();
+        foreach ($difficulties as $idx => $difficulty) {
+            $diffOrX->add('m.difficulty = :difficulty'.$idx);
+            $query->setParameter('difficulty'.$idx, $difficulty);
+        }
+        if (count($difficulties) > 0) {
+            $query->andWhere($diffOrX);
+        }
+
+        if (count($movementsToExclude) > 0) {
+            $movementsToExclude = array_map(fn (Movement $movement) => $movement->getId()->toString(), $movementsToExclude);
+            $query->andWhere('m.id NOT IN (:movementsToExclude)')
+                ->setParameter('movementsToExclude', $movementsToExclude);
+        }
+
+        return $query
             ->getQuery()
             ->getResult();
     }
