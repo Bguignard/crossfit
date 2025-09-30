@@ -3,6 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use App\Entity\ConvertibleToDTOInterface;
 use App\Entity\Workout\Enum\BodyPartEnum;
 use App\Repository\Workout\BodyPartRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -10,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: BodyPartRepository::class)]
 #[ApiResource]
-class BodyPart
+class BodyPart implements ConvertibleToDTOInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

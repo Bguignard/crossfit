@@ -10,20 +10,24 @@ use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
+use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\MovementRepository;
 
 final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceInterface
 {
     public function __construct(
         private MovementClusterGeneratorService $movementClusterGeneratorService,
-        private int $maxNumberOfRounds,
         private WorkoutOriginServiceInterface $workoutOriginService,
         private MovementGeneratorServiceInterface $movementGeneratorService,
+        private MovementRepository $movementRepository,
+        private MovementDifficultyService $movementDifficultyService,
     ) {
     }
 
     /**
      * How to generate a workout:
      * Criteria :
+     * - Workout name
      * - Workout movement types selection (gyms, cardio, etc.) and dominance (50% gyms, 50% cardio)
      * - Workout type (AMRAP, EMOM, for time, etc.)
      * - Workout time cap
@@ -40,80 +44,90 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
      * - Versions of workout with different numbers of reps or different types of movements
      * - Max Difficulty ?
      */
-    public function generateWorkout(
-        ?string $name,
-        array $workoutMovementTypes,
-        ?WorkoutTypeEnum $workoutType,
-        int $numberOfDifferentMovements,
-        int $workoutTimeCap,
-        int $cardioIntensity,
-        int $gymnasticIntensity,
-        int $weightliftingIntensity,
-        int $weightIntensity,
-        bool $intervals,
-        ?int $intervalsTime,
-        ?int $intervalsRestTime,
-        ?array $mandatoryMovements,
-        ?array $mandatoryImplements,
-        ?int $maxDifficulty,
-    ): Workout {
-        $name = $name ?? $this->generateWorkoutName();
-        $workoutType = $workoutType ?? $this->setRandWorkoutType();
-        if ($workoutType === WorkoutTypeEnum::FOR_TIME) {
-            $workoutTimeCap = $workoutTimeCap ?? rand(5, 60);
+    public function generateWorkout(WorkoutGeneration $workoutGeneration): Workout
+    {
+        if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new \InvalidArgumentException('The number of mandatory movements cannot be greater than the number of different movements.');
         }
-        $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
+        $maximumNumberOfRounds = 10;
 
-        $workout = new Workout(
-            $name,
-            $this->getNumberOfForTimeWorkoutRounds($numberOfDifferentMovements),
-            $workoutTimeCap,
-            $workoutType,
-            $workoutOrigin,
-            $this->generateBlocks(
-                $numberOfDifferentMovements,
-                $mandatoryMovements,
-                $maxDifficulty,
-                $mandatoryImplements,
-            ),
+        $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
+        $numberOfRounds = $workoutGeneration->getNumberOfRounds() ?? $this->getNumberOfForTimeWorkoutRounds($workoutGeneration->getNumberOfDifferentMovements(), $maximumNumberOfRounds);
+
+        // Movements generation
+        $movementsInWorkout = $workoutGeneration->getMandatoryMovements()->toArray();
+
+        if (count($movementsInWorkout) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            while (count($workoutGeneration->getMandatoryMovements()) < $workoutGeneration->getNumberOfDifferentMovements()) {
+                $potentialMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficulty(
+                    $workoutGeneration->getMovementTypes()->toArray(),
+                    $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
+                    $movementsInWorkout,
+                );
+
+                dump($potentialMovements);
+
+                $movementsInWorkout[] = $potentialMovements[array_rand($potentialMovements)];
+            }
+        }
+
+        if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::FOR_WEIGHT) {
+            // todo : return a workout here
+        }
+
+        // if intervals we need the time and the rest time
+        if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
+            if ($workoutGeneration->getIntervalsTime() === null || $workoutGeneration->getIntervalsRestTime() === null) {
+                throw new \InvalidArgumentException('Intervals time and rest time must be provided for INTERVALS workout type.');
+            }
+
+            // todo : implement intervals workout generation
+
+            // todo : return a workout here
+        }
+
+        $blocks = $this->generateBlocks(
+            $numberOfRounds,
+            $movementsInWorkout,
+            $workoutGeneration->getAvailableImplements()->toArray(),
+            $workoutGeneration->getTimeCap(),
         );
 
-        // todo : set reps
-
-        return $workout;
-    }
-
-    private function generateWorkoutName(): string
-    {
-        return 'Custom workout';
+        return new Workout(
+            $workoutGeneration->getName(),
+            $numberOfRounds,
+            $workoutGeneration->getTimeCap(),
+            $workoutGeneration->getWorkoutType(),
+            $workoutOrigin,
+            $blocks,
+        );
     }
 
     /**
-     * @param Movement[]|null  $mandatoryMovements
+     * @param Movement[]       $movements
      * @param Implement[]|null $availableImplements
      *
      * @return Block[]
      */
     private function generateBlocks(
-        int $numberOfDifferentMovements,
-        ?array $mandatoryMovements,
-        ?int $maxDifficulty,
-        ?array $availableImplements,
-        ?array $forbiddenMovements = null,
-        ?int $maximumTimeAllowedInSeconds = null,
+        int $numberOfRounds,
+        array $movements,
+        array $availableImplements,
+        int $generalTimeCap,
+        int $restTimeInSeconds = 0,
+        int $maxMovementsPerBlock = 3,
     ): array {
         $blocks = [];
         $order = 1;
+        $timePerBlock = intdiv($generalTimeCap, $numberOfRounds);
+
         $blocks[] = new Block(
-            1,
+            $numberOfRounds,
             $order,
             $this->generateWorkoutMovementsClusters(
-                $numberOfDifferentMovements,
-                $mandatoryMovements,
-                $maxDifficulty,
+                $movements,
                 $availableImplements,
-                $forbiddenMovements,
-                $maximumTimeAllowedInSeconds,
+                $timePerBlock,
             ),
             null,
         );
@@ -122,74 +136,64 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
     }
 
     /**
-     * @param Movement[]|null  $mandatoryMovements
-     * @param Movement[]|null  $forbiddenMovements
+     * @param Movement[]       $movementsInWorkout
      * @param Implement[]|null $availableImplements
      *
      * @return MovementCluster[]
      */
     private function generateWorkoutMovementsClusters(
-        int $numberOfDifferentMovements,
-        ?array $mandatoryMovements,
-        ?int $maxDifficulty,
-        ?array $availableImplements,
-        ?array $forbiddenMovements = null,
+        array $movementsInWorkout,
+        array $availableImplements,
         ?int $maximumTimeAllowedInSeconds = null,
     ): array {
-        $numberOfGeneratedMovements = 0;
+        // what we already have
         $movementClusters = [];
+
+        // let's set an implement for movement
         if ($maximumTimeAllowedInSeconds === null) {
             $maximumTimeAllowedInSeconds = rand(3, 15);
         }
 
-        if ($mandatoryMovements !== null && count($mandatoryMovements) > 0) {
-            shuffle($mandatoryMovements);
-        } else {
-            // todo : for each movement cluster, determine the movement type  (gym, cardio, wl) to generate it
-            $mandatoryMovements = [];
+        // todo : for each movement cluster, determine the movement type  (gym, cardio, wl) to generate it
 
-            while (count($mandatoryMovements) < $numberOfDifferentMovements) {
-                $mandatoryMovements[] = $this->movementGeneratorService->generateMovement(
-                    $availableImplements,
-                    $maxDifficulty,
-                    $forbiddenMovements,
-                    $this->getTypeOfMovements());
-            }
-        }
-
-        while ($numberOfGeneratedMovements < $numberOfDifferentMovements) {
-            $movement = array_pop($mandatoryMovements);
-            $possibleImplements = $movement->getPossibleImplements();
+        foreach ($movementsInWorkout as $movementInWorkout) {
+            $possibleImplements = $movementInWorkout->getPossibleImplements()->toArray();
             shuffle($possibleImplements);
-            $implement = $possibleImplements[0];
+            $implement = null;
+            $availableImplementsIds = array_map(fn (Implement $implement) => $implement->getId()->toString(), $availableImplements);
+            foreach ($possibleImplements as $possibleImplement) {
+                if (in_array($possibleImplement->getId()->toString(), $availableImplementsIds)) {
+                    $implement = $possibleImplement;
+                    break;
+                }
+            }
+
+            if ($implement === null) {
+                throw new \InvalidArgumentException('No available implement found for movement '.$movementInWorkout->getName());
+            }
+
             $implementMeasureUnit = $implement->getImplementTypeOfAdjustableMeasure()->getMeasureUnits()->first()->getNameAsEnum();
 
             $movementClusters[] = $this->movementClusterGeneratorService->generateMovementCluster(
-                $movement,
-                $movement->getMovementExecutionTimeForMeasureUnits()->first()->getMeasureUnit(),
+                $movementInWorkout,
+                $movementInWorkout->getMovementExecutionTimeForMeasureUnits()->first()->getMeasureUnit(),
                 $maximumTimeAllowedInSeconds,
                 $implement,
                 $implementMeasureUnit,
                 null, // todo : add the intensity value depending on the rx standard
             );
-            ++$numberOfGeneratedMovements;
         }
 
         return $movementClusters;
     }
 
-    private function setRandWorkoutType(): WorkoutTypeEnum
-    {
-        return WorkoutTypeEnum::cases()[rand(0, count(WorkoutTypeEnum::cases()) - 1)];
-    }
-
     /*
       * The fewer movements, the more rounds
     */
-    private function getNumberOfForTimeWorkoutRounds(int $numberOfDifferentMovements): int
+    private function getNumberOfForTimeWorkoutRounds(int $numberOfDifferentMovements, int $maxNumberOfRounds): int
     {
         if ($numberOfDifferentMovements <= 3) {
-            return rand(4, $this->maxNumberOfRounds);
+            return rand(4, $maxNumberOfRounds);
         }
         if ($numberOfDifferentMovements <= 5) {
             return rand(3, 5);

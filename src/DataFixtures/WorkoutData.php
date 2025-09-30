@@ -4,13 +4,13 @@ namespace App\DataFixtures;
 
 use App\Entity\Workout\Block;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
-use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementCluster;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
+use App\Entity\Workout\WorkoutType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -26,6 +26,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
             ImplementData::class,
             MovementData::class,
             ImplementTypeOfAdjustableMeasureUnitData::class,
+            WorkoutTypeData::class,
         ];
     }
 
@@ -57,7 +58,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 $workout['name'],
                 $workout['numberOfRounds'],
                 $workout['timeCap'],
-                $workout['workoutType'],
+                $this->getReference($workout['workoutType'], WorkoutType::class),
                 new WorkoutOrigin(
                     $this->getReference($workout['workoutOrigin']['name'], WorkoutOriginName::class),
                     $workout['workoutOrigin']['year'],
@@ -162,7 +163,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 1,
                 'timeCap' => 10,
-                'workoutType' => WorkoutTypeEnum::FOR_TIME,
+                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_GIRLS_WORKOUT,
                     'year' => 2010,
@@ -203,7 +204,7 @@ class WorkoutData extends Fixture implements DependentFixtureInterface
                 ],
                 'numberOfRounds' => 10,
                 'timeCap' => 40,
-                'workoutType' => WorkoutTypeEnum::FOR_TIME,
+                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
                 'workoutOrigin' => [
                     'name' => WorkoutOriginNameData::WORKOUT_ORIGIN_NAME_CROSSFIT_OPEN_WORKOUT,
                     'year' => 2017,

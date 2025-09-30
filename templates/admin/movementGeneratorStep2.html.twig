@@ -1,0 +1,32 @@
+{% extends "/base.html.twig" %}
+
+{% block title %}Workout generator {% endblock %}
+
+{% block body %}
+    <h1>Generate a workout</h1>
+    <h2>Choose your movements</h2>
+    <h3>Actual choices :</h3>
+    <ul>
+        <li>Name : {{ workout_generation.name }}</li>
+        <li>Time cap : {{ workout_generation.timeCap }} seconds</li>
+        <li>Movement types :
+            <ul>
+                {% for type in workout_generation.movementTypes %}
+                    <li>{{ type.name }}</li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li>Number of different movements : {{ workout_generation.numberOfDifferentMovements }}</li>
+        <li>Workout type : {{ workout_generation.workoutType.name }}</li>
+        <li>Difficulty : {{ workout_generation.movementDifficulty.name }}</li>
+        <li>Generation based on : {{ workout_generation.movementGenerationType.name }}</li>
+    </ul>
+
+
+    <div class="container">
+        <form action="#" method="post">
+            {{ form_widget(form) }}
+            <input type="submit" />
+        </form>
+    </div>
+{% endblock %}
