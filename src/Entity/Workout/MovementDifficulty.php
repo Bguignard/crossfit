@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\ConvertibleToDTOInterface;
+
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Repository\Workout\MovementDifficultyRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementDifficultyRepository::class)]
 #[ApiResource]
-class MovementDifficulty implements ConvertibleToDTOInterface
+class MovementDifficulty
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

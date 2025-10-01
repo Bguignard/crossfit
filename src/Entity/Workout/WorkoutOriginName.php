@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\ConvertibleToDTOInterface;
+
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Repository\Workout\WorkoutOriginRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutOriginRepository::class)]
 #[ApiResource]
-class WorkoutOriginName implements ConvertibleToDTOInterface
+class WorkoutOriginName
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

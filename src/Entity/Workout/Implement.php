@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\ConvertibleToDTOInterface;
+
 use App\Entity\Workout\Enum\ImplementEnum;
 use App\Repository\Workout\ImplementRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ImplementRepository::class)]
 #[ApiResource]
-class Implement implements ConvertibleToDTOInterface
+class Implement
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

@@ -3,7 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\ConvertibleToDTOInterface;
+
 use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Repository\Workout\MeasureUnitRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MeasureUnitRepository::class)]
 #[ApiResource]
-class MeasureUnit implements ConvertibleToDTOInterface
+class MeasureUnit
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
