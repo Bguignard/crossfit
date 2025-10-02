@@ -20,10 +20,12 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_PULL_UP = 'movement-pull-up';
     public const string MOVEMENT_DEADLIFT = 'movement-deadlift';
     public const string MOVEMENT_SHOULDER_PRESS = 'movement-shoulder-press';
+    public const string MOVEMENT_SHOULDER_TO_OVERHEAD = 'movement-shoulder-to-overhead';
     public const string MOVEMENT_CHIN_UP = 'movement-chin-up';
     public const string MOVEMENT_CHEST_TO_BAR_PULL_UP = 'movement-chest-to-bar-pull-up';
     public const string MOVEMENT_THRUSTER = 'movement-thruster';
     public const string MOVEMENT_PUSH_PRESS = 'movement-push-press';
+    public const string MOVEMENT_JERK = 'movement-jerk';
     public const string MOVEMENT_PUSH_JERK = 'movement-push-jerk';
     public const string MOVEMENT_SPLIT_JERK = 'movement-split-jerk';
     public const string MOVEMENT_SQUAT_CLEAN = 'movement-squat-clean';
@@ -31,6 +33,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_CLEAN = 'movement-clean';
     public const string MOVEMENT_CLEAN_AND_JERK = 'movement-clean-and-jerk';
     public const string MOVEMENT_HANG_POWER_CLEAN = 'movement-hang-power-clean';
+    public const string MOVEMENT_HANG_CLEAN = 'movement-hang-clean';
     public const string MOVEMENT_HANG_SQUAT_CLEAN = 'movement-hang-squat-clean';
     public const string MOVEMENT_LOW_HANG_POWER_CLEAN = 'movement-low-hang-power-clean';
     public const string MOVEMENT_LOW_HANG_SQUAT_CLEAN = 'movement-low-hang-squat-clean';
@@ -44,10 +47,12 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_MUSCLE_CLEAN = 'movement-muscle-clean';
     public const string MOVEMENT_MUSCLE_SNATCH = 'movement-muscle-snatch';
     public const string MOVEMENT_OVERHEAD_SQUAT = 'movement-overhead-squat';
+    public const string MOVEMENT_WALKING_LUNGE = 'movement-walking-lunge';
     public const string MOVEMENT_FRONT_RACK_WALKING_LUNGE = 'movement-front-rack-walking-lunge';
     public const string MOVEMENT_OVERHEAD_WALKING_LUNGE = 'movement-overhead-walking-lunge';
     public const string MOVEMENT_BACK_RACK_WALKING_LUNGE = 'movement-back-rack-walking-lunge';
     public const string MOVEMENT_SQUAT = 'movement-squat';
+    public const string MOVEMENT_AIR_SQUAT = 'movement-air-squat';
     public const string MOVEMENT_FRONT_SQUAT = 'movement-front-squat';
     public const string MOVEMENT_BACK_SQUAT = 'movement-back-squat';
     public const string MOVEMENT_SINGLE_UNDER = 'movement-single-under';
@@ -65,10 +70,13 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_SKI_ERG = 'movement-ski-erg';
     public const string MOVEMENT_BURPEE = 'movement-burpee';
     public const string MOVEMENT_BURPEE_BOX_JUMP_OVER = 'movement-burpee-box-jump-over';
+    public const string MOVEMENT_BURPEE_BOX_JUMP = 'movement-burpee-box-jump';
     public const string MOVEMENT_BURPEE_OVER = 'movement-burpee-over';
     public const string MOVEMENT_BURPEE_OVER_FACING = 'movement-burpee-over-facing';
+    public const string MOVEMENT_BURPEE_DEADLIFT = 'movement-burpee-deadlift';
     public const string MOVEMENT_BURPEE_PULL_UP = 'movement-burpee-pull-up';
     public const string MOVEMENT_BURPEE_MUSCLE_UP = 'movement-burpee-muscle-up';
+    public const string MOVEMENT_BURPEE_ROPE_CLIMB = 'movement-burpee-rope-climb';
     public const string MOVEMENT_BURPEE_CHEST_TO_BAR_PULL_UP = 'movement-burpee-chest-to-bar-pull-up';
     public const string MOVEMENT_STRICT_CHEST_TO_BAR_PULL_UP = 'movement-strict_chest-to-bar-pull-up';
     public const string MOVEMENT_STRICT_PULL_UP = 'movement-strict-pull-up';
@@ -97,6 +105,8 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_GHD_BACK_EXTENSION = 'movement-ghd-back-extension';
     public const string MOVEMENT_GHD_HIP_EXTENSION = 'movement-ghd-hip-extension';
     public const string MOVEMENT_CARRY = 'movement-carry';
+    public const string MOVEMENT_BUDDY_CARRY = 'movement-buddy-carry';
+    public const string MOVEMENT_FARMER_CARRY = 'movement-farmer-carry';
     public const string MOVEMENT_SLED_DRAG = 'movement-sled-drag';
     public const string MOVEMENT_SLED_PUSH = 'movement-sled-push';
     public const string MOVEMENT_SLED_PULL = 'movement-sled-pull';
@@ -115,6 +125,14 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_BROAD_JUMP = 'movement-broad-jump';
     public const string MOVEMENT_BURPEE_BROAD_JUMP = 'movement-burpee-broad-jump';
     public const string MOVEMENT_PUSH_UP = 'movement-push-up';
+    public const string MOVEMENT_PIKE_PUSH_UP = 'movement-pike-push-up';
+    public const string MOVEMENT_HAND_RELEASE_PUSH_UP = 'movement-hand-release-push-up';
+    public const string MOVEMENT_ROPE_CLIMB = 'movement-rope-climb';
+    public const string MOVEMENT_LEGLESS_ROPE_CLIMB = 'movement-legless-rope-climb';
+    public const string MOVEMENT_SUMO_DEADLIFT_HIGH_PULL = 'movement-sumo-deadlift-high-pull';
+    public const string MOVEMENT_FORWARD_ROLL = 'movement-forward-roll';
+    public const string MOVEMENT_BEAR_CRAWL = 'movement-bear-crawl';
+    public const string MOVEMENT_DEAD_HANG = 'movement-dead-hang';
 
     public function getDependencies(): array
     {
@@ -269,6 +287,28 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
             ],
             [
+                'reference' => self::MOVEMENT_SHOULDER_TO_OVERHEAD,
+                'name' => 'Shoulder To Overhead',
+                'muscles' => [
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2300,
+                ],
+            ],
+            [
                 'reference' => self::MOVEMENT_CHIN_UP,
                 'name' => 'Chin Up',
                 'muscles' => [
@@ -358,6 +398,32 @@ class MovementData extends Fixture implements DependentFixtureInterface
             [
                 'reference' => self::MOVEMENT_PUSH_JERK,
                 'name' => 'Push Jerk',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_CALVES,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_JERK,
+                'name' => 'Jerk',
                 'muscles' => [
                     MuscleData::MUSCLE_QUADRICEPS,
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
@@ -516,6 +582,32 @@ class MovementData extends Fixture implements DependentFixtureInterface
             [
                 'reference' => self::MOVEMENT_HANG_POWER_CLEAN,
                 'name' => 'Hang Power Clean',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_SPINAL_ERECTORS,
+                    MuscleData::MUSCLE_CALVES,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1200,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_HANG_CLEAN,
+                'name' => 'Hang Clean',
                 'muscles' => [
                     MuscleData::MUSCLE_QUADRICEPS,
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
@@ -878,6 +970,33 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
             ],
             [
+                'reference' => self::MOVEMENT_WALKING_LUNGE,
+                'name' => 'Walking Lunge',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                ],
+            ],
+            [
                 'reference' => self::MOVEMENT_FRONT_RACK_WALKING_LUNGE,
                 'name' => 'Front Rack Walking Lunge',
                 'muscles' => [
@@ -959,7 +1078,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
             ],
             [
                 'reference' => self::MOVEMENT_SQUAT,
-                'name' => 'Front Squat',
+                'name' => 'Squat',
                 'muscles' => [
                     MuscleData::MUSCLE_QUADRICEPS,
                     MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
@@ -981,6 +1100,23 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     ImplementData::IMPLEMENT_WORM,
                     ImplementData::IMPLEMENT_HUSAFELL_BAG,
                 ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_AIR_SQUAT,
+                'name' => 'Air Squat',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                    MuscleData::MUSCLE_SPINAL_ERECTORS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_BODYBUILDING,
+                'implements' => [],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 1000,
                 ],
@@ -1324,7 +1460,6 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_DELTOIDS,
                     MuscleData::MUSCLE_PECTORALS,
                     MuscleData::MUSCLE_CALVES,
-                    MuscleData::MUSCLE_HAMSTRINGS,
                 ],
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
@@ -1332,6 +1467,32 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 3000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_BURPEE_BOX_JUMP,
+                'name' => 'Burpee Box Jump',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_PECTORALS,
+                    MuscleData::MUSCLE_CALVES,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BOX,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
                 ],
             ],
             [
@@ -1427,6 +1588,39 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
             ],
             [
+                'reference' => self::MOVEMENT_BURPEE_DEADLIFT,
+                'name' => 'Burpee Deadlift',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_SPINAL_ERECTORS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_PECTORALS,
+                    MuscleData::MUSCLE_CALVES,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_CARDIO,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3500,
+                ],
+            ],
+            [
                 'reference' => self::MOVEMENT_BURPEE_PULL_UP,
                 'name' => 'Burpee Pull Up',
                 'muscles' => [
@@ -1468,6 +1662,34 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_PECTORALS,
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
+                    MuscleData::MUSCLE_BICEPS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 6000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_BURPEE_ROPE_CLIMB,
+                'name' => 'Burpee Rope Climb',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_PECTORALS,
+                    MuscleData::MUSCLE_CALVES,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                    MuscleData::MUSCLE_BICEPS,
                 ],
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
@@ -1494,6 +1716,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                     MuscleData::MUSCLE_PECTORALS,
                     MuscleData::MUSCLE_CALVES,
                     MuscleData::MUSCLE_HAMSTRINGS,
+                    MuscleData::MUSCLE_BICEPS,
                 ],
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
@@ -2068,6 +2291,52 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
             ],
             [
+                'reference' => self::MOVEMENT_BUDDY_CARRY,
+                'name' => 'Buddy/Partner Carry',
+                'muscles' => [
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_BICEPS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_CALVES,
+                    MuscleData::MUSCLE_QUADRICEPS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PARTNER
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 700,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_FARMER_CARRY,
+                'name' => 'Farmer Carry',
+                'muscles' => [
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_BICEPS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_CALVES,
+                    MuscleData::MUSCLE_QUADRICEPS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
+                'implements' => [
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_BARBELL,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 700,
+                ],
+            ],
+            [
                 'reference' => self::MOVEMENT_SLED_DRAG,
                 'name' => 'Sled Drag',
                 'muscles' => [
@@ -2392,6 +2661,164 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 1500,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_PIKE_PUSH_UP,
+                'name' => 'Pike Push Up',
+                'muscles' => [
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_PECTORALS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_HAND_RELEASE_PUSH_UP,
+                'name' => 'Hand Release Push Up',
+                'muscles' => [
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_PECTORALS,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 1500,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_ROPE_CLIMB,
+                'name' => 'Rope Climb',
+                'muscles' => [
+                    MuscleData::MUSCLE_BICEPS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_HIP_FLEXORS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_ROPE
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 10000,
+                    MeasureUnitEnum::METER->value => 5000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_LEGLESS_ROPE_CLIMB,
+                'name' => 'Legless Rope Climb',
+                'muscles' => [
+                    MuscleData::MUSCLE_BICEPS,
+                    MuscleData::MUSCLE_LATISSIMUS_DORSI,
+                    MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+                    MuscleData::MUSCLE_OBLIQUES,
+                    MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_HIP_FLEXORS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_ROPE
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 10000,
+                    MeasureUnitEnum::METER->value => 5000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_SUMO_DEADLIFT_HIGH_PULL,
+                'name' => 'Sumo Deadlift High Pull',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_SPINAL_ERECTORS,
+                    MuscleData::MUSCLE_CALVES,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 2000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_FORWARD_ROLL,
+                'name' => 'Forward Roll',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_BEAR_CRAWL,
+                'name' => 'Bear Crawl',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_HIP_FLEXORS,
+                    MuscleData::MUSCLE_HAMSTRINGS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::METER->value => 2000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_DEAD_HANG,
+                'name' => 'Dead Hang',
+                'muscles' => [
+                    MuscleData::MUSCLE_FOREARMS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
+                'implements' => [
+                    ImplementData::IMPLEMENT_PULL_UP_BAR,
+                    ImplementData::IMPLEMENT_RINGS,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::SECOND->value => 2000,
                 ],
             ],
         ];
