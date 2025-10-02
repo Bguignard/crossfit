@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-
 use App\Repository\Workout\WorkoutOriginRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;

@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Repository\Workout\MovementDifficultyRepository;
 use Doctrine\ORM\Mapping as ORM;

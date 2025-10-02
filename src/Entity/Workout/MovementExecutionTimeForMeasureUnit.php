@@ -2,7 +2,6 @@
 
 namespace App\Entity\Workout;
 
-
 use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Repository\Workout\MovementExecutionTimeForMeasureUnitRepository;
 use Doctrine\ORM\Mapping as ORM;

@@ -25,9 +25,11 @@ class MovementData extends Fixture implements DependentFixtureInterface
     public const string MOVEMENT_THRUSTER = 'movement-thruster';
     public const string MOVEMENT_PUSH_PRESS = 'movement-push-press';
     public const string MOVEMENT_PUSH_JERK = 'movement-push-jerk';
+    public const string MOVEMENT_SPLIT_JERK = 'movement-split-jerk';
     public const string MOVEMENT_SQUAT_CLEAN = 'movement-squat-clean';
     public const string MOVEMENT_POWER_CLEAN = 'movement-power-clean';
     public const string MOVEMENT_CLEAN = 'movement-clean';
+    public const string MOVEMENT_CLEAN_AND_JERK = 'movement-clean-and-jerk';
     public const string MOVEMENT_HANG_POWER_CLEAN = 'movement-hang-power-clean';
     public const string MOVEMENT_HANG_SQUAT_CLEAN = 'movement-hang-squat-clean';
     public const string MOVEMENT_LOW_HANG_POWER_CLEAN = 'movement-low-hang-power-clean';
@@ -380,6 +382,32 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
             ],
             [
+                'reference' => self::MOVEMENT_SPLIT_JERK,
+                'name' => 'Split Jerk',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_CALVES,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 3000,
+                ],
+            ],
+            [
                 'reference' => self::MOVEMENT_SQUAT_CLEAN,
                 'name' => 'Squat Clean',
                 'muscles' => [
@@ -455,6 +483,34 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 2000,
+                ],
+            ],
+            [
+                'reference' => self::MOVEMENT_CLEAN_AND_JERK,
+                'name' => 'Clean and Jerk',
+                'muscles' => [
+                    MuscleData::MUSCLE_QUADRICEPS,
+                    MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+                    MuscleData::MUSCLE_GLUTEUS_MEDIUS,
+                    MuscleData::MUSCLE_TRAPEZIUS,
+                    MuscleData::MUSCLE_SPINAL_ERECTORS,
+                    MuscleData::MUSCLE_DELTOIDS,
+                    MuscleData::MUSCLE_TRICEPS,
+                    MuscleData::MUSCLE_CALVES,
+                ],
+                'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
+                'movementType' => MovementTypeData::MOVEMENT_TYPE_WEIGHTLIFTING,
+                'implements' => [
+                    ImplementData::IMPLEMENT_BARBELL,
+                    ImplementData::IMPLEMENT_KETTLEBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_KETTLEBELLS,
+                    ImplementData::IMPLEMENT_DUMBBELL,
+                    ImplementData::IMPLEMENT_DOUBLE_DUMBBELLS,
+                    ImplementData::IMPLEMENT_MEDICINE_BALL,
+                    ImplementData::IMPLEMENT_WORM,
+                ],
+                'movementExecutionTimeForMeasureUnits' => [
+                    MeasureUnitEnum::REPETITION->value => 4000,
                 ],
             ],
             [

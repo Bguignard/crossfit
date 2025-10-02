@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-
 use App\Entity\Workout\Enum\BodyPartEnum;
 use App\Repository\Workout\BodyPartRepository;
 use Doctrine\ORM\Mapping as ORM;

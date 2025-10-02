@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;

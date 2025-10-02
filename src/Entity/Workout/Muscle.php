@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-
 use App\Entity\Workout\Enum\MuscleEnum;
 use App\Repository\Workout\MuscleRepository;
 use Doctrine\Common\Collections\ArrayCollection;

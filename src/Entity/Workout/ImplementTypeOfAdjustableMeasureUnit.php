@@ -2,7 +2,6 @@
 
 namespace App\Entity\Workout;
 
-
 use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
 use App\Repository\Workout\ImplementTypeOfMeasureRepository;
 use Doctrine\Common\Collections\ArrayCollection;
