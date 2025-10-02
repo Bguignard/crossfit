@@ -3,7 +3,6 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Entity\ConvertibleToDTOInterface;
 use App\Repository\Workout\MovementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementRepository::class)]
 #[ApiResource]
-class Movement implements ConvertibleToDTOInterface
+class Movement
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

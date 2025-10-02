@@ -2,7 +2,6 @@
 
 namespace App\Entity\Workout;
 
-use App\Entity\ConvertibleToDTOInterface;
 use App\Entity\Workout\Enum\ImplementTypeOfMeasureEnum;
 use App\Repository\Workout\ImplementTypeOfMeasureRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ImplementTypeOfMeasureRepository::class)]
-class ImplementTypeOfAdjustableMeasureUnit implements ConvertibleToDTOInterface
+class ImplementTypeOfAdjustableMeasureUnit
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

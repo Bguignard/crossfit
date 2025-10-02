@@ -2,14 +2,13 @@
 
 namespace App\Entity\Workout;
 
-use App\Entity\ConvertibleToDTOInterface;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
 use App\Repository\Workout\MovementExecutionTimeForMeasureUnitRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementExecutionTimeForMeasureUnitRepository::class)]
-class MovementExecutionTimeForMeasureUnit implements ConvertibleToDTOInterface
+class MovementExecutionTimeForMeasureUnit
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

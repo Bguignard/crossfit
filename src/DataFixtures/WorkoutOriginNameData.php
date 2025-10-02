@@ -22,15 +22,15 @@ class WorkoutOriginNameData extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        foreach ($this->getWorkoutOrigins() as $reference => $workoutOriginName) {
-            $bodyPartEntity = new WorkoutOriginName($workoutOriginName);
-            $manager->persist($bodyPartEntity);
-            $this->addReference($reference, $bodyPartEntity);
+        foreach ($this->getWorkoutOriginNames() as $reference => $workoutOriginName) {
+            $workoutOriginNameEntity = new WorkoutOriginName($workoutOriginName);
+            $manager->persist($workoutOriginNameEntity);
+            $this->addReference($reference, $workoutOriginNameEntity);
         }
         $manager->flush();
     }
 
-    private function getWorkoutOrigins(): array
+    private function getWorkoutOriginNames(): array
     {
         return [
             self::WORKOUT_ORIGIN_NAME_CROSSFIT_GAMES => WorkoutOriginNameEnum::CROSSFIT_GAMES,
