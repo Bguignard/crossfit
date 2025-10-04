@@ -4,11 +4,11 @@ namespace App\Entity\WorkoutGeneration;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Entity\Workout\BodyPart;
-use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementType;
+use App\Entity\Workout\WorkoutMovementGenerationType;
 use App\Entity\Workout\WorkoutType;
 use App\Repository\WorkoutGeneration\WorkoutGenerationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -46,8 +46,11 @@ class WorkoutGeneration
     #[ORM\ManyToOne(targetEntity: MovementDifficulty::class, cascade: ['persist'])]
     private MovementDifficulty $movementDifficulty;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: WorkoutMovementGenerationTypeEnum::class)]
-    private WorkoutMovementGenerationTypeEnum $movementGenerationType;
+    #[ORM\Column(nullable: false)]
+    private bool $isTeamWorkout = false;
+
+    #[ORM\ManyToOne(targetEntity: WorkoutMovementGenerationType::class, cascade: ['persist'])]
+    private WorkoutMovementGenerationType $movementGenerationType;
 
     #[ORM\ManyToMany(targetEntity: Movement::class, cascade: ['persist'])]
     #[ORM\JoinTable(name: 'workout_generation_banned_movements')]
@@ -73,24 +76,8 @@ class WorkoutGeneration
     private ?int $numberOfRounds;
 
     public function __construct(
-        string $name,
-        int $timeCap,
-        array $movementTypes,
-        int $numberOfDifferentMovements,
-        WorkoutType $workoutType,
-        MovementDifficulty $movementDifficulty,
-        WorkoutMovementGenerationTypeEnum $movementGenerationType,
     ) {
-        $this->name = $name;
-        $this->timeCap = $timeCap;
         $this->movementTypes = new ArrayCollection();
-        foreach ($movementTypes as $movementType) {
-            $this->addMovementType($movementType);
-        }
-        $this->numberOfDifferentMovements = $numberOfDifferentMovements;
-        $this->workoutType = $workoutType;
-        $this->movementDifficulty = $movementDifficulty;
-        $this->movementGenerationType = $movementGenerationType;
         $this->bannedMovements = new ArrayCollection();
         $this->availableImplements = new ArrayCollection();
         $this->mandatoryBodyParts = new ArrayCollection();
@@ -186,18 +173,6 @@ class WorkoutGeneration
     public function setMovementDifficulty(MovementDifficulty $movementDifficulty): WorkoutGeneration
     {
         $this->movementDifficulty = $movementDifficulty;
-
-        return $this;
-    }
-
-    public function getMovementGenerationType(): WorkoutMovementGenerationTypeEnum
-    {
-        return $this->movementGenerationType;
-    }
-
-    public function setMovementGenerationType(WorkoutMovementGenerationTypeEnum $movementGenerationType): WorkoutGeneration
-    {
-        $this->movementGenerationType = $movementGenerationType;
 
         return $this;
     }
@@ -318,6 +293,30 @@ class WorkoutGeneration
     public function setNumberOfRounds(?int $numberOfRounds): WorkoutGeneration
     {
         $this->numberOfRounds = $numberOfRounds;
+
+        return $this;
+    }
+
+    public function isTeamWorkout(): bool
+    {
+        return $this->isTeamWorkout;
+    }
+
+    public function setIsTeamWorkout(bool $isTeamWorkout): WorkoutGeneration
+    {
+        $this->isTeamWorkout = $isTeamWorkout;
+
+        return $this;
+    }
+
+    public function getMovementGenerationType(): WorkoutMovementGenerationType
+    {
+        return $this->movementGenerationType;
+    }
+
+    public function setMovementGenerationType(WorkoutMovementGenerationType $movementGenerationType): WorkoutGeneration
+    {
+        $this->movementGenerationType = $movementGenerationType;
 
         return $this;
     }

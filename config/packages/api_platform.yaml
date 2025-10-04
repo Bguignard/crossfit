@@ -6,3 +6,5 @@ api_platform:
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']
         pagination_enabled: false
+    graphql:
+        enabled: true
