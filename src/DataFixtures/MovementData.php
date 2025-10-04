@@ -2305,7 +2305,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_BEGINNER,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_STRONGMAN,
                 'implements' => [
-                    ImplementData::IMPLEMENT_PARTNER
+                    ImplementData::IMPLEMENT_PARTNER,
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::METER->value => 700,
@@ -2717,7 +2717,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_INTERMEDIATE,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
-                    ImplementData::IMPLEMENT_ROPE
+                    ImplementData::IMPLEMENT_ROPE,
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 10000,
@@ -2739,7 +2739,7 @@ class MovementData extends Fixture implements DependentFixtureInterface
                 'difficulty' => MovementDifficultyData::MOVEMENT_DIFFICULTY_RX,
                 'movementType' => MovementTypeData::MOVEMENT_TYPE_GYMNASTIC,
                 'implements' => [
-                    ImplementData::IMPLEMENT_ROPE
+                    ImplementData::IMPLEMENT_ROPE,
                 ],
                 'movementExecutionTimeForMeasureUnits' => [
                     MeasureUnitEnum::REPETITION->value => 10000,

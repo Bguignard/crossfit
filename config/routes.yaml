@@ -1,0 +1,3 @@
+api_graphql_entrypoint:
+  path: /graphql
+  controller: api_platform.graphql.action.entrypoint

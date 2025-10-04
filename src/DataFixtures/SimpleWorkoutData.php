@@ -2131,7 +2131,7 @@ class SimpleWorkoutData extends Fixture implements DependentFixtureInterface
                 10 Burpee Box Jumps (24/20 in)
                 15 Deadlifts (225/155 lb)
                 TXT,
-                            'timeCap' => 40,
+                'timeCap' => 40,
                 'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
                 'implements' => [
                     ImplementData::IMPLEMENT_RINGS,
