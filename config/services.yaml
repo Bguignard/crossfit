@@ -36,3 +36,6 @@ services:
     App\Services\Workout\WorkoutOriginServiceInterface:
         class: App\Services\Workout\WorkoutOriginService
         public: true
+
+    App\DataProvider\WorkoutGenerationPossibleMovementsProvider:
+        tags: ['api_platform.collection_data_provider']

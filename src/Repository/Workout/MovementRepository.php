@@ -46,8 +46,12 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function getMovementByDifficultyAndImplementsAndForbiddenMovementsAndType(?array $availableImplements, ?int $maxDifficulty, ?array $forbiddenMovements, MovementTypeEnum $movementType): ?Movement
-    {
+    public function getMovementByDifficultyAndImplementsAndForbiddenMovementsAndType(
+        ?array $availableImplements,
+        ?int $maxDifficulty,
+        ?array $forbiddenMovements,
+        MovementTypeEnum $movementType,
+    ): ?Movement {
         $queryBuilder = $this->createQueryBuilder('m')
             ->where('m.difficulty <= :maxDifficulty')
             ->setParameter('maxDifficulty', $maxDifficulty)
@@ -75,27 +79,41 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
      * @param MovementType[] $movementTypes
      * @param MovementDifficulty[] $difficulties
      * @param Movement[] $movementsToExclude
+     * @param Implement[]|null $implements
      * @return Movement[]
      */
-    public function getMovementsByMovementTypesAndDifficulty(array $movementTypes, array $difficulties, array $movementsToExclude): array
-    {
+    public function getMovementsByMovementTypesAndDifficultyAndImplements(
+        array $movementTypes,
+        array $difficulties,
+        array $movementsToExclude,
+        array $implements,
+    ): array {
         $query = $this->createQueryBuilder('m');
 
-        $typeOrX = $query->expr()->orX();
-        foreach ($movementTypes as $idx => $movementType) {
-            $typeOrX->add('m.movementType = :movementType'.$idx);
-            $query->setParameter('movementType'.$idx, $movementType);
-        }
         if (count($movementTypes) > 0) {
+            $typeOrX = $query->expr()->orX();
+            foreach ($movementTypes as $idx => $movementType) {
+                $typeOrX->add('m.movementType = :movementType'.$idx);
+                $query->setParameter('movementType'.$idx, $movementType);
+            }
             $query->andWhere($typeOrX);
         }
 
-        $diffOrX = $query->expr()->orX();
-        foreach ($difficulties as $idx => $difficulty) {
-            $diffOrX->add('m.difficulty = :difficulty'.$idx);
-            $query->setParameter('difficulty'.$idx, $difficulty);
-        }
         if (count($difficulties) > 0) {
+            $diffOrX = $query->expr()->orX();
+            foreach ($difficulties as $idx => $difficulty) {
+                $diffOrX->add('m.difficulty = :difficulty'.$idx);
+                $query->setParameter('difficulty'.$idx, $difficulty);
+            }
+            $query->andWhere($diffOrX);
+        }
+
+        if (count($implements) > 0) {
+            $diffOrX = $query->expr()->orX();
+            foreach ($implements as $idx => $implement) {
+                $diffOrX->add(':implement'.$idx.' MEMBER OF m.possibleImplements');
+                $query->setParameter('implement'.$idx, $implement);
+            }
             $query->andWhere($diffOrX);
         }
 

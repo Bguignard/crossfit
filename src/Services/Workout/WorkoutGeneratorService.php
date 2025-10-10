@@ -59,13 +59,12 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
 
         if (count($movementsInWorkout) < $workoutGeneration->getNumberOfDifferentMovements()) {
             while (count($workoutGeneration->getMandatoryMovements()) < $workoutGeneration->getNumberOfDifferentMovements()) {
-                $potentialMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficulty(
+                $potentialMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplements(
                     $workoutGeneration->getMovementTypes()->toArray(),
                     $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
                     $movementsInWorkout,
+                    $workoutGeneration->getAvailableImplements()->toArray(),
                 );
-
-                dump($potentialMovements);
 
                 $movementsInWorkout[] = $potentialMovements[array_rand($potentialMovements)];
             }

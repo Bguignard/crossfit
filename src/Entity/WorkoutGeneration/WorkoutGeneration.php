@@ -134,9 +134,9 @@ class WorkoutGeneration
         return $this->movementTypes;
     }
 
-    public function setMovementTypes(Collection $movementTypes): WorkoutGeneration
+    public function setMovementTypes(array $movementTypes): WorkoutGeneration
     {
-        $this->movementTypes = $movementTypes;
+        $this->movementTypes = new ArrayCollection($movementTypes);
 
         return $this;
     }
@@ -191,9 +191,9 @@ class WorkoutGeneration
         return $this->bannedMovements;
     }
 
-    public function setBannedMovements(Collection $bannedMovements): WorkoutGeneration
+    public function setBannedMovements(array $bannedMovements): WorkoutGeneration
     {
-        $this->bannedMovements = $bannedMovements;
+        $this->bannedMovements = new ArrayCollection($bannedMovements);
 
         return $this;
     }
@@ -212,9 +212,9 @@ class WorkoutGeneration
         return $this->availableImplements;
     }
 
-    public function setAvailableImplements(Collection $availableImplements): WorkoutGeneration
+    public function setAvailableImplements(array $availableImplements): WorkoutGeneration
     {
-        $this->availableImplements = $availableImplements;
+        $this->availableImplements = new ArrayCollection($availableImplements);
 
         return $this;
     }
@@ -233,9 +233,9 @@ class WorkoutGeneration
         return $this->mandatoryBodyParts;
     }
 
-    public function setMandatoryBodyParts(Collection $mandatoryBodyParts): WorkoutGeneration
+    public function setMandatoryBodyParts(array $mandatoryBodyParts): WorkoutGeneration
     {
-        $this->mandatoryBodyParts = $mandatoryBodyParts;
+        $this->mandatoryBodyParts = new ArrayCollection($mandatoryBodyParts);
 
         return $this;
     }
@@ -254,9 +254,9 @@ class WorkoutGeneration
         return $this;
     }
 
-    public function setMandatoryMovements(Collection $mandatoryMovements): WorkoutGeneration
+    public function setMandatoryMovements(array $mandatoryMovements): WorkoutGeneration
     {
-        $this->mandatoryMovements = $mandatoryMovements;
+        $this->mandatoryMovements = new ArrayCollection($mandatoryMovements);
 
         return $this;
     }
