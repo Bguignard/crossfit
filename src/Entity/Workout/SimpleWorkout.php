@@ -3,6 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Repository\Workout\SimpleWorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -41,6 +42,9 @@ class SimpleWorkout
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+
+    #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['persist', 'remove'])]
+    private ?WorkoutGeneration $workoutGeneration = null;
 
     public function __construct(
         ?string $name,
@@ -146,5 +150,17 @@ class SimpleWorkout
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getWorkoutGeneration(): ?WorkoutGeneration
+    {
+        return $this->workoutGeneration;
+    }
+
+    public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): SimpleWorkout
+    {
+        $this->workoutGeneration = $workoutGeneration;
+
+        return $this;
     }
 }

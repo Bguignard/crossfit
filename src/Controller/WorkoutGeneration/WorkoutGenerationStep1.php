@@ -7,6 +7,7 @@ use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementType;
 use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\WorkoutMovementGenerationTypeRepository;
 use App\Repository\WorkoutGeneration\WorkoutGenerationRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +23,7 @@ class WorkoutGenerationStep1 extends AbstractController
 {
     public function __construct(
         private readonly WorkoutGenerationRepository $workoutGenerationRepository,
+        private readonly WorkoutMovementGenerationTypeRepository $workoutMovementGenerationTypeRepository,
     ) {
     }
 
@@ -136,15 +138,16 @@ class WorkoutGenerationStep1 extends AbstractController
         $workoutDifficulty = $data['difficulty_of_movements'];
         $buildWorkoutMovementsFrom = $data['build_workout_movements_from'];
 
-        $workoutGeneration = new WorkoutGeneration(
-            $workoutName,
-            $timeCap,
-            $movementTypes->toArray(),
-            $numberOfDifferentMovements,
-            $workoutType,
-            $workoutDifficulty,
-            $buildWorkoutMovementsFrom
-        );
+        $workoutGeneration = new WorkoutGeneration()
+            ->setName($workoutName)
+            ->setTimeCap($timeCap)
+            ->setWorkoutType($workoutType)
+            ->setMovementTypes($movementTypes)
+            ->setNumberOfDifferentMovements($numberOfDifferentMovements)
+            ->setMovementDifficulty($workoutDifficulty)
+            ->setMovementGenerationType(
+                $this->workoutMovementGenerationTypeRepository->findOneBy(['name' => $buildWorkoutMovementsFrom])
+            );
 
         return $this->workoutGenerationRepository->save($workoutGeneration);
     }

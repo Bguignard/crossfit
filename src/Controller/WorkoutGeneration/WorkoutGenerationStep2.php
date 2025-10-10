@@ -42,7 +42,12 @@ class WorkoutGenerationStep2 extends AbstractController
 
         $workoutGeneration = $this->workoutGenerationRepository->find($workoutGenerationId);
         $difficultiesEntitiesToGet = $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty());
-        $compatibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficulty($workoutGeneration->getMovementTypes()->toArray(), $difficultiesEntitiesToGet, $workoutGeneration->getBannedMovements()->toArray());
+        $compatibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplements(
+            $workoutGeneration->getMovementTypes()->toArray(),
+            $difficultiesEntitiesToGet,
+            $workoutGeneration->getBannedMovements()->toArray(),
+            $workoutGeneration->getAvailableImplements()->toArray(),
+        );
         $form = $this->getForm($compatibleMovements, $workoutGeneration->getMovementGenerationType(), $workoutGeneration->getWorkoutType());
 
         $form->handleRequest($request);
