@@ -29,9 +29,11 @@ services:
 #        arguments:
 #            $maxNumberOfRounds: '%maxNumberOfRounds%'
 
-    App\Services\Workout\MovementGeneratorServiceInterface:
-        class: App\Services\Workout\MovementGeneratorService
+    App\Services\Workout\ChatGPTApiKeyInterface:
+        class: App\Services\Workout\ChatGPTApiKey
         public: true
+        arguments:
+            $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
 
     App\Services\Workout\WorkoutOriginServiceInterface:
         class: App\Services\Workout\WorkoutOriginService

@@ -2,12 +2,12 @@
 
 namespace App\Services\Workout;
 
-use App\Repository\Workout\MovementTypeRepository;
+use App\Repository\Workout\MovementTypeRepositoryInterface;
 
 readonly class MovementTypeService implements MovementTypeServiceInterface
 {
     public function __construct(
-        public MovementTypeRepository $movementTypeRepository,
+        public MovementTypeRepositoryInterface $movementTypeRepository,
     ) {
     }
 

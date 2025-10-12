@@ -15,7 +15,7 @@ final readonly class WorkoutOriginService implements WorkoutOriginServiceInterfa
     ) {
     }
 
-    public function insertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+    public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
     {
         $workoutOriginName = $this->workoutOriginNameRepository->findOneBy(['name' => $name]);
         $workoutOrigin = $this->workoutOriginRepository->findOneBy(['name' => $workoutOriginName->getId(), 'year' => $year]);

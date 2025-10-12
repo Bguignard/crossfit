@@ -6,7 +6,7 @@ use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\MovementDifficulty;
 use App\Repository\Workout\MovementDifficultyRepositoryInterface;
 
-readonly class MovementDifficultyService
+readonly class MovementDifficultyService implements MovementDifficultyServiceInterface
 {
     public function __construct(
         private MovementDifficultyRepositoryInterface $movementDifficultyRepository,

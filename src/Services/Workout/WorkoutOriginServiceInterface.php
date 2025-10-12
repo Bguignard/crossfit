@@ -6,5 +6,5 @@ use App\Entity\Workout\WorkoutOrigin;
 
 interface WorkoutOriginServiceInterface
 {
-    public function insertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin;
+    public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin;
 }
