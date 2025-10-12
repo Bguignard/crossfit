@@ -18,7 +18,6 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
     public function __construct(
         private MovementClusterGeneratorService $movementClusterGeneratorService,
         private WorkoutOriginServiceInterface $workoutOriginService,
-        private MovementGeneratorServiceInterface $movementGeneratorService,
         private MovementRepository $movementRepository,
         private MovementDifficultyService $movementDifficultyService,
     ) {
@@ -51,7 +50,7 @@ final readonly class WorkoutGeneratorService implements WorkoutGeneratorServiceI
         }
         $maximumNumberOfRounds = 10;
 
-        $workoutOrigin = $this->workoutOriginService->insertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
+        $workoutOrigin = $this->workoutOriginService->getExistingOrInsertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, intval(date('Y')));
         $numberOfRounds = $workoutGeneration->getNumberOfRounds() ?? $this->getNumberOfForTimeWorkoutRounds($workoutGeneration->getNumberOfDifferentMovements(), $maximumNumberOfRounds);
 
         // Movements generation
