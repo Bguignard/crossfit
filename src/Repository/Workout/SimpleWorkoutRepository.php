@@ -21,11 +21,11 @@ class SimpleWorkoutRepository extends ServiceEntityRepository implements SimpleW
         parent::__construct($registry, SimpleWorkout::class);
     }
 
-    public function persist(SimpleWorkout $workoutOriginName): SimpleWorkout
+    public function persist(SimpleWorkout $simpleWorkout): SimpleWorkout
     {
-        $this->getEntityManager()->persist($workoutOriginName);
+        $this->getEntityManager()->persist($simpleWorkout);
         $this->getEntityManager()->flush();
 
-        return $workoutOriginName;
+        return $simpleWorkout;
     }
 }

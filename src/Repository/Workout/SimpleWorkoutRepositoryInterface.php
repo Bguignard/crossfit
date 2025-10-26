@@ -6,5 +6,5 @@ use App\Entity\Workout\SimpleWorkout;
 
 interface SimpleWorkoutRepositoryInterface
 {
-    public function persist(SimpleWorkout $workoutOriginName): SimpleWorkout;
+    public function persist(SimpleWorkout $simpleWorkout): SimpleWorkout;
 }

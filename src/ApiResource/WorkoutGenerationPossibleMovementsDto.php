@@ -9,12 +9,12 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Uid\Uuid;
 
-#[ApiResource(provider: WorkoutGenerationPossibleMovementsProvider::class,
-    operations: [
-        new Get(
-            uriTemplate: '/workout_generation_possible_movements/{workoutGenerationId}'
-        ),
-    ])]
+#[ApiResource(operations: [
+    new Get(
+        uriTemplate: '/workout_generation_possible_movements/{workoutGenerationId}'
+    ),
+],
+    provider: WorkoutGenerationPossibleMovementsProvider::class)]
 class WorkoutGenerationPossibleMovementsDto
 {
     public function __construct(
