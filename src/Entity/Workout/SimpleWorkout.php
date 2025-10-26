@@ -31,7 +31,7 @@ class SimpleWorkout
     #[ORM\Column(nullable: true)]
     private ?int $timeCap; // time cap in minutes
 
-    #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['persist'])]
+    #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['remove'])]
     private WorkoutOrigin $workoutOrigin;
 
     #[ORM\ManyToMany(targetEntity: Implement::class)]
@@ -43,7 +43,7 @@ class SimpleWorkout
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['persist', 'remove'])]
+    #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['remove'])]
     private ?WorkoutGeneration $workoutGeneration = null;
 
     public function __construct(

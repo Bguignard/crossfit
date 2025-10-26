@@ -38,11 +38,12 @@ class WorkoutGenerationPossibleMovementsProvider implements ProviderInterface
         if ($operation instanceof CollectionOperationInterface) {
             return [];
         }
-        $movementsArray = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplements(
+        $movementsArray = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
             $workoutGeneration->getMovementTypes()->toArray(),
             $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
             $workoutGeneration->getBannedMovements()->toArray(),
             $workoutGeneration->getAvailableImplements()->toArray(),
+            $workoutGeneration->getMandatoryBodyParts()->toArray(),
         );
         $movements = new ArrayCollection();
 

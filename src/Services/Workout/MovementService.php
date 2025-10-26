@@ -19,11 +19,12 @@ readonly class MovementService implements MovementServiceInterface
     public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
     {
         // todo : we should remove similar movements for example if we have 2 different types of push ups, jerk, clean, we should not have both in the workout
-        $possibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplements(
+        $possibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
             $workoutGeneration->getMovementTypes()->toArray(),
             $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
             array_merge($workoutGeneration->getBannedMovements()->toArray(), $workoutGeneration->getMandatoryMovements()->toArray()),
             $workoutGeneration->getAvailableImplements()->toArray(),
+            $workoutGeneration->getMandatoryBodyParts()->toArray()
         );
         shuffle($possibleMovements);
 
@@ -89,7 +90,7 @@ readonly class MovementService implements MovementServiceInterface
         // first, we fill with not used type of movements
         foreach ($notUsedMovementTypes as $movementType) {
             foreach ($possibleMovements as $key => $movement) {
-                if ($movement->getMovementTypes()->contains($movementType) && count($movementsInWorkout) < $workoutGeneration->getNumberOfDifferentMovements()) {
+                if ($movement->getMovementType()->getId() === $movementType->getId() && count($movementsInWorkout) < $workoutGeneration->getNumberOfDifferentMovements()) {
                     $movementsInWorkout[] = $movement;
                     unset($possibleMovements[$key]);
                     break;
