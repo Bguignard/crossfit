@@ -72,8 +72,9 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
 
         if (count($implements) > 0) {
             $diffOrX = $query->expr()->orX();
+            $query->join('m.possibleImplements', 'pi');
             foreach ($implements as $idx => $implement) {
-                $diffOrX->add(':implement'.$idx.' MEMBER OF m.possibleImplements');
+                $diffOrX->add(':implement'.$idx.' = pi');
                 $query->setParameter('implement'.$idx, $implement);
             }
             $query->andWhere($diffOrX);
@@ -95,7 +96,7 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
      * @param MovementDifficulty[] $difficulties
      * @param Movement[] $movementsToExclude
      * @param Implement[] $implements
-     * @param Muscle[] $muscles
+     * @param BodyParts[] $bodyParts
      * @return Movement[]
      */
     public function getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
@@ -103,7 +104,7 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         array $difficulties,
         array $movementsToExclude,
         array $implements,
-        array $muscles,
+        array $bodyParts,
     ) {
         $query = $this->createQueryBuilder('m');
 
@@ -134,13 +135,13 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
             $query->andWhere($diffOrX);
         }
 
-        if (count($muscles) > 0) {
-            $muscleOrX = $query->expr()->orX();
-            foreach ($muscles as $idx => $muscle) {
-                $muscleOrX->add(':muscle'.$idx.' MEMBER OF m.muscles');
-                $query->setParameter('muscle'.$idx, $muscle);
+        if (count($bodyParts) > 0) {
+            $bodyPartOrX = $query->expr()->orX();
+            foreach ($bodyParts as $idx => $bodyPart) {
+                $bodyPartOrX->add(':bodyPart'.$idx.' MEMBER OF m.muscles.bodyPart');
+                $query->setParameter('bodyPart'.$idx, $bodyPart);
             }
-            $query->andWhere($muscleOrX);
+            $query->andWhere($bodyPartOrX);
         }
 
         if (count($movementsToExclude) > 0) {
