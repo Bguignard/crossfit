@@ -35,9 +35,26 @@ services:
         arguments:
             $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
 
+    App\Services\Workout\MovementDifficultyServiceInterface:
+        class: App\Services\Workout\MovementDifficultyService
+        public: true
+
+    App\Services\Workout\MovementServiceInterface:
+        class: App\Services\Workout\MovementService
+        public: true
+
+    App\Services\Workout\MuscleServiceInterface:
+        class: App\Services\Workout\MuscleService
+        public: true
+
+    App\Services\Workout\SimpleWorkoutCreatorServiceInterface:
+        class: App\Services\Workout\SimpleWorkoutCreatorService
+        public: true
+
     App\Services\Workout\WorkoutOriginServiceInterface:
         class: App\Services\Workout\WorkoutOriginService
         public: true
+
 
     App\DataProvider\WorkoutGenerationPossibleMovementsProvider:
         tags: ['api_platform.collection_data_provider']

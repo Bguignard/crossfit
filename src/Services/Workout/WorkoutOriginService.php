@@ -15,17 +15,20 @@ final readonly class WorkoutOriginService implements WorkoutOriginServiceInterfa
     ) {
     }
 
-    public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+    public function getExistingOrInsertNewWorkoutOrigin(string $name, ?int $year): WorkoutOrigin
     {
         $workoutOriginName = $this->workoutOriginNameRepository->findOneBy(['name' => $name]);
+        if ($workoutOriginName === null) {
+            $workoutOriginName = $this->workoutOriginNameRepository->findOneBy(['name' => WorkoutOriginNameEnum::CUSTOM->value]);
+        }
+
         $workoutOrigin = $this->workoutOriginRepository->findOneBy(['name' => $workoutOriginName->getId(), 'year' => $year]);
         if ($workoutOrigin !== null) {
             return $workoutOrigin;
         }
 
-        $customWorkoutOriginName = $this->workoutOriginNameRepository->findOneBy(['name' => WorkoutOriginNameEnum::CUSTOM->value]);
         $workoutOrigin = new WorkoutOrigin(
-            $customWorkoutOriginName,
+            $workoutOriginName,
             $year
         );
 

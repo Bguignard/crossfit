@@ -136,9 +136,12 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         }
 
         if (count($bodyParts) > 0) {
+            $query->join('m.muscles', 'mm')
+                ->join('mm.bodyPart', 'bp');
+
             $bodyPartOrX = $query->expr()->orX();
             foreach ($bodyParts as $idx => $bodyPart) {
-                $bodyPartOrX->add(':bodyPart'.$idx.' MEMBER OF m.muscles.bodyPart');
+                $bodyPartOrX->add('bp = :bodyPart'.$idx);
                 $query->setParameter('bodyPart'.$idx, $bodyPart);
             }
             $query->andWhere($bodyPartOrX);

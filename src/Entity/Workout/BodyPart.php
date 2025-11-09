@@ -5,6 +5,8 @@ namespace App\Entity\Workout;
 use ApiPlatform\Metadata\ApiResource;
 use App\Entity\Workout\Enum\BodyPartEnum;
 use App\Repository\Workout\BodyPartRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
@@ -21,8 +23,12 @@ class BodyPart
     #[ORM\Column(length: 255)]
     private string $name;
 
+    #[ORM\OneToMany(mappedBy: 'bodyPart', targetEntity: Muscle::class)]
+    private Collection $muscles;
+
     public function __construct(BodyPartEnum $bodyPart)
     {
+        $this->muscles = new ArrayCollection();
         $this->name = $bodyPart->value;
     }
 
@@ -39,5 +45,26 @@ class BodyPart
     public function getNameAsEnum(): BodyPartEnum
     {
         return BodyPartEnum::from($this->name);
+    }
+
+    public function getMuscles(): array
+    {
+        return $this->muscles->toArray();
+    }
+
+    public function setMuscles(array $muscles): BodyPart
+    {
+        $this->muscles = new ArrayCollection($muscles);
+
+        return $this;
+    }
+
+    public function addMuscle(Muscle $muscle): BodyPart
+    {
+        if (!$this->muscles->contains($muscle)) {
+            $this->muscles->add($muscle);
+        }
+
+        return $this;
     }
 }
