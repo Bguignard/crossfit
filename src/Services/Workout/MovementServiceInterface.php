@@ -22,5 +22,5 @@ interface MovementServiceInterface
      */
     public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array;
 
-    public function getSimpleWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array;
+    public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array;
 }

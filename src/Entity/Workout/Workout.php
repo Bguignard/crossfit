@@ -3,6 +3,7 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -25,8 +26,8 @@ class Workout
     #[ORM\Column(nullable: true)]
     private ?int $numberOfRounds;
 
-    #[ORM\ManyToMany(targetEntity: Block::class, cascade: ['persist'])]
-    private Collection $blocks;
+    #[ORM\Column(type: 'text')]
+    private string $flow;
 
     #[ORM\Column(nullable: true)]
     private ?int $timeCap; // time cap in minutes
@@ -37,22 +38,43 @@ class Workout
     #[ORM\ManyToOne(targetEntity: WorkoutOrigin::class, cascade: ['persist'])]
     private WorkoutOrigin $workoutOrigin;
 
+    #[ORM\ManyToMany(targetEntity: Implement::class)]
+    private Collection $implements;
+
+    #[ORM\ManyToMany(targetEntity: Movement::class)]
+    private Collection $movements;
+
+    #[ORM\Column(type: 'datetime_immutable')]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['remove'])]
+    private ?WorkoutGeneration $workoutGeneration = null;
+
     public function __construct(
         ?string $name,
+        string $flow,
         ?int $numberOfRounds,
         ?int $timeCap,
         ?WorkoutType $workoutType,
         WorkoutOrigin $workoutOrigin,
-        array $blocks,
+        array $implements = [],
+        array $movements = [],
     ) {
+        $this->implements = new ArrayCollection();
+        $this->movements = new ArrayCollection();
+
         $this->name = $name;
+        $this->flow = $flow;
+        $this->createdAt = new \DateTimeImmutable();
         $this->numberOfRounds = $numberOfRounds;
         $this->timeCap = $timeCap;
         $this->workoutType = $workoutType;
         $this->workoutOrigin = $workoutOrigin;
-        $this->blocks = new ArrayCollection();
-        foreach ($blocks as $block) {
-            $this->addBlock($block);
+        foreach ($implements as $implement) {
+            $this->addImplement($implement);
+        }
+        foreach ($movements as $movement) {
+            $this->addMovement($movement);
         }
     }
 
@@ -73,6 +95,18 @@ class Workout
         return $this;
     }
 
+    public function getFlow(): string
+    {
+        return $this->flow;
+    }
+
+    public function setFlow(string $flow): static
+    {
+        $this->flow = $flow;
+
+        return $this;
+    }
+
     public function getNumberOfRounds(): ?int
     {
         return $this->numberOfRounds;
@@ -86,25 +120,49 @@ class Workout
     }
 
     /**
-     * @return Collection<int, MovementCluster>
+     * @return Collection<int, Implement>
      */
-    public function getBlocks(): Collection
+    public function getImplements(): Collection
     {
-        return $this->blocks;
+        return $this->implements;
     }
 
-    public function addBlock(Block $block): static
+    public function addImplement(Implement $implement): static
     {
-        if (!$this->blocks->contains($block)) {
-            $this->blocks->add($block);
+        if (!$this->implements->contains($implement)) {
+            $this->implements->add($implement);
         }
 
         return $this;
     }
 
-    public function removeMovementBlock(Block $block): static
+    public function removeImplement(Implement $implement): static
     {
-        $this->blocks->removeElement($block);
+        $this->implements->removeElement($implement);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Movement>
+     */
+    public function getMovements(): Collection
+    {
+        return $this->movements;
+    }
+
+    public function addMovement(Movement $movement): static
+    {
+        if (!$this->movements->contains($movement)) {
+            $this->movements->add($movement);
+        }
+
+        return $this;
+    }
+
+    public function removeMovement(Movement $movement): static
+    {
+        $this->movements->removeElement($movement);
 
         return $this;
     }
@@ -136,5 +194,22 @@ class Workout
     public function getWorkoutOrigin(): WorkoutOrigin
     {
         return $this->workoutOrigin;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getWorkoutGeneration(): ?WorkoutGeneration
+    {
+        return $this->workoutGeneration;
+    }
+
+    public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): static
+    {
+        $this->workoutGeneration = $workoutGeneration;
+
+        return $this;
     }
 }

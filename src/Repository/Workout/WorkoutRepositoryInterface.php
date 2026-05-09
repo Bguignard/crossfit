@@ -6,6 +6,8 @@ use App\Entity\Workout\Workout;
 
 interface WorkoutRepositoryInterface
 {
+    public function persist(Workout $workout): Workout;
+
     public function getByName(string $name): ?Workout;
 
     public function getWorkoutsNames(): array;

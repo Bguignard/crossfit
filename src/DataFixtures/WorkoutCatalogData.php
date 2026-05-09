@@ -4,13 +4,14 @@ namespace App\DataFixtures;
 
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
-use App\Entity\Workout\SimpleWorkout;
+use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutType;
 use App\Entity\Workout\WorkoutOrigin;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
-class SimpleWorkoutData extends Fixture implements DependentFixtureInterface
+class WorkoutCatalogData extends Fixture implements DependentFixtureInterface
 {
     public const string SIMPLE_WORKOUT_ANGIE = 'Angie';
     public const string SIMPLE_WORKOUT_FRAN = 'Fran';
@@ -243,16 +244,18 @@ class SimpleWorkoutData extends Fixture implements DependentFixtureInterface
                 $movements[] = $this->getReference($movement, Movement::class);
             }
 
-            $simpleWorkout = new SimpleWorkout(
+            $workoutEntity = new Workout(
                 $workout['name'],
                 $workout['flow'],
+                $workout['numberOfRounds'] ?? null,
                 $workout['timeCap'] ?? null,
+                $this->getReference($workout['workoutType'] ?? WorkoutTypeData::WORKOUT_TYPE_FOR_TIME, WorkoutType::class),
                 $this->getReference($workout['origin'], WorkoutOrigin::class),
                 $implements,
                 $movements
             );
-            $manager->persist($simpleWorkout);
-            $this->addReference($reference, $simpleWorkout);
+            $manager->persist($workoutEntity);
+            $this->addReference($reference, $workoutEntity);
         }
         $manager->flush();
     }
@@ -263,6 +266,7 @@ class SimpleWorkoutData extends Fixture implements DependentFixtureInterface
             WorkoutOriginData::class,
             MovementData::class,
             ImplementData::class,
+            WorkoutTypeData::class,
         ];
     }
 

@@ -47,8 +47,8 @@ services:
         class: App\Services\Workout\MuscleService
         public: true
 
-    App\Services\Workout\SimpleWorkoutCreatorServiceInterface:
-        class: App\Services\Workout\SimpleWorkoutCreatorService
+    App\Services\Workout\WorkoutCreatorServiceInterface:
+        class: App\Services\Workout\WorkoutCreatorService
         public: true
 
     App\Services\Workout\WorkoutOriginServiceInterface:

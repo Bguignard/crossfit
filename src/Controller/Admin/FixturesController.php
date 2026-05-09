@@ -5,10 +5,8 @@ namespace App\Controller\Admin;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
-use App\Repository\Workout\BlockRepositoryInterface;
 use App\Repository\Workout\BodyPartRepositoryInterface;
 use App\Repository\Workout\ImplementRepositoryInterface;
-use App\Repository\Workout\MovementClusterRepositoryInterface;
 use App\Repository\Workout\MovementRepositoryInterface;
 use App\Repository\Workout\MovementTypeRepositoryInterface;
 use App\Repository\Workout\MuscleRepositoryInterface;
@@ -21,10 +19,8 @@ use Symfony\Component\Routing\Attribute\Route;
 class FixturesController extends AbstractController
 {
     public function __construct(
-        public readonly BlockRepositoryInterface $blockRepository,
         public readonly BodyPartRepositoryInterface $bodyPartRepository,
         public readonly ImplementRepositoryInterface $implementRepository,
-        public readonly MovementClusterRepositoryInterface $movementClusterRepository,
         public readonly MovementRepositoryInterface $movementRepository,
         public readonly MovementTypeRepositoryInterface $movementTypeRepository,
         public readonly WorkoutRepositoryInterface $workoutRepository,

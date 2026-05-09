@@ -21,6 +21,13 @@ class WorkoutRepository extends ServiceEntityRepository implements WorkoutReposi
         parent::__construct($registry, Workout::class);
     }
 
+    public function persist(Workout $workout): Workout
+    {
+        $this->getEntityManager()->persist($workout);
+
+        return $workout;
+    }
+
     public function getByName(string $name): ?Workout
     {
         return $this->findOneBy(['name' => $name]);
