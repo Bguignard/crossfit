@@ -21,7 +21,7 @@ class ImplementTypeOfAdjustableMeasureUnit
     #[ORM\Column(type: 'string', nullable: false, enumType: ImplementTypeOfMeasureEnum::class)]
     private ImplementTypeOfMeasureEnum $implementTypeOfMeasureEnum;
 
-    #[ORM\ManyToMany(targetEntity: MeasureUnit::class, inversedBy: 'implementTypeOfAdjustableMeasureUnit')]
+    #[ORM\ManyToMany(targetEntity: MeasureUnit::class)]
     private Collection $measureUnits;
 
     public function __construct(

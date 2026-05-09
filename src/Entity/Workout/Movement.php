@@ -31,10 +31,10 @@ class Movement
     #[ORM\ManyToOne(targetEntity: MovementType::class, cascade: ['persist'])]
     private MovementType $movementType;
 
-    #[ORM\ManyToMany(targetEntity: Implement::class, inversedBy: 'movements')]
+    #[ORM\ManyToMany(targetEntity: Implement::class)]
     private Collection $possibleImplements;
 
-    #[ORM\ManyToMany(targetEntity: MovementExecutionTimeForMeasureUnit::class, inversedBy: 'movements')]
+    #[ORM\ManyToMany(targetEntity: MovementExecutionTimeForMeasureUnit::class)]
     private Collection $movementExecutionTimeForMeasureUnits;
 
     public function __construct(

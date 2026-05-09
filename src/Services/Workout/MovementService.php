@@ -28,7 +28,7 @@ readonly class MovementService implements MovementServiceInterface
         );
         shuffle($possibleMovements);
 
-        return $this->getSimpleWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
+        return $this->getWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
     }
 
     /**
@@ -66,10 +66,10 @@ readonly class MovementService implements MovementServiceInterface
 
         shuffle($possibleMovements);
 
-        return $this->getSimpleWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
+        return $this->getWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
     }
 
-    public function getSimpleWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+    public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
     {
         // get already used type of movements
         $usedMovementTypes = [];

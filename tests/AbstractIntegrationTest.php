@@ -2,6 +2,9 @@
 
 namespace App\Tests;
 
+use Doctrine\Bundle\FixturesBundle\Loader\SymfonyFixturesLoader;
+use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
+use Doctrine\Common\DataFixtures\Purger\ORMPurger;
 use Doctrine\Common\DataFixtures\ReferenceRepository;
 use Doctrine\ORM\EntityManager;
 use Doctrine\Persistence\ObjectRepository;
@@ -20,7 +23,17 @@ abstract class AbstractIntegrationTest extends WebTestCase
             ->get('doctrine')
             ->getManager();
 
-        $this->referenceRepository = new ReferenceRepository($this->entityManager);
+        // Load all data fixtures for integration tests
+        /** @var SymfonyFixturesLoader $fixturesLoader */
+        $fixturesLoader = static::getContainer()->get('doctrine.fixtures.loader');
+        $fixtures = $fixturesLoader->getFixtures();
+
+        $purger = new ORMPurger($this->entityManager);
+        $executor = new ORMExecutor($this->entityManager, $purger);
+        $executor->purge();
+        $executor->execute($fixtures, true);
+
+        $this->referenceRepository = $executor->getReferenceRepository();
     }
 
     protected function getService(string $serviceName): object

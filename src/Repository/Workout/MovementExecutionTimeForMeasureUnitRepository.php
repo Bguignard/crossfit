@@ -2,7 +2,6 @@
 
 namespace App\Repository\Workout;
 
-use App\Entity\Workout\Block;
 use App\Entity\Workout\MovementExecutionTimeForMeasureUnit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,6 +18,6 @@ class MovementExecutionTimeForMeasureUnitRepository extends ServiceEntityReposit
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Block::class);
+        parent::__construct($registry, MovementExecutionTimeForMeasureUnit::class);
     }
 }

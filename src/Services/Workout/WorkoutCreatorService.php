@@ -5,10 +5,10 @@ namespace App\Services\Workout;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
-use App\Entity\Workout\SimpleWorkout;
+use App\Entity\Workout\Workout;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
-readonly class SimpleWorkoutCreatorService implements SimpleWorkoutCreatorServiceInterface
+readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 {
     public function __construct(
         public MovementServiceInterface $movementService,
@@ -17,7 +17,7 @@ readonly class SimpleWorkoutCreatorService implements SimpleWorkoutCreatorServic
     ) {
     }
 
-    public function createSimpleWorkout(WorkoutGeneration $workoutGeneration): SimpleWorkout
+    public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
     {
         if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
             throw new \InvalidArgumentException('The number of mandatory movements cannot be greater than the number of different movements.');
@@ -49,7 +49,7 @@ readonly class SimpleWorkoutCreatorService implements SimpleWorkoutCreatorServic
 
         // création du prompt ChatGPT :
         $promptForChatGPT = "Create a crossfit workout with the following movements and possible implement for the movement. 
-        Take all following movements but just chose one implement per movement. With all movement implement are specified the time of execution for each unit of measure.
+        Take all following movements but just chose one implement per movement. The execution times are indicative average paces per unit of measure; use them as guidance, not as strict math.
         Movement you have to use and implements are given following this pattern :\n";
         $promptForChatGPT .=
             "-Name of movement
@@ -62,12 +62,12 @@ readonly class SimpleWorkoutCreatorService implements SimpleWorkoutCreatorServic
             $promptForChatGPT .= "This workout is a For time, you have to complete the workout as fast as possible.\n";
             $promptForChatGPT .= "Even if there are many rounds, you don't have to write them all, just write :\n";
             $promptForChatGPT .= sprintf("%d rounds of : \n", $numberOfRounds);
-            $promptForChatGPT .= "The only case of writing multiple rounds is if you decide to create different blocks in the workout with different movements or reps.\n";
+            $promptForChatGPT .= "You may write a natural multi-part workout only if it improves the intended stimulus.\n";
             $promptForChatGPT .= "You don't have to write the number of milliseconds per movement.\n";
         }
 
         // - Durée de l'entrainement et nombre de tours
-        $promptForChatGPT .= sprintf("You must choose the number of reps of each movement following the average time per movement, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
+        $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
         // - Mouvements du workout avec seulement les implements disponibles
         $promptForChatGPT .= "Movements and possible implements :\n";
         foreach ($WorkoutMovements as $movement) {
@@ -180,14 +180,16 @@ readonly class SimpleWorkoutCreatorService implements SimpleWorkoutCreatorServic
         // Appel à l'API ChatGPT pour générer le nom et le flow de l'entrainement
         $flow = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
 
-        // Création de l'entité SimpleWorkout avec les données reçues
+        // Création de l'entité Workout avec les données reçues
         // todo : faire un service qui crée un workoutOrigin avec l'année courante si il n'existe pas
         $workoutOrigin = $this->workoutOriginService->getExistingOrInsertNewWorkoutOrigin(WorkoutOriginNameEnum::CUSTOM->value, (int) date('Y'));
 
-        return new SimpleWorkout(
+        return new Workout(
             $workoutGeneration->getName(),
             $flow,
+            $workoutGeneration->getNumberOfRounds(),
             $workoutGeneration->getTimeCap(),
+            $workoutGeneration->getWorkoutType(),
             $workoutOrigin,
             $workoutGeneration->getAvailableImplements()->toArray(),
             $WorkoutMovements,

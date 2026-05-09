@@ -1,0 +1,121 @@
+  name: CI
+
+  on:
+    push:
+    pull_request:
+
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      services:
+        db:
+          image: mysql:8.0
+          env:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: test_db
+            MYSQL_USER: test
+            MYSQL_PASSWORD: test
+          # ports not strictement nécessaires mais utiles pour debug local
+          ports:
+            - 3306:3306
+          options: >-
+            --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+            --health-interval=10s --health-timeout=5s --health-retries=3
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: test_db
+        DB_USERNAME: test
+        DB_PASSWORD: test
+        DATABASE_URL: "mysql://test:test@127.0.0.1:3306/test_db"
+        COMPOSER_ALLOW_SUPERUSER: 1
+        PHP_CS_FIXER_IGNORE_ENV: 1
+
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Setup PHP
+          uses: shivammathur/setup-php@v2
+          with:
+            php-version: 8.4
+            extensions: mbstring, intl, pdo_mysql
+
+        - name: Cache Composer
+          uses: actions/cache@v4
+          with:
+            path: ~/.composer/cache
+            key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+            restore-keys: ${{ runner.os }}-composer-
+
+        - name: Install dependencies
+          run: composer install --no-progress --no-suggest --prefer-dist --no-interaction
+
+        - name: Wait for MySQL
+          run: |
+            for i in {1..30}; do
+              if mysql -h 127.0.0.1 -P ${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "SELECT 1" >/dev/null 2>&1; then
+                echo "MySQL ready"
+                break
+              fi
+              echo "Waiting for MySQL..."
+              sleep 2
+            done
+
+        - name: Run PHP CS Fixer
+          run: PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix src
+
+        - name: Ensure Psalm is installed
+          run: |
+            if [ ! -f vendor/bin/psalm ]; then
+              composer require --dev vimeo/psalm:^6 --no-interaction --no-progress --prefer-dist
+            fi
+
+        - name: Run Psalm
+          run: vendor/bin/psalm
+
+        - name: Prepare database
+          run: |
+            # create main and test DB as root
+            MYSQL_PWD=root mysql -h 127.0.0.1 -P ${DB_PORT} -uroot -e "CREATE DATABASE IF NOT EXISTS \`${DB_DATABASE}\`;"
+            MYSQL_PWD=root mysql -h 127.0.0.1 -P ${DB_PORT} -uroot -e "CREATE DATABASE IF NOT EXISTS \`${DB_DATABASE}_test\`;"
+            
+            # ensure the app user exists and has the right password
+            MYSQL_PWD=root mysql -h 127.0.0.1 -P ${DB_PORT} -uroot -e "CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
+            MYSQL_PWD=root mysql -h 127.0.0.1 -P ${DB_PORT} -uroot -e "ALTER USER '${DB_USERNAME}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
+            
+            # grant privileges on the test database (the app will use DB_NAME_test in env=test)
+            MYSQL_PWD=root mysql -h 127.0.0.1 -P ${DB_PORT} -uroot -e "GRANT ALL PRIVILEGES ON \`${DB_DATABASE}_test\`.* TO '${DB_USERNAME}'@'%'; FLUSH PRIVILEGES;"
+
+        - name: Run PHPUnit (create schema, load fixtures, diagnostics)
+          env:
+            APP_ENV: test
+            APP_DEBUG: 0
+            DATABASE_URL: "mysql://${{ env.DB_USERNAME }}:${{ env.DB_PASSWORD }}@127.0.0.1:${{ env.DB_PORT }}/${{ env.DB_DATABASE }}"
+            MYSQL_PWD: ${{ env.DB_PASSWORD }}
+          run: |
+            # Wait for MySQL
+            for i in {1..30}; do
+              if mysql -h 127.0.0.1 -P ${DB_PORT} -u${DB_USERNAME} -e "SELECT 1" >/dev/null 2>&1; then
+                echo "MySQL ready"
+                break
+              fi
+              echo "Waiting for MySQL..."
+              sleep 2
+            done
+
+            php bin/console cache:clear --env=test --no-warmup || true
+            php bin/console doctrine:database:create --if-not-exists --env=test || true
+            php bin/console doctrine:schema:create --env=test || true
+
+            # Charger fixtures explicitement pour s'assurer qu'elles sont présentes en CI
+            php bin/console doctrine:fixtures:load --env=test --no-interaction || true
+
+            # Diagnostics: vérifier qu'il y a des données pertinentes (adapter le nom de la table si nécessaire)
+            echo ">>> movements count"
+            php bin/console doctrine:query:sql "SELECT COUNT(*) FROM movement" --env=test || true
+            echo ">>> sample movements"
+            php bin/console doctrine:query:sql "SELECT id, name FROM movement LIMIT 10" --env=test || true
+
+            # Lancer PHPUnit en verbeux pour obtenir plus d'infos sur l'erreur
+            php -d memory_limit=1G bin/phpunit --colors=always -v --debug

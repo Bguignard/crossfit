@@ -18,28 +18,7 @@
             {% if workout.numberOfRounds is not same as(1) %}
                 <p>{{ workout.numberOfRounds }} rounds of :</p>
             {% endif %}
-
-{#            Order by block.orderInWorkout#}
-            {% for block in workout.blocks %}
-                {% if block.rounds is not same as(1) %}
-                    <h5>{{ block.rounds }} rounds of :</h5>
-                {% endif %}
-
-                {% for movementCluster in block.movementClusters %}
-                    <p>- {{ movementCluster.repetitions }} {{ movementCluster.repUnit.value }}
-                    {% for implement in movementCluster.implements %}
-                        {{ implement.name }}
-                    {% endfor %}
-                    {{ movementCluster.movement.name }}
-                    {% if movementCluster.implementIntensityUnit is not null %}
-                        ( {{ movementCluster.implementIntensityAdjustmentValue }} {{ movementCluster.implementIntensityUnit.value }} )
-                    {% endif %}
-                    </p>
-                {% endfor %}
-                {% if block.restTime is not null %}
-                    {block.restTime}} seconds rest
-                {% endif %}
-            {% endfor %}
+            <pre>{{ workout.flow }}</pre>
             <p>Time cap {{ workout.timeCap }} minutes</p>
             </li>
         {% endfor %}

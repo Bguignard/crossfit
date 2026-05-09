@@ -1,0 +1,184 @@
+# Architecture Decision
+
+## Decision
+
+The product should be split into three clear responsibilities:
+
+- Symfony is the product backend.
+- Vue/Vite is the mobile-first web frontend.
+- Python/FastAPI remains the crawler, data enrichment, AI, and long-running jobs service.
+
+This keeps the existing CrossFit domain model in Symfony while avoiding turning the Python crawler project into a full user-facing product platform.
+
+## Why
+
+Symfony already contains the core workout domain:
+
+- movements
+- implements
+- muscles and body parts
+- workout types
+- workout origins
+- simple workout generation data
+
+That structured domain is still valuable even with AI. It should become the guardrail layer for generation: available equipment, target muscles, movement patterns, stimulus, constraints, scaling, and safety checks.
+
+Python is strongest where it already works well:
+
+- crawling CrossFit Games, CompetitionCorner, and ScoringFit
+- normalizing external results
+- enriching workout definitions
+- running AI analysis and generation jobs
+- handling slow backfills and maintenance scripts
+
+The frontend should start from `crossfit-front-vue`, because it is currently the cleanest and most mature frontend candidate:
+
+- Vite build passes
+- unit tests pass
+- router, Pinia, GraphQL composables, and views already exist
+- it is the shortest path to a mobile-first PWA
+
+`crossfit-front` can be used as reference material, but should not be the primary frontend. It mixes older Next.js pages, a partial app directory, API proxy routes, and large prototype pages.
+
+## Target Architecture
+
+```text
+Vue/Vite mobile-first frontend
+        |
+Symfony API product backend
+        |
+PostgreSQL
+        |
+Python FastAPI internal service
+```
+
+Symfony owns:
+
+- users
+- authentication and authorization
+- boxes
+- memberships and roles
+- saved workouts
+- box programming
+- competition programming
+- workout collections
+- product-level permissions and billing-ready boundaries
+- the workout ontology: movements, implements, muscles, body parts, difficulties, workout types
+
+Python owns:
+
+- crawlers
+- external athlete result sync
+- CrossFit Games workout sync
+- AI performance analysis
+- AI workout generation
+- AI programming generation
+- background jobs that should not block user requests
+
+## Workout Model Direction
+
+The canonical workout format should be monolithic plain text, not a mandatory block/cluster tree.
+
+This matches the data shape produced by crawlers and most real-world WOD sources:
+
+- CrossFit Games workout descriptions
+- CompetitionCorner workout descriptions
+- generated workouts
+- manually entered box programming
+- hero/girls/benchmark WOD collections
+
+The structured movement domain remains important, but it should enrich the monolithic workout instead of replacing it.
+
+Keep and invest in:
+
+- `Movement`
+- `MovementDifficulty`
+- `MovementType`
+- `Muscle`
+- `BodyPart`
+- `Implement`
+- `MeasureUnit`
+- `WorkoutType`
+- `WorkoutOrigin`
+
+Use those concepts to annotate a workout:
+
+- detected movements
+- required or possible equipment
+- targeted muscles/body parts
+- estimated difficulty
+- intended stimulus
+- time domain
+- loading pattern
+- scaling hints
+
+Treat `Block` and `MovementCluster` as legacy or optional advanced structure. They are useful when a workout is deliberately authored as a structured plan, but they should not be required for imported or generated workouts.
+
+The likely target is one unified workout entity with:
+
+- name
+- plain-text description/body
+- optional time cap
+- optional workout type
+- origin/source
+- linked movements
+- linked implements
+- generated/enriched metadata
+
+`Workout` is the target unified entity. It absorbs the useful parts of `SimpleWorkout`: text `flow`, linked movements, linked implements, generated workout metadata, and creation date.
+
+The first refactor removes the legacy `Block` / `MovementCluster` model from the active Symfony domain. `MovementExecutionTimeForMeasureUnit` stays, but only as indicative metadata that can guide generation. It must not be treated as an exact pacing formula, because athlete level, fatigue, workout context, and intended stimulus change the real execution time.
+
+## Mobile Strategy
+
+Start with a responsive PWA. This is the fastest path to a good phone experience.
+
+If App Store / Play Store distribution becomes important, wrap the Vue app with Capacitor rather than rewriting the app immediately. Expo / React Native remains an option only if the product becomes native-first.
+
+## First Implementation Phases
+
+### Phase 1: Stabilize Symfony as the Product API
+
+- Add a real `User` entity.
+- Replace `users_in_memory` security with a real user provider.
+- Add authentication suitable for an API frontend.
+- Add `Box`, `BoxMembership`, and role concepts.
+- Keep existing movement ontology.
+- Consolidate workout storage around monolithic text plus enrichment metadata.
+- Ensure tests can run from a documented local setup.
+
+### Phase 2: Connect Product Backend to Python Service
+
+- Add Symfony service/client for Python FastAPI.
+- Move current ChatGPT workout generation responsibility out of Symfony service code and into the Python AI service.
+- Symfony stores generation requests and generated artifacts.
+- Python performs generation and returns structured results.
+
+### Phase 3: Frontend Consolidation
+
+- Use `crossfit-front-vue` as the frontend base.
+- Remove hard-coded GraphQL endpoint fallbacks.
+- Add auth screens and token/session handling.
+- Redesign navigation mobile-first.
+- Split oversized views into focused components.
+- Add PWA manifest and installability.
+
+### Phase 4: Product Features
+
+- Athlete result profile and analysis.
+- Workout generator.
+- Box programming generator.
+- Competition programming generator.
+- WOD collection and search.
+- Saved/favorite WODs.
+- Box equipment profile and programming constraints.
+
+## Immediate Next Step
+
+Start in Symfony with the minimal product identity model:
+
+- `User`
+- `Box`
+- `BoxMembership`
+
+Then configure API authentication and expose the current workout domain behind authenticated/product-aware boundaries.

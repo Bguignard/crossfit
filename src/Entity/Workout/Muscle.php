@@ -23,11 +23,11 @@ class Muscle
     #[ORM\Column(type: 'string', nullable: false)]
     private string $name;
 
-    #[ORM\ManyToOne(targetEntity: BodyPart::class)]
+    #[ORM\ManyToOne(targetEntity: BodyPart::class, inversedBy: 'muscles')]
     #[ORM\JoinColumn(nullable: false)]
     private BodyPart $bodyPart;
 
-    #[ORM\ManyToMany(targetEntity: Movement::class, inversedBy: 'muscles')]
+    #[ORM\ManyToMany(targetEntity: Movement::class, mappedBy: 'muscles')]
     private Collection $movements;
 
     public function __construct(MuscleEnum $muscleEnum, BodyPart $bodyPart)
