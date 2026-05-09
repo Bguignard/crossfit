@@ -1,4 +1,8 @@
- .env.*
- var/
- vendor/
- .idea/
+.env.*
+var/
+vendor/
+.idea/
+.DS_Store
+**/.DS_Store
+.php-cs-fixer.cache
+.phpunit.result.cache
