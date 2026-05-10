@@ -2,9 +2,21 @@
 
 ## Goal
 
-Symfony becomes the canonical product backend and database.
+Symfony becomes the canonical product backend and database for a CrossFit analysis and programming product.
 
 Python remains responsible for crawling, parsing, AI enrichment, AI generation, and long-running jobs. It should not remain a separate product database for workouts, athletes, competitions, or results.
+
+The product must let connected users:
+
+- manage their own account and profile;
+- link one or more imported athlete identities from Scoring.fit, CompetitionCorner, CrossFit Games, or future sources;
+- record personal performances such as 1RM, benchmark scores, and manual workout results;
+- request performance analysis based on personal metrics and imported competition history;
+- request personalized programming;
+- request box programming and competition programming;
+- browse public athlete score histories;
+- browse and search a catalog of known WODs from heroes, girls, competitions, Games, Open, and imported sources;
+- generate a WOD from constraints such as movements, equipment, duration, stimulus, and level.
 
 ## Target Data Ownership
 
@@ -22,6 +34,9 @@ Symfony owns:
 - programming
 - workout collections
 - product permissions
+- user performance records
+- linked external athlete profiles
+- analysis and programming requests
 
 Python owns:
 
@@ -85,6 +100,15 @@ Python owns:
 - Symfony stores the official product data consumed by the frontend.
 - Long-running jobs should be triggered explicitly and tracked.
 
+## Phase 4a: Add Product Identity And Personal Data
+
+- Keep imported `Athlete` records independent from user accounts.
+- Add explicit links between users and imported athlete profiles.
+- Allow one user to link multiple athlete profiles across sources.
+- Add personal performance records owned by users.
+- Keep 1RM and benchmark records structured enough for performance analysis.
+- Prepare analysis and programming request models before implementing AI execution.
+
 ## Phase 5: Rebuild Tests Properly
 
 - Replace legacy tests with tests around actual product behavior.
@@ -97,10 +121,10 @@ Python owns:
 
 ## Near-Term Next Steps
 
-1. Model `Athlete`, `Competition`, `CompetitionEvent`, `WorkoutResult`, and `Score` in Symfony.
-2. Add migrations and minimal repositories.
-3. Create a small import command that reads a JSON file exported by Python.
-4. Export a small sample from Python.
-5. Import that sample into Symfony test database.
-6. Iterate on the schema until the imported data feels natural.
-7. Only then migrate the full Python data set.
+1. Add the user-to-athlete linking model.
+2. Add API authentication.
+3. Add personal performance tracking.
+4. Add athlete profile and WOD catalog APIs for the frontend.
+5. Add analysis request storage.
+6. Add programming generation request storage.
+7. Connect Symfony to the Python worker service for AI and long-running jobs.
