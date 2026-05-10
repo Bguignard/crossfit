@@ -1,0 +1,600 @@
+<?php
+
+namespace App\Command;
+
+use App\Entity\Competition\Athlete;
+use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\Enum\ScoreTypeEnum;
+use App\Entity\Competition\Score;
+use App\Entity\Competition\WorkoutResult;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
+use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutOrigin;
+use App\Entity\Workout\WorkoutOriginName;
+use App\Entity\Workout\WorkoutType;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+
+#[AsCommand(
+    name: 'app:import:competition-results',
+    description: 'Import normalized competition results JSON produced by the Python service.',
+)]
+class ImportCompetitionResultsCommand extends Command
+{
+    private const CONTRACT_VERSION = 'competition-results.v1';
+
+    /**
+     * @var array<string, array{created: int, updated: int, skipped: int, failed: int}>
+     */
+    private array $summary = [];
+
+    /**
+     * @var list<string>
+     */
+    private array $errors = [];
+
+    public function __construct(private readonly EntityManagerInterface $entityManager)
+    {
+        parent::__construct();
+    }
+
+    protected function configure(): void
+    {
+        $this->addArgument('file', InputArgument::REQUIRED, 'Path to a competition-results.v1 JSON file.');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+        $file = (string) $input->getArgument('file');
+
+        if (!is_file($file) || !is_readable($file)) {
+            $io->error(sprintf('Import file "%s" does not exist or is not readable.', $file));
+
+            return Command::FAILURE;
+        }
+
+        try {
+            $payload = json_decode((string) file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            $io->error(sprintf('Invalid JSON: %s', $exception->getMessage()));
+
+            return Command::FAILURE;
+        }
+
+        if (!is_array($payload)) {
+            $io->error('Import payload must be a JSON object.');
+
+            return Command::FAILURE;
+        }
+
+        if (($payload['contractVersion'] ?? null) !== self::CONTRACT_VERSION) {
+            $io->error(sprintf('Unsupported contract version "%s".', (string) ($payload['contractVersion'] ?? '')));
+
+            return Command::FAILURE;
+        }
+
+        $sourceName = $this->stringOrNull($payload['source']['name'] ?? null);
+
+        $this->importRows('workouts', $payload['workouts'] ?? [], fn (array $row): string => $this->importWorkout($row, $sourceName));
+        $this->entityManager->flush();
+        $this->importRows('athletes', $payload['athletes'] ?? [], fn (array $row): string => $this->importAthlete($row, $sourceName));
+        $this->entityManager->flush();
+        $this->importRows('competitions', $payload['competitions'] ?? [], fn (array $row): string => $this->importCompetition($row, $sourceName));
+        $this->entityManager->flush();
+        $this->importRows('events', $payload['events'] ?? [], fn (array $row): string => $this->importEvent($row, $sourceName));
+        $this->entityManager->flush();
+        $this->importRows('results', $payload['results'] ?? [], fn (array $row): string => $this->importResult($row, $sourceName));
+        $this->entityManager->flush();
+
+        $io->section('Import summary');
+        $io->table(
+            ['section', 'created', 'updated', 'skipped', 'failed'],
+            array_map(
+                static fn (string $section, array $counts): array => [
+                    $section,
+                    $counts['created'],
+                    $counts['updated'],
+                    $counts['skipped'],
+                    $counts['failed'],
+                ],
+                array_keys($this->summary),
+                $this->summary,
+            ),
+        );
+
+        if ($this->errors !== []) {
+            $io->warning('Some rows were not imported.');
+            foreach ($this->errors as $error) {
+                $io->writeln(sprintf('- %s', $error));
+            }
+        }
+
+        return $this->hasFailures() ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * @param mixed $rows
+     * @param callable(array<string, mixed>): string $importer
+     */
+    private function importRows(string $section, mixed $rows, callable $importer): void
+    {
+        $this->summary[$section] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
+
+        if (!is_array($rows)) {
+            ++$this->summary[$section]['failed'];
+            $this->errors[] = sprintf('%s must be an array.', $section);
+
+            return;
+        }
+
+        foreach ($rows as $index => $row) {
+            if (!is_array($row)) {
+                ++$this->summary[$section]['failed'];
+                $this->errors[] = sprintf('%s[%d] must be an object.', $section, $index);
+
+                continue;
+            }
+
+            try {
+                $status = $importer($row);
+                ++$this->summary[$section][$status];
+            } catch (\InvalidArgumentException $exception) {
+                ++$this->summary[$section]['failed'];
+                $this->errors[] = sprintf('%s[%d]: %s', $section, $index, $exception->getMessage());
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function importWorkout(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $name = $this->requiredString($row, 'name');
+        $flow = $this->requiredString($row, 'flow');
+
+        /** @var Workout|null $workout */
+        $workout = $this->entityManager->getRepository(Workout::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $workout === null ? 'created' : 'updated';
+
+        $origin = $this->findOrCreateWorkoutOrigin(
+            $this->stringOrNull($row['originName'] ?? null),
+            $this->intOrNull($row['originYear'] ?? null),
+        );
+        $workoutType = $this->findWorkoutType($this->stringOrNull($row['workoutType'] ?? null));
+
+        if ($workout === null) {
+            $workout = new Workout(
+                $name,
+                $flow,
+                null,
+                $this->intOrNull($row['timeCap'] ?? null),
+                $workoutType,
+                $origin,
+            );
+            $workout->setSourceName($sourceName)->setExternalId($externalId);
+            $this->entityManager->persist($workout);
+        }
+
+        $workout
+            ->setName($name)
+            ->setFlow($flow)
+            ->setTimeCap($this->intOrNull($row['timeCap'] ?? null))
+            ->setWorkoutType($workoutType)
+            ->setWorkoutOrigin($origin)
+            ->setSourceUrl($sourceUrl);
+
+        $this->replaceMovements($workout, $this->strings($row['movementNames'] ?? []));
+        $this->replaceImplements($workout, $this->strings($row['implementNames'] ?? []));
+
+        return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function importAthlete(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $displayName = $this->requiredString($row, 'displayName');
+
+        /** @var Athlete|null $athlete */
+        $athlete = $this->entityManager->getRepository(Athlete::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $athlete === null ? 'created' : 'updated';
+
+        if ($athlete === null) {
+            $athlete = new Athlete($displayName, $sourceName, $externalId);
+            $this->entityManager->persist($athlete);
+        }
+
+        $athlete
+            ->setDisplayName($displayName)
+            ->setFirstName($this->stringOrNull($row['firstName'] ?? null))
+            ->setLastName($this->stringOrNull($row['lastName'] ?? null))
+            ->setGender($this->stringOrNull($row['gender'] ?? null))
+            ->setCountry($this->stringOrNull($row['country'] ?? null))
+            ->setSourceUrl($sourceUrl);
+
+        return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function importCompetition(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $name = $this->requiredString($row, 'name');
+
+        /** @var Competition|null $competition */
+        $competition = $this->entityManager->getRepository(Competition::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $competition === null ? 'created' : 'updated';
+
+        if ($competition === null) {
+            $competition = new Competition($name, $sourceName, $externalId);
+            $this->entityManager->persist($competition);
+        }
+
+        $competition
+            ->setName($name)
+            ->setSeason($this->intOrNull($row['season'] ?? null))
+            ->setSourceUrl($sourceUrl);
+
+        return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function importEvent(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $name = $this->requiredString($row, 'name');
+        $competition = $this->findImported(Competition::class, $sourceName, $this->requiredString($row, 'competitionSourceId'));
+        $workoutSourceId = $this->stringOrNull($row['workoutSourceId'] ?? null);
+        $workout = $workoutSourceId === null ? null : $this->findImported(Workout::class, $sourceName, $workoutSourceId);
+
+        /** @var CompetitionEvent|null $event */
+        $event = $this->entityManager->getRepository(CompetitionEvent::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $event === null ? 'created' : 'updated';
+
+        if ($event === null) {
+            $event = new CompetitionEvent($competition, $name, $sourceName, $externalId);
+            $this->entityManager->persist($event);
+        }
+
+        $event
+            ->setName($name)
+            ->setEventOrder($this->intOrNull($row['eventOrder'] ?? null))
+            ->setWorkout($workout)
+            ->setSourceUrl($sourceUrl);
+
+        return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function importResult(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $athlete = $this->findImported(Athlete::class, $sourceName, $this->requiredString($row, 'athleteSourceId'));
+        $event = $this->findImported(CompetitionEvent::class, $sourceName, $this->requiredString($row, 'eventSourceId'));
+        /** @var WorkoutResult|null $result */
+        $result = $this->entityManager->getRepository(WorkoutResult::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $result === null ? 'created' : 'updated';
+        $score = $this->buildScore($row['score'] ?? null, $result?->getScore());
+
+        if ($result === null) {
+            $result = new WorkoutResult($athlete, $event, $score, $sourceName, $externalId);
+            $this->entityManager->persist($result);
+        }
+
+        $result
+            ->setScore($score)
+            ->setRank($this->intOrNull($row['rank'] ?? null))
+            ->setDivision($this->stringOrNull($row['division'] ?? null))
+            ->setPoints($this->intOrNull($row['points'] ?? null))
+            ->setSourceUrl($sourceUrl);
+
+        return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{0: string, 1: string, 2: string|null}
+     */
+    private function sourceIdentity(array $row, ?string $fallbackSourceName): array
+    {
+        if (!isset($row['source']) || !is_array($row['source'])) {
+            throw new \InvalidArgumentException('source object is required.');
+        }
+
+        $sourceName = $this->stringOrNull($row['source']['name'] ?? null) ?? $fallbackSourceName;
+        $externalId = $this->stringOrNull($row['source']['externalId'] ?? null);
+
+        if ($sourceName === null) {
+            throw new \InvalidArgumentException('source.name is required.');
+        }
+
+        if ($externalId === null) {
+            throw new \InvalidArgumentException('source.externalId is required.');
+        }
+
+        return [$sourceName, $externalId, $this->stringOrNull($row['source']['url'] ?? null)];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function requiredString(array $row, string $field): string
+    {
+        $value = $this->stringOrNull($row[$field] ?? null);
+
+        if ($value === null) {
+            throw new \InvalidArgumentException(sprintf('%s is required.', $field));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @template T of object
+     * @param class-string<T> $className
+     * @return T
+     */
+    private function findImported(string $className, string $sourceName, string $externalId): object
+    {
+        $entity = $this->entityManager->getRepository($className)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+
+        if ($entity === null) {
+            throw new \InvalidArgumentException(sprintf('Unable to resolve %s "%s".', $className, $externalId));
+        }
+
+        return $entity;
+    }
+
+    private function buildScore(mixed $data, ?Score $score = null): Score
+    {
+        if (!is_array($data)) {
+            throw new \InvalidArgumentException('score object is required.');
+        }
+
+        $typeValue = $this->requiredString($data, 'type');
+        $type = ScoreTypeEnum::tryFrom($typeValue);
+
+        if ($type === null) {
+            throw new \InvalidArgumentException(sprintf('Unsupported score type "%s".', $typeValue));
+        }
+
+        $score ??= new Score($type, $this->requiredString($data, 'rawValue'));
+
+        return $score
+            ->setType($type)
+            ->setRawValue($this->requiredString($data, 'rawValue'))
+            ->setDisplayValue($this->stringOrNull($data['displayValue'] ?? null))
+            ->setNumericValue($this->floatOrNull($data['numericValue'] ?? null))
+            ->setTimeInSeconds($this->intOrNull($data['timeInSeconds'] ?? null))
+            ->setUnit($this->stringOrNull($data['unit'] ?? null));
+    }
+
+    private function findWorkoutType(?string $name): ?WorkoutType
+    {
+        if ($name === null) {
+            return null;
+        }
+
+        $enum = WorkoutTypeEnum::tryFrom($name);
+        if ($enum === null) {
+            $enum = $this->matchEnumByNormalizedValue(WorkoutTypeEnum::cases(), $name);
+        }
+
+        if ($enum === null) {
+            return null;
+        }
+
+        /** @var WorkoutType|null $type */
+        $type = $this->entityManager->getRepository(WorkoutType::class)->findOneBy(['name' => $enum->value]);
+
+        if ($type === null) {
+            $type = new WorkoutType($enum);
+            $this->entityManager->persist($type);
+        }
+
+        return $type;
+    }
+
+    private function findOrCreateWorkoutOrigin(?string $originName, ?int $year): WorkoutOrigin
+    {
+        $enum = $originName === null ? WorkoutOriginNameEnum::OTHER : WorkoutOriginNameEnum::tryFrom($originName);
+        if ($enum === null) {
+            $enum = $this->matchEnumByNormalizedValue(WorkoutOriginNameEnum::cases(), $originName);
+        }
+        $enum ??= WorkoutOriginNameEnum::OTHER;
+
+        /** @var WorkoutOriginName|null $name */
+        $name = $this->entityManager->getRepository(WorkoutOriginName::class)->findOneBy(['name' => $enum->value]);
+        if ($name === null) {
+            $name = new WorkoutOriginName($enum);
+            $this->entityManager->persist($name);
+        }
+
+        /** @var WorkoutOrigin|null $origin */
+        $origin = $this->entityManager->getRepository(WorkoutOrigin::class)->findOneBy([
+            'name' => $name,
+            'year' => $year,
+        ]);
+
+        if ($origin === null) {
+            $origin = new WorkoutOrigin($name, $year);
+            $this->entityManager->persist($origin);
+        }
+
+        return $origin;
+    }
+
+    /**
+     * @param list<string> $names
+     */
+    private function replaceMovements(Workout $workout, array $names): void
+    {
+        foreach ($workout->getMovements()->toArray() as $movement) {
+            $workout->removeMovement($movement);
+        }
+
+        foreach ($this->matchEntitiesByName(Movement::class, $names) as $movement) {
+            $workout->addMovement($movement);
+        }
+    }
+
+    /**
+     * @param list<string> $names
+     */
+    private function replaceImplements(Workout $workout, array $names): void
+    {
+        foreach ($workout->getImplements()->toArray() as $implement) {
+            $workout->removeImplement($implement);
+        }
+
+        foreach ($this->matchEntitiesByName(Implement::class, $names) as $implement) {
+            $workout->addImplement($implement);
+        }
+    }
+
+    /**
+     * @template T of object
+     * @param class-string<T> $className
+     * @param list<string> $names
+     * @return list<T>
+     */
+    private function matchEntitiesByName(string $className, array $names): array
+    {
+        $entities = $this->entityManager->getRepository($className)->findAll();
+        $byName = [];
+
+        foreach ($entities as $entity) {
+            if (method_exists($entity, 'getName')) {
+                $byName[$this->normalizeName((string) $entity->getName())] = $entity;
+            }
+        }
+
+        $matches = [];
+        foreach ($names as $name) {
+            $normalized = $this->normalizeName($name);
+            if (isset($byName[$normalized])) {
+                $matches[] = $byName[$normalized];
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @template T of \BackedEnum
+     * @param list<T> $cases
+     * @return T|null
+     */
+    private function matchEnumByNormalizedValue(array $cases, string $value): ?\BackedEnum
+    {
+        $normalized = $this->normalizeName($value);
+
+        foreach ($cases as $case) {
+            if ($this->normalizeName((string) $case->value) === $normalized) {
+                return $case;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeName(string $name): string
+    {
+        $normalized = strtolower($name);
+        $normalized = str_replace(['-', '_'], ' ', $normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? $normalized;
+        $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? $normalized);
+
+        return rtrim($normalized, 's');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function strings(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map($this->stringOrNull(...), $value)));
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function intOrNull(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    private function floatOrNull(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function hasFailures(): bool
+    {
+        foreach ($this->summary as $counts) {
+            if ($counts['failed'] > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

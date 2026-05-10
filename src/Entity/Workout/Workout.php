@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
+#[ORM\UniqueConstraint(name: 'UNIQ_WORKOUT_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
 #[ApiResource]
 class Workout
 {
@@ -46,6 +47,15 @@ class Workout
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $sourceName = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $externalId = null;
+
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $sourceUrl = null;
 
     #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['remove'])]
     private ?WorkoutGeneration $workoutGeneration = null;
@@ -112,7 +122,7 @@ class Workout
         return $this->numberOfRounds;
     }
 
-    public function setNumberOfRounds(int $numberOfRounds): static
+    public function setNumberOfRounds(?int $numberOfRounds): static
     {
         $this->numberOfRounds = $numberOfRounds;
 
@@ -172,7 +182,7 @@ class Workout
         return $this->timeCap;
     }
 
-    public function setTimeCap(int $timeCap): static
+    public function setTimeCap(?int $timeCap): static
     {
         $this->timeCap = $timeCap;
 
@@ -196,6 +206,13 @@ class Workout
         return $this->workoutOrigin;
     }
 
+    public function setWorkoutOrigin(WorkoutOrigin $workoutOrigin): static
+    {
+        $this->workoutOrigin = $workoutOrigin;
+
+        return $this;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -209,6 +226,42 @@ class Workout
     public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): static
     {
         $this->workoutGeneration = $workoutGeneration;
+
+        return $this;
+    }
+
+    public function getSourceName(): ?string
+    {
+        return $this->sourceName;
+    }
+
+    public function setSourceName(?string $sourceName): static
+    {
+        $this->sourceName = $sourceName;
+
+        return $this;
+    }
+
+    public function getExternalId(): ?string
+    {
+        return $this->externalId;
+    }
+
+    public function setExternalId(?string $externalId): static
+    {
+        $this->externalId = $externalId;
+
+        return $this;
+    }
+
+    public function getSourceUrl(): ?string
+    {
+        return $this->sourceUrl;
+    }
+
+    public function setSourceUrl(?string $sourceUrl): static
+    {
+        $this->sourceUrl = $sourceUrl;
 
         return $this;
     }
