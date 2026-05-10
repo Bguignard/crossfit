@@ -3,6 +3,7 @@
 namespace App\Entity\Security;
 
 use App\Entity\Product\BoxMembership;
+use App\Entity\Product\UserAthleteProfile;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -42,12 +43,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: BoxMembership::class, orphanRemoval: true)]
     private Collection $boxMemberships;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserAthleteProfile::class, orphanRemoval: true)]
+    private Collection $athleteProfiles;
+
     public function __construct(string $email)
     {
         $this->email = $email;
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
         $this->boxMemberships = new ArrayCollection();
+        $this->athleteProfiles = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -132,6 +137,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getBoxMemberships(): Collection
     {
         return $this->boxMemberships;
+    }
+
+    public function getAthleteProfiles(): Collection
+    {
+        return $this->athleteProfiles;
     }
 
     private function touch(): void

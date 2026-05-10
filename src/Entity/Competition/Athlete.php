@@ -2,6 +2,9 @@
 
 namespace App\Entity\Competition;
 
+use App\Entity\Product\UserAthleteProfile;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
@@ -46,6 +49,9 @@ class Athlete
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\OneToMany(mappedBy: 'athlete', targetEntity: UserAthleteProfile::class, orphanRemoval: true)]
+    private Collection $linkedUserProfiles;
+
     public function __construct(string $displayName, string $sourceName, string $externalId)
     {
         $this->displayName = $displayName;
@@ -53,6 +59,7 @@ class Athlete
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+        $this->linkedUserProfiles = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -156,6 +163,11 @@ class Athlete
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getLinkedUserProfiles(): Collection
+    {
+        return $this->linkedUserProfiles;
     }
 
     private function touch(): void
