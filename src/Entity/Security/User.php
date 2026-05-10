@@ -4,6 +4,7 @@ namespace App\Entity\Security;
 
 use App\Entity\Product\BoxMembership;
 use App\Entity\Product\PerformanceAnalysisRequest;
+use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceProfile;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -54,6 +55,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: PerformanceAnalysisRequest::class, orphanRemoval: true)]
     private Collection $performanceAnalysisRequests;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: ProgrammingGenerationRequest::class, orphanRemoval: true)]
+    private Collection $programmingGenerationRequests;
+
     public function __construct(string $email)
     {
         $this->email = $email;
@@ -63,6 +67,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->athleteProfiles = new ArrayCollection();
         $this->performanceProfiles = new ArrayCollection();
         $this->performanceAnalysisRequests = new ArrayCollection();
+        $this->programmingGenerationRequests = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -162,6 +167,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getPerformanceAnalysisRequests(): Collection
     {
         return $this->performanceAnalysisRequests;
+    }
+
+    public function getProgrammingGenerationRequests(): Collection
+    {
+        return $this->programmingGenerationRequests;
     }
 
     private function touch(): void
