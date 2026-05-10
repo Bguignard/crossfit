@@ -21,6 +21,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -50,6 +51,7 @@ class ImportCompetitionResultsCommand extends Command
     protected function configure(): void
     {
         $this->addArgument('file', InputArgument::REQUIRED, 'Path to a competition-results.v1 JSON file.');
+        $this->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Flush batch size for large result imports.', 500);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -84,6 +86,7 @@ class ImportCompetitionResultsCommand extends Command
         }
 
         $sourceName = $this->stringOrNull($payload['source']['name'] ?? null);
+        $batchSize = max(1, (int) $input->getOption('batch-size'));
 
         $this->importRows('workouts', $payload['workouts'] ?? [], fn (array $row): string => $this->importWorkout($row, $sourceName));
         $this->entityManager->flush();
@@ -93,7 +96,12 @@ class ImportCompetitionResultsCommand extends Command
         $this->entityManager->flush();
         $this->importRows('events', $payload['events'] ?? [], fn (array $row): string => $this->importEvent($row, $sourceName));
         $this->entityManager->flush();
-        $this->importRows('results', $payload['results'] ?? [], fn (array $row): string => $this->importResult($row, $sourceName));
+        $this->importRows(
+            'results',
+            $payload['results'] ?? [],
+            fn (array $row): string => $this->importResult($row, $sourceName),
+            $batchSize,
+        );
         $this->entityManager->flush();
 
         $io->section('Import summary');
@@ -126,7 +134,7 @@ class ImportCompetitionResultsCommand extends Command
      * @param mixed $rows
      * @param callable(array<string, mixed>): string $importer
      */
-    private function importRows(string $section, mixed $rows, callable $importer): void
+    private function importRows(string $section, mixed $rows, callable $importer, ?int $flushEvery = null): void
     {
         $this->summary[$section] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
 
@@ -151,6 +159,11 @@ class ImportCompetitionResultsCommand extends Command
             } catch (\InvalidArgumentException $exception) {
                 ++$this->summary[$section]['failed'];
                 $this->errors[] = sprintf('%s[%d]: %s', $section, $index, $exception->getMessage());
+            }
+
+            if ($flushEvery !== null && ($index + 1) % $flushEvery === 0) {
+                $this->entityManager->flush();
+                $this->entityManager->clear();
             }
         }
     }
