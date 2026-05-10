@@ -8,18 +8,20 @@ use Doctrine\Common\DataFixtures\Purger\ORMPurger;
 use Doctrine\Common\DataFixtures\ReferenceRepository;
 use Doctrine\ORM\EntityManager;
 use Doctrine\Persistence\ObjectRepository;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 abstract class AbstractIntegrationTest extends WebTestCase
 {
     protected ?EntityManager $entityManager = null;
     protected ReferenceRepository $referenceRepository;
+    protected KernelBrowser $client;
 
     protected function setUp(): void
     {
-        $kernel = self::bootKernel();
+        $this->client = static::createClient();
 
-        $this->entityManager = $kernel->getContainer()
+        $this->entityManager = static::getContainer()
             ->get('doctrine')
             ->getManager();
 
@@ -61,10 +63,17 @@ abstract class AbstractIntegrationTest extends WebTestCase
         return $this->referenceRepository;
     }
 
+    protected function browser(): KernelBrowser
+    {
+        return $this->client;
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
-        $this->entityManager->close();
+        if ($this->entityManager !== null) {
+            $this->entityManager->close();
+        }
         $this->entityManager = null;
     }
 }
