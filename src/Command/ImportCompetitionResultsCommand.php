@@ -131,7 +131,6 @@ class ImportCompetitionResultsCommand extends Command
     }
 
     /**
-     * @param mixed $rows
      * @param callable(array<string, mixed>): string $importer
      */
     private function importRows(string $section, mixed $rows, callable $importer, ?int $flushEvery = null): void
@@ -341,6 +340,7 @@ class ImportCompetitionResultsCommand extends Command
 
     /**
      * @param array<string, mixed> $row
+     *
      * @return array{0: string, 1: string, 2: string|null}
      */
     private function sourceIdentity(array $row, ?string $fallbackSourceName): array
@@ -379,7 +379,9 @@ class ImportCompetitionResultsCommand extends Command
 
     /**
      * @template T of object
+     *
      * @param class-string<T> $className
+     *
      * @return T
      */
     private function findImported(string $className, string $sourceName, string $externalId): object
@@ -505,8 +507,10 @@ class ImportCompetitionResultsCommand extends Command
 
     /**
      * @template T of object
+     *
      * @param class-string<T> $className
-     * @param list<string> $names
+     * @param list<string>    $names
+     *
      * @return list<T>
      */
     private function matchEntitiesByName(string $className, array $names): array
@@ -533,7 +537,9 @@ class ImportCompetitionResultsCommand extends Command
 
     /**
      * @template T of \BackedEnum
+     *
      * @param list<T> $cases
+     *
      * @return T|null
      */
     private function matchEnumByNormalizedValue(array $cases, string $value): ?\BackedEnum
