@@ -6,3 +6,4 @@ vendor/
 **/.DS_Store
 .php-cs-fixer.cache
 .phpunit.result.cache
+config/reference.php
