@@ -13,7 +13,7 @@
         "doctrine/dbal": "^3",
         "doctrine/doctrine-bundle": "^2.10",
         "doctrine/doctrine-migrations-bundle": "^3.2",
-        "doctrine/orm": "^2.16",
+        "doctrine/orm": "^3.6",
         "friendsofphp/php-cs-fixer": "^3.38",
         "nelmio/cors-bundle": "^2.5",
         "phpdocumentor/reflection-docblock": "^5.3",
