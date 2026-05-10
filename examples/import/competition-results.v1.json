@@ -1,0 +1,92 @@
+{
+  "contractVersion": "competition-results.v1",
+  "generatedAt": "2026-05-10T12:00:00+00:00",
+  "source": {
+    "name": "crossfit_games",
+    "url": "https://games.crossfit.com"
+  },
+  "workouts": [
+    {
+      "source": {
+        "name": "crossfit_games",
+        "externalId": "cf-games-2016-open-16-2",
+        "url": "https://games.crossfit.com/workouts/open/2016/2"
+      },
+      "name": "Open 16.2",
+      "flow": "Beginning on a 4-minute clock, complete as many reps as possible of 25 toes-to-bars, 50 double-unders, 15 squat cleans, then continue with increasing clean loads if completed before each cutoff.",
+      "timeCap": 20,
+      "workoutType": "AMRAP",
+      "originName": "CrossFit Open",
+      "originYear": 2016,
+      "movementNames": [
+        "Toes-to-bars",
+        "Double-unders",
+        "Squat cleans"
+      ],
+      "implementNames": [
+        "Pull-up bar",
+        "Jump rope",
+        "Barbell"
+      ]
+    }
+  ],
+  "athletes": [
+    {
+      "source": {
+        "name": "crossfit_games",
+        "externalId": "athlete-12348",
+        "url": "https://games.crossfit.com/athlete/12348"
+      },
+      "displayName": "Tia-Clair Toomey",
+      "firstName": "Tia-Clair",
+      "lastName": "Toomey",
+      "gender": "F",
+      "country": "Australia"
+    }
+  ],
+  "competitions": [
+    {
+      "source": {
+        "name": "crossfit_games",
+        "externalId": "crossfit-open-2016",
+        "url": "https://games.crossfit.com/leaderboard/open/2016"
+      },
+      "name": "CrossFit Open",
+      "season": 2016
+    }
+  ],
+  "events": [
+    {
+      "source": {
+        "name": "crossfit_games",
+        "externalId": "crossfit-open-2016-event-16-2",
+        "url": "https://games.crossfit.com/workouts/open/2016/2"
+      },
+      "competitionSourceId": "crossfit-open-2016",
+      "workoutSourceId": "cf-games-2016-open-16-2",
+      "name": "Open 16.2",
+      "eventOrder": 2
+    }
+  ],
+  "results": [
+    {
+      "source": {
+        "name": "crossfit_games",
+        "externalId": "crossfit-open-2016-event-16-2-athlete-12348",
+        "url": "https://games.crossfit.com/leaderboard/open/2016?athlete=12348"
+      },
+      "athleteSourceId": "athlete-12348",
+      "eventSourceId": "crossfit-open-2016-event-16-2",
+      "rank": 1,
+      "division": "Women",
+      "points": 100,
+      "score": {
+        "type": "reps",
+        "rawValue": "430",
+        "displayValue": "430 reps",
+        "numericValue": 430,
+        "unit": "reps"
+      }
+    }
+  ]
+}
