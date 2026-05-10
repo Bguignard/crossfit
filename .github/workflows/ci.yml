@@ -75,5 +75,11 @@ jobs:
       - name: Lint Symfony container
         run: php bin/console lint:container --env=test
 
+      - name: Check coding style
+        run: composer cs:check
+
+      - name: Run Psalm
+        run: composer psalm
+
       - name: Run PHPUnit
         run: php -d memory_limit=1G bin/phpunit --colors=always
