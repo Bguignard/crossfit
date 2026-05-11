@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Catalog\MissingHeroWorkoutCatalog;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
@@ -276,7 +277,7 @@ class WorkoutCatalogData extends Fixture implements DependentFixtureInterface
     public function getWorkouts(): array
     {
         return [
-            ...MissingHeroWorkoutCatalog::workouts(),
+            ...$this->heroWorkouts(),
             self::SIMPLE_WORKOUT_ANGIE => [
                 'name' => 'Angie',
                 'flow' => <<<TXT
@@ -4683,5 +4684,24 @@ class WorkoutCatalogData extends Fixture implements DependentFixtureInterface
                 ],
             ],
         ];
+    }
+
+    /**
+     * @return array<string, array{name: string, flow: string, origin: string, implements: list<string>, movements: list<string>, workoutType?: string, timeCap?: int, numberOfRounds?: int}>
+     */
+    private function heroWorkouts(): array
+    {
+        return array_map(
+            static function (array $workout): array {
+                $workout['origin'] = WorkoutOriginData::WORKOUT_ORIGIN_HERO;
+                $workout['workoutType'] = match ($workout['workoutType'] ?? 'For time') {
+                    'AMRAP' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                    default => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                };
+
+                return $workout;
+            },
+            MissingHeroWorkoutCatalog::workouts(),
+        );
     }
 }
