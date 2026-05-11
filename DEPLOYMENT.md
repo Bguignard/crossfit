@@ -10,6 +10,7 @@ The production API is deployed manually from the server with `scripts/deploy_pro
   - `APP_DEBUG=0`
   - `APP_SECRET`
   - `DATABASE_URL`
+  - `PYTHON_WORKER_BASE_URL`
 - PHP, Composer, PostgreSQL access, Nginx and PHP-FPM are already installed.
 - The deploy user can reload PHP-FPM with `sudo systemctl reload php8.4-fpm`.
 
