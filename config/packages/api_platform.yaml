@@ -1,10 +1,13 @@
 api_platform:
-    title: Hello API Platform
+    title: MonWod API
     version: 1.0.0
     defaults:
         stateless: true
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']
-        pagination_enabled: false
+        pagination_enabled: true
+        pagination_items_per_page: 25
+        pagination_client_items_per_page: true
+        pagination_maximum_items_per_page: 50
     graphql:
         enabled: true

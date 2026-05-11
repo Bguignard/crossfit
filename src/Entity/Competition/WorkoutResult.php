@@ -2,12 +2,16 @@
 
 namespace App\Entity\Competition;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'workout_result')]
 #[ORM\UniqueConstraint(name: 'UNIQ_WORKOUT_RESULT_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
+#[ApiResource(operations: [new Get(), new GetCollection()])]
 class WorkoutResult
 {
     #[ORM\Id]
