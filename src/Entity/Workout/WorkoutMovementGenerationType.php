@@ -3,13 +3,15 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Repository\Workout\WorkoutMovementGenerationTypeRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutMovementGenerationTypeRepository::class)]
-#[ApiResource]
+#[ApiResource(operations: [new Get(), new GetCollection()])]
 class WorkoutMovementGenerationType
 {
     #[ORM\Id]

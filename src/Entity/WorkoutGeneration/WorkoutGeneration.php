@@ -2,7 +2,6 @@
 
 namespace App\Entity\WorkoutGeneration;
 
-use ApiPlatform\Metadata\ApiResource;
 use App\Entity\Workout\BodyPart;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
@@ -17,7 +16,6 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutGenerationRepository::class)]
-#[ApiResource]
 class WorkoutGeneration
 {
     #[ORM\Id]

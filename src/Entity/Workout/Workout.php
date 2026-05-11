@@ -3,6 +3,8 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -12,7 +14,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_WORKOUT_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
-#[ApiResource]
+#[ApiResource(operations: [new Get(), new GetCollection()])]
 class Workout
 {
     #[ORM\Id]

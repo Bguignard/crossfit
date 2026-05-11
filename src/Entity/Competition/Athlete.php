@@ -2,15 +2,20 @@
 
 namespace App\Entity\Competition;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Entity\Product\UserAthleteProfile;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'athlete')]
 #[ORM\UniqueConstraint(name: 'UNIQ_ATHLETE_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
+#[ApiResource(operations: [new Get(), new GetCollection()])]
 class Athlete
 {
     #[ORM\Id]
@@ -165,6 +170,7 @@ class Athlete
         return $this->updatedAt;
     }
 
+    #[Ignore]
     public function getLinkedUserProfiles(): Collection
     {
         return $this->linkedUserProfiles;

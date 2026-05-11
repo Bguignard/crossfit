@@ -10,6 +10,7 @@ use App\Services\Workout\WorkoutCreatorServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class WorkoutGeneratorController extends AbstractController
 {
@@ -20,7 +21,8 @@ class WorkoutGeneratorController extends AbstractController
     ) {
     }
 
-    #[Route('/api/workout-generator/{id}', name: 'workout-generator', requirements: ['id' => '[0-9a-fA-F\-]{36}'])]
+    #[Route('/api/workout-generator/{id}', name: 'workout-generator', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
     public function index(string $id): Response
     {
         $workoutGeneration = $this->workoutGenerationRepository->find($id);

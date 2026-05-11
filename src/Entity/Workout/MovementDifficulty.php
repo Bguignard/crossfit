@@ -3,13 +3,15 @@
 namespace App\Entity\Workout;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Repository\Workout\MovementDifficultyRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MovementDifficultyRepository::class)]
-#[ApiResource]
+#[ApiResource(operations: [new Get(), new GetCollection()])]
 class MovementDifficulty
 {
     #[ORM\Id]

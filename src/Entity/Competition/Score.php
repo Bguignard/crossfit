@@ -2,12 +2,15 @@
 
 namespace App\Entity\Competition;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'score')]
+#[ApiResource(operations: [new Get()])]
 class Score
 {
     #[ORM\Id]
