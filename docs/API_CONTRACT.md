@@ -30,14 +30,16 @@ Do not add public endpoints that dump complete datasets or trigger expensive AI/
 
 Private endpoints require an authenticated user and should cover user-owned data:
 
-- current user profile;
-- linked athlete profiles;
-- personal performance profiles and metrics;
-- performance analysis requests;
-- programming generation requests;
+- `GET /api/me`: current user dashboard payload, linked athlete profiles, latest
+  performance profile, readiness, and metric catalog;
+- `POST /api/me/athlete-profiles`: link an imported athlete to the current user;
+- `DELETE /api/me/athlete-profiles/{id}`: unlink one of the current user's
+  athlete profiles;
+- `PUT /api/me/performance-profile`: create or update the current user's latest
+  performance profile metrics;
+- future performance analysis requests;
+- future programming generation requests;
 - future saved or favorite WODs.
-
-This surface still needs the dedicated API authentication implementation.
 
 ## Admin API
 
