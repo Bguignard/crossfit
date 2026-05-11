@@ -62,6 +62,51 @@ class ProductFixturesTest extends AbstractIntegrationTest
         self::assertEquals(ImplementEnum::BARBELL, $barbell->getNameAsEnum());
     }
 
+    public function testHeroWorkoutCatalogContainsLegacyYamlCoverage(): void
+    {
+        $heroWorkoutNames = [];
+
+        /** @var Workout $workout */
+        foreach ($this->getRepository(Workout::class)->findAll() as $workout) {
+            if ($workout->getWorkoutOrigin()->getName()->getNameAsEnum() !== WorkoutOriginNameEnum::HERO_WORKOUT) {
+                continue;
+            }
+
+            $heroWorkoutNames[] = $workout->getName();
+        }
+
+        self::assertCount(237, $heroWorkoutNames);
+
+        foreach ([
+            'JT',
+            'Michael',
+            'Jason',
+            'Joshie',
+            'Tommy V',
+            'Griff',
+            'Ryan',
+            'Erin',
+            'Mr. Joshua',
+            'DT',
+            'Danny',
+            'Hansen',
+            'Tyler',
+            'Lumberjack 20',
+            'Nutts',
+            'Arnie',
+            'The Seven',
+            'RJ',
+            'Luce',
+            'Johnson',
+            'Jack',
+            'Forrest',
+            'Bull',
+            'Holbrook',
+        ] as $expectedHeroWorkoutName) {
+            self::assertContains($expectedHeroWorkoutName, $heroWorkoutNames);
+        }
+    }
+
     public function testMovementOntologyKeepsHighSignalMappingsForGenerationPrompts(): void
     {
         /** @var Movement $burpeeRopeClimb */

@@ -270,9 +270,13 @@ class WorkoutCatalogData extends Fixture implements DependentFixtureInterface
         ];
     }
 
+    /**
+     * @return array<string, array{name: string, flow: string, origin: string, implements: list<string>, movements: list<string>, workoutType?: string, timeCap?: int, numberOfRounds?: int}>
+     */
     public function getWorkouts(): array
     {
         return [
+            ...MissingHeroWorkoutCatalog::workouts(),
             self::SIMPLE_WORKOUT_ANGIE => [
                 'name' => 'Angie',
                 'flow' => <<<TXT
