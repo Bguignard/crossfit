@@ -2,6 +2,9 @@
 
 namespace App\Entity\Workout;
 
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -15,6 +18,13 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_WORKOUT_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
 #[ApiResource(operations: [new Get(), new GetCollection()])]
+#[ApiFilter(SearchFilter::class, properties: [
+    'name' => 'ipartial',
+    'flow' => 'ipartial',
+    'sourceName' => 'exact',
+    'externalId' => 'exact',
+])]
+#[ApiFilter(OrderFilter::class, properties: ['name', 'createdAt'])]
 class Workout
 {
     #[ORM\Id]

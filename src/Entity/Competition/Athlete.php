@@ -2,6 +2,8 @@
 
 namespace App\Entity\Competition;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -16,6 +18,13 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Table(name: 'athlete')]
 #[ORM\UniqueConstraint(name: 'UNIQ_ATHLETE_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
 #[ApiResource(operations: [new Get(), new GetCollection()])]
+#[ApiFilter(SearchFilter::class, properties: [
+    'displayName' => 'ipartial',
+    'firstName' => 'ipartial',
+    'lastName' => 'ipartial',
+    'sourceName' => 'exact',
+    'externalId' => 'exact',
+])]
 class Athlete
 {
     #[ORM\Id]
