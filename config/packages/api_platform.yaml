@@ -11,3 +11,5 @@ api_platform:
         pagination_maximum_items_per_page: 50
     graphql:
         enabled: true
+        graphiql:
+            enabled: false
