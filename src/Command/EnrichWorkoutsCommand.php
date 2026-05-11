@@ -87,7 +87,11 @@ final class EnrichWorkoutsCommand extends Command
             }
 
             $rows[] = [
+                (string) $workout->getId(),
                 $workout->getName(),
+                $workout->getSourceName() ?? '-',
+                $workout->getExternalId() ?? '-',
+                $this->flowPreview($workout),
                 $newMovements === [] ? '-' : implode(', ', array_map(static fn (Movement $movement): string => (string) $movement->getName(), $newMovements)),
                 $newImplements === [] ? '-' : implode(', ', array_map(static fn (Implement $implement): string => $implement->getName(), $newImplements)),
                 $match->ambiguousTerms === [] ? '-' : implode(', ', $match->ambiguousTerms),
@@ -108,7 +112,7 @@ final class EnrichWorkoutsCommand extends Command
         if ($rows !== []) {
             $table = new Table($output);
             $table
-                ->setHeaders(['Workout', 'New movements', 'New implements', 'Needs review'])
+                ->setHeaders(['ID', 'Workout', 'Source', 'External ID', 'Flow preview', 'New movements', 'New implements', 'Needs review'])
                 ->setRows($rows);
             $table->render();
         }
@@ -131,5 +135,16 @@ final class EnrichWorkoutsCommand extends Command
         }
 
         return $repository->findBy([], ['name' => 'ASC'], $limit);
+    }
+
+    private function flowPreview(Workout $workout): string
+    {
+        $preview = trim((string) preg_replace('/\s+/', ' ', $workout->getFlow()));
+
+        if (strlen($preview) <= 80) {
+            return $preview;
+        }
+
+        return substr($preview, 0, 77).'...';
     }
 }

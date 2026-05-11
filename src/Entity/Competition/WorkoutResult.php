@@ -28,6 +28,10 @@ class WorkoutResult
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private CompetitionEvent $event;
 
+    #[ORM\ManyToOne(targetEntity: CompetitionDivision::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?CompetitionDivision $competitionDivision = null;
+
     #[ORM\OneToOne(targetEntity: Score::class, cascade: ['persist', 'remove'])]
     #[ORM\JoinColumn(nullable: false)]
     private Score $score;
@@ -85,6 +89,19 @@ class WorkoutResult
     public function getEvent(): CompetitionEvent
     {
         return $this->event;
+    }
+
+    public function getCompetitionDivision(): ?CompetitionDivision
+    {
+        return $this->competitionDivision;
+    }
+
+    public function setCompetitionDivision(?CompetitionDivision $competitionDivision): self
+    {
+        $this->competitionDivision = $competitionDivision;
+        $this->touch();
+
+        return $this;
     }
 
     public function getScore(): Score

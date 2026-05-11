@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Entity\Competition\Athlete;
 use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
@@ -42,6 +43,11 @@ class ImportCompetitionResultsCommand extends Command
      * @var list<string>
      */
     private array $errors = [];
+
+    /**
+     * @var array<string, CompetitionDivision>
+     */
+    private array $competitionDivisions = [];
 
     public function __construct(private readonly EntityManagerInterface $entityManager)
     {
@@ -87,6 +93,7 @@ class ImportCompetitionResultsCommand extends Command
 
         $sourceName = $this->stringOrNull($payload['source']['name'] ?? null);
         $batchSize = max(1, (int) $input->getOption('batch-size'));
+        $this->competitionDivisions = [];
 
         $this->importRows('workouts', $payload['workouts'] ?? [], fn (array $row): string => $this->importWorkout($row, $sourceName));
         $this->entityManager->flush();
@@ -163,6 +170,7 @@ class ImportCompetitionResultsCommand extends Command
             if ($flushEvery !== null && ($index + 1) % $flushEvery === 0) {
                 $this->entityManager->flush();
                 $this->entityManager->clear();
+                $this->competitionDivisions = [];
             }
         }
     }
@@ -315,6 +323,14 @@ class ImportCompetitionResultsCommand extends Command
         [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
         $athlete = $this->findImported(Athlete::class, $sourceName, $this->requiredString($row, 'athleteSourceId'));
         $event = $this->findImported(CompetitionEvent::class, $sourceName, $this->requiredString($row, 'eventSourceId'));
+        $divisionName = $this->stringOrNull($row['division'] ?? null);
+        $competitionDivision = $divisionName === null ? null : $this->findOrCreateCompetitionDivision(
+            $event->getCompetition(),
+            $divisionName,
+            $sourceName,
+            $this->stringOrNull($row['divisionSourceId'] ?? null),
+            $sourceUrl,
+        );
         /** @var WorkoutResult|null $result */
         $result = $this->entityManager->getRepository(WorkoutResult::class)->findOneBy([
             'sourceName' => $sourceName,
@@ -331,7 +347,8 @@ class ImportCompetitionResultsCommand extends Command
         $result
             ->setScore($score)
             ->setRank($this->intOrNull($row['rank'] ?? null))
-            ->setDivision($this->stringOrNull($row['division'] ?? null))
+            ->setDivision($divisionName)
+            ->setCompetitionDivision($competitionDivision)
             ->setPoints($this->intOrNull($row['points'] ?? null))
             ->setSourceUrl($sourceUrl);
 
@@ -475,6 +492,52 @@ class ImportCompetitionResultsCommand extends Command
         }
 
         return $origin;
+    }
+
+    private function findOrCreateCompetitionDivision(
+        Competition $competition,
+        string $name,
+        string $sourceName,
+        ?string $externalId,
+        ?string $sourceUrl,
+    ): CompetitionDivision {
+        $externalId ??= $this->derivedDivisionExternalId($competition, $name);
+        $cacheKey = $sourceName.'|'.$externalId;
+        if (isset($this->competitionDivisions[$cacheKey])) {
+            return $this->competitionDivisions[$cacheKey]
+                ->setName($name)
+                ->setSourceUrl($sourceUrl);
+        }
+
+        /** @var CompetitionDivision|null $division */
+        $division = $this->entityManager->getRepository(CompetitionDivision::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+
+        if ($division === null) {
+            $division = new CompetitionDivision($competition, $name, $sourceName, $externalId);
+            $this->entityManager->persist($division);
+        }
+
+        $this->competitionDivisions[$cacheKey] = $division;
+
+        return $division
+            ->setName($name)
+            ->setSourceUrl($sourceUrl);
+    }
+
+    private function derivedDivisionExternalId(Competition $competition, string $divisionName): string
+    {
+        $normalizedName = strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $divisionName));
+        $normalizedName = trim($normalizedName, '-') ?: substr(sha1($divisionName), 0, 12);
+        $externalId = sprintf('%s:division:%s', $competition->getExternalId(), $normalizedName);
+
+        if (strlen($externalId) <= 255) {
+            return $externalId;
+        }
+
+        return sprintf('%s:division:%s', substr($competition->getExternalId(), 0, 225), substr(sha1($divisionName), 0, 16));
     }
 
     /**
