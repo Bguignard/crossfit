@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
-use App\DataFixtures\MissingHeroWorkoutCatalog;
+use App\Catalog\MissingHeroWorkoutCatalog;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Symfony\Component\Uid\Uuid;

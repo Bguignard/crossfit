@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DataFixtures;
+namespace App\Catalog;
 
 final class MissingHeroWorkoutCatalog
 {
@@ -59,8 +59,8 @@ final class MissingHeroWorkoutCatalog
                 Ring dips
                 Push-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -72,8 +72,8 @@ final class MissingHeroWorkoutCatalog
                 50 back extensions
                 50 sit-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -90,8 +90,8 @@ final class MissingHeroWorkoutCatalog
                 25 squats
                 20 muscle-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -106,8 +106,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 25 lb
                 Men: 40 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -124,8 +124,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 75 lb, 15-foot rope
                 Men: 115 lb, 15-foot rope
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -138,8 +138,8 @@ final class MissingHeroWorkoutCatalog
                 Run 800 meters
                 Run 400 meters backwards
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -150,8 +150,8 @@ final class MissingHeroWorkoutCatalog
                 7 muscle-ups
                 21 burpees
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -164,8 +164,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 30 lb
                 Men: 40 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -179,8 +179,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 175 lb
                 Men: 250 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -194,8 +194,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 105 lb
                 Men: 155 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -209,8 +209,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 75-lb barbell, 20-inch box
                 Men: 115-lb barbell, 24-inch box
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                'origin' => 'Hero workout',
+                'workoutType' => 'AMRAP',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -224,8 +224,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 53 lb
                 Men: 70 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -238,8 +238,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 65 lb
                 Men: 95 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -264,8 +264,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 185-lb deadlifts, 53-lb kettlebell, 75-lb overhead squats, 20-inch box, 30-lb dumbbells
                 Men: 275-lb deadlifts, 70-lb kettlebell, 115-lb overhead squats, 24-inch box, 45-lb dumbbells
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -278,8 +278,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 65 lb
                 Men: 95 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -291,8 +291,8 @@ final class MissingHeroWorkoutCatalog
                 25 ring handstand push-ups
                 25 L pull-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -304,8 +304,8 @@ final class MissingHeroWorkoutCatalog
                 100 squats
                 35 GHD sit-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -319,8 +319,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 185-lb barbell, 20-inch box
                 Men: 275-lb barbell, 24-inch box
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                'origin' => 'Hero workout',
+                'workoutType' => 'AMRAP',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -334,8 +334,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 125 lb
                 Men: 185 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -353,8 +353,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 175-lb deadlifts, 24-inch box, 14-lb medicine ball to 9 feet, 25-lb plate
                 Men: 250-lb deadlifts, 30-inch box, 20-lb medicine ball to 10 feet, 45-lb plate
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -371,8 +371,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 53 lb
                 Men: 70 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -390,8 +390,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 95-lb thrusters, 165-lb deadlifts, 53-lb kettlebell
                 Men: 135-lb thrusters, 245-lb deadlifts, 70-lb kettlebell
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -403,8 +403,8 @@ final class MissingHeroWorkoutCatalog
                 5 rope climbs to 15 feet
                 50 push-ups
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -418,8 +418,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 14-lb vest
                 Men: 20-lb vest
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -433,8 +433,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 165-lb deadlifts, 105-lb squat cleans
                 Men: 245-lb deadlifts, 155-lb squat cleans
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                'origin' => 'Hero workout',
+                'workoutType' => 'AMRAP',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -452,8 +452,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 195-lb deadlifts, 20-inch box, 14-lb ball to 9 feet, 135-lb bench press, 95-lb clean
                 Men: 295-lb deadlifts, 24-inch box, 20-lb ball to 10 feet, 195-lb bench press, 145-lb cleans
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -466,8 +466,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 65 lb
                 Men: 95 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -483,8 +483,8 @@ final class MissingHeroWorkoutCatalog
                 Men: 20-lb vest
                 If you've got a 20-lb vest or body armor, wear it.
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -498,8 +498,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 35-lb dumbbells
                 Men: 50-lb dumbbells
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -513,8 +513,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 75-lb barbell, 1-pood kettlebell, 20-inch box
                 Men: 115-lb barbell, 1.5-pood kettlebell, 24-inch box
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                'origin' => 'Hero workout',
+                'workoutType' => 'AMRAP',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -527,8 +527,8 @@ final class MissingHeroWorkoutCatalog
                 40 burpees
                 Run 800 meters
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -543,8 +543,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 95 lb
                 Men: 135 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -556,8 +556,8 @@ final class MissingHeroWorkoutCatalog
                 100-foot standing broad jump
                 Do 3 burpees after every 5 broad jumps. If you've got a 20-lb vest or body armor, wear it.
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -572,8 +572,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 25-lb plate, 20-inch box, 14-lb medicine ball to a 9-foot target
                 Men: 45-lb plate, 24-inch box, 20-lb medicine ball to a 10-foot target
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -588,8 +588,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 35-lb sandbag, 75-lb push press, 20-inch box, 65-lb sumo deadlift high pull
                 Men: 50-lb sandbag, 115-lb push press, 24-inch box, 95-lb sumo deadlift high pull
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -604,8 +604,8 @@ final class MissingHeroWorkoutCatalog
                 Men: 95-lb back squat, 135-lb farmers carry
                 Begin the rope climbs seated on the floor.
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -621,8 +621,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 53-lbkettlebell, 20-inch box, 14-lb medicine ball to a 9-foot target
                 Men: 72-lb kettlebell, 24-inch box, 20-lb medicine ball to a 10-foot target
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -637,8 +637,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 95-lb barbell
                 Men: 135-lb barbell
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -653,8 +653,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 155-lb barbell, 53-lb kettlebell
                 Men: 225-lb barbell, 70-lb kettlebell
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_AMRAP,
+                'origin' => 'Hero workout',
+                'workoutType' => 'AMRAP',
                 'implements' => [],
                 'movements' => [],
             ],
@@ -669,8 +669,8 @@ final class MissingHeroWorkoutCatalog
                 Women: 75 lb
                 Men: 115 lb
                 TXT,
-                'origin' => WorkoutOriginData::WORKOUT_ORIGIN_HERO,
-                'workoutType' => WorkoutTypeData::WORKOUT_TYPE_FOR_TIME,
+                'origin' => 'Hero workout',
+                'workoutType' => 'For time',
                 'implements' => [],
                 'movements' => [],
             ],
