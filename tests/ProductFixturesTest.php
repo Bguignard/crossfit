@@ -4,6 +4,7 @@ namespace App\Tests;
 
 use App\DataFixtures\ImplementData;
 use App\DataFixtures\MovementData;
+use App\DataFixtures\MuscleData;
 use App\DataFixtures\WorkoutData;
 use App\Entity\Workout\Enum\ImplementEnum;
 use App\Entity\Workout\Enum\MeasureUnitEnum;
@@ -13,6 +14,7 @@ use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
+use App\Entity\Workout\Muscle;
 use App\Entity\Workout\Workout;
 
 class ProductFixturesTest extends AbstractIntegrationTest
@@ -58,5 +60,78 @@ class ProductFixturesTest extends AbstractIntegrationTest
             )
         );
         self::assertEquals(ImplementEnum::BARBELL, $barbell->getNameAsEnum());
+    }
+
+    public function testMovementOntologyKeepsHighSignalMappingsForGenerationPrompts(): void
+    {
+        /** @var Movement $burpeeRopeClimb */
+        $burpeeRopeClimb = $this->getReference(MovementData::MOVEMENT_BURPEE_ROPE_CLIMB, Movement::class);
+        /** @var Implement $rope */
+        $rope = $this->getReference(ImplementData::IMPLEMENT_ROPE, Implement::class);
+        /** @var Implement $pullUpBar */
+        $pullUpBar = $this->getReference(ImplementData::IMPLEMENT_PULL_UP_BAR, Implement::class);
+
+        self::assertTrue($burpeeRopeClimb->getPossibleImplements()->contains($rope));
+        self::assertFalse($burpeeRopeClimb->getPossibleImplements()->contains($pullUpBar));
+
+        /** @var Movement $broadJump */
+        $broadJump = $this->getReference(MovementData::MOVEMENT_BROAD_JUMP, Movement::class);
+        /** @var Implement $band */
+        $band = $this->getReference(ImplementData::IMPLEMENT_BAND, Implement::class);
+
+        self::assertFalse($broadJump->getPossibleImplements()->contains($band));
+        $this->assertMovementHasMuscles($broadJump, [
+            MuscleData::MUSCLE_QUADRICEPS,
+            MuscleData::MUSCLE_GLUTEUS_MAXIMUS,
+            MuscleData::MUSCLE_HAMSTRINGS,
+            MuscleData::MUSCLE_CALVES,
+        ]);
+
+        /** @var Movement $muscleSnatch */
+        $muscleSnatch = $this->getReference(MovementData::MOVEMENT_MUSCLE_SNATCH, Movement::class);
+
+        $this->assertMovementHasMuscles($muscleSnatch, [
+            MuscleData::MUSCLE_TRAPEZIUS,
+            MuscleData::MUSCLE_DELTOIDS,
+            MuscleData::MUSCLE_FOREARMS,
+            MuscleData::MUSCLE_SPINAL_ERECTORS,
+        ]);
+
+        /** @var Movement $wallFacingStrictHandstandPushUp */
+        $wallFacingStrictHandstandPushUp = $this->getReference(MovementData::MOVEMENT_WALL_FACING_STRICT_HANDSTAND_PUSH_UP, Movement::class);
+
+        self::assertSame('Wall Facing Strict Handstand Push Up', $wallFacingStrictHandstandPushUp->getName());
+        $this->assertMovementHasMuscles($wallFacingStrictHandstandPushUp, [
+            MuscleData::MUSCLE_DELTOIDS,
+            MuscleData::MUSCLE_TRICEPS,
+            MuscleData::MUSCLE_RECTUS_ABDOMINIS,
+            MuscleData::MUSCLE_OBLIQUES,
+            MuscleData::MUSCLE_TRANSVERSUS_ABDOMINIS,
+        ]);
+
+        /** @var Movement $sledPush */
+        $sledPush = $this->getReference(MovementData::MOVEMENT_SLED_PUSH, Movement::class);
+
+        self::assertTrue(
+            $sledPush->getMovementExecutionTimeForMeasureUnits()->exists(
+                static fn (int $index, $executionTime): bool => $executionTime->getMeasureUnit() === MeasureUnitEnum::METER
+            )
+        );
+    }
+
+    /**
+     * @param list<string> $expectedMuscleReferences
+     */
+    private function assertMovementHasMuscles(Movement $movement, array $expectedMuscleReferences): void
+    {
+        foreach ($expectedMuscleReferences as $expectedMuscleReference) {
+            /** @var Muscle $muscle */
+            $muscle = $this->getReference($expectedMuscleReference, Muscle::class);
+
+            self::assertTrue(
+                $movement->getMuscles()->contains($muscle),
+                sprintf('Expected movement "%s" to contain muscle "%s".', $movement->getName(), $muscle->getName())
+            );
+        }
     }
 }
