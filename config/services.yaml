@@ -62,6 +62,10 @@ services:
     App\Services\PythonWorker\PythonWorkerClientInterface:
         alias: App\Services\PythonWorker\PythonWorkerClient
 
+    App\Services\Security\AuthEmailSender:
+        arguments:
+            $frontendBaseUrl: '%env(FRONTEND_BASE_URL)%'
+            $fromEmail: '%env(MAILER_FROM)%'
 
     App\DataProvider\WorkoutGenerationPossibleMovementsProvider:
         tags: ['api_platform.collection_data_provider']
