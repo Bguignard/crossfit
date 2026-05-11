@@ -37,6 +37,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $displayName = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $emailVerifiedAt = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -122,6 +125,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    #[\Deprecated]
     public function eraseCredentials(): void
     {
     }
@@ -134,6 +138,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setDisplayName(?string $displayName): self
     {
         $this->displayName = $displayName;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->emailVerifiedAt !== null;
+    }
+
+    public function getEmailVerifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerifiedAt;
+    }
+
+    public function markEmailVerified(?\DateTimeImmutable $verifiedAt = null): self
+    {
+        $this->emailVerifiedAt = $verifiedAt ?? new \DateTimeImmutable();
         $this->touch();
 
         return $this;
