@@ -7,6 +7,7 @@ BRANCH="${BRANCH:-master}"
 PHP_BIN="${PHP_BIN:-php}"
 COMPOSER_BIN="${COMPOSER_BIN:-composer}"
 PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-php8.4-fpm}"
+MESSENGER_SERVICE="${MESSENGER_SERVICE:-monwod-symfony-messenger}"
 RUN_MIGRATIONS=1
 
 usage() {
@@ -17,6 +18,7 @@ usage() {
     printf '  PHP_BIN           Default: php\n'
     printf '  COMPOSER_BIN      Default: composer\n'
     printf '  PHP_FPM_SERVICE   Default: php8.4-fpm\n'
+    printf '  MESSENGER_SERVICE Default: monwod-symfony-messenger\n'
 }
 
 log() {
@@ -68,7 +70,17 @@ log "Clearing production cache"
 log "Warming production cache"
 "$PHP_BIN" bin/console cache:warmup --env=prod
 
+log "Stopping Messenger workers so systemd restarts them with fresh code"
+"$PHP_BIN" bin/console messenger:stop-workers --env=prod || true
+
 log "Reloading ${PHP_FPM_SERVICE}"
 sudo systemctl reload "$PHP_FPM_SERVICE"
+
+if systemctl cat "$MESSENGER_SERVICE" >/dev/null 2>&1; then
+    log "Restarting ${MESSENGER_SERVICE}"
+    sudo systemctl restart "$MESSENGER_SERVICE"
+else
+    log "Messenger service ${MESSENGER_SERVICE} is not installed; skipping restart"
+fi
 
 log "Deployment completed"
