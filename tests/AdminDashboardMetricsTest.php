@@ -4,6 +4,12 @@ namespace App\Tests;
 
 use App\DataFixtures\WorkoutData;
 use App\Entity\Competition\Athlete;
+use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionDivision;
+use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\Enum\ScoreTypeEnum;
+use App\Entity\Competition\Score;
+use App\Entity\Competition\WorkoutResult;
 use App\Entity\Product\Box;
 use App\Entity\Product\BoxMembership;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
@@ -30,6 +36,13 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $fran->setSourceName('crossfit_games');
 
         $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-clair-toomey');
+        $competition = (new Competition('CrossFit Games', 'crossfit_games', 'games-2026'))->setSeason(2026);
+        $event = new CompetitionEvent($competition, 'Final', 'crossfit_games', 'games-2026-final');
+        $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2026-women');
+        $score = (new Score(ScoreTypeEnum::REPS, '100'))->setNumericValue(100);
+        $result = (new WorkoutResult($athlete, $event, $score, 'crossfit_games', 'games-2026-final-tct'))
+            ->setCompetitionDivision($division)
+            ->setRank(1);
         $athleteProfile = new UserAthleteProfile($member, $athlete);
         $performanceProfile = new UserPerformanceProfile($member);
         $analysisRequest = new PerformanceAnalysisRequest($member, $performanceProfile, $athleteProfile);
@@ -45,6 +58,10 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $entityManager->persist($admin);
         $entityManager->persist($member);
         $entityManager->persist($athlete);
+        $entityManager->persist($competition);
+        $entityManager->persist($event);
+        $entityManager->persist($division);
+        $entityManager->persist($result);
         $entityManager->persist($athleteProfile);
         $entityManager->persist($performanceProfile);
         $entityManager->persist($analysisRequest);
@@ -63,11 +80,19 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertGreaterThanOrEqual(1, $payload['workouts']['total']);
         self::assertSame(1, $payload['workouts']['by_source']['crossfit_games']);
         self::assertArrayHasKey('manual', $payload['workouts']['by_source']);
+        self::assertNotNull($payload['workouts']['latest_created_at']);
 
         self::assertGreaterThanOrEqual(1, $payload['athletes']['total']);
         self::assertSame(1, $payload['athletes']['by_source']['crossfit_games']);
 
+        self::assertSame(1, $payload['competitions']['total']);
+        self::assertSame(1, $payload['competition_events']['total']);
+        self::assertSame(1, $payload['competition_divisions']['total']);
+        self::assertSame(1, $payload['workout_results']['total']);
+        self::assertSame(1, $payload['workout_results']['by_source']['crossfit_games']);
+
         self::assertGreaterThanOrEqual(2, $payload['users']['total']);
+        self::assertSame(1, $payload['users']['admins']);
         self::assertSame(1, $payload['linked_athlete_profiles']['total']);
         self::assertSame(1, $payload['performance_profiles']['total']);
         self::assertSame(1, $payload['analysis_requests']['by_status']['queued']);
@@ -89,5 +114,12 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $this->browser()->request('GET', '/api/admin/metrics');
 
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testAnonymousUsersCannotReadAdminMetrics(): void
+    {
+        $this->browser()->request('GET', '/api/admin/metrics');
+
+        self::assertContains($this->browser()->getResponse()->getStatusCode(), [401, 403]);
     }
 }

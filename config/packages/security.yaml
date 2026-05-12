@@ -30,6 +30,7 @@ security:
         - { path: ^/api/auth/(register|verify-email|login|forgot-password|reset-password)$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/me$, roles: ROLE_USER }
         - { path: ^/api/me, roles: ROLE_USER }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 
