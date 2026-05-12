@@ -18,6 +18,8 @@ fallback.
   - `PYTHON_WORKER_BASE_URL`
 - PHP, Composer, PostgreSQL access, Nginx and PHP-FPM are already installed.
 - The deploy user can reload PHP-FPM with `sudo systemctl reload php8.4-fpm`.
+- The deploy user can restart the Messenger worker with
+  `sudo systemctl restart monwod-symfony-messenger` once the service is installed.
 
 ## Automatic Deploy
 
@@ -50,7 +52,9 @@ cd /var/www/crossfit
 ```
 
 The script updates `master`, installs production Composer dependencies, runs
-Doctrine migrations, clears and warms the Symfony cache, then reloads PHP-FPM.
+Doctrine migrations, clears and warms the Symfony cache, asks old Messenger
+workers to stop, reloads PHP-FPM, then restarts the Messenger worker when the
+systemd service exists.
 
 ## Manual Deploy
 
@@ -77,7 +81,48 @@ BRANCH=master \
 PHP_BIN=php \
 COMPOSER_BIN=composer \
 PHP_FPM_SERVICE=php8.4-fpm \
+MESSENGER_SERVICE=monwod-symfony-messenger \
 ./scripts/deploy_prod.sh
+```
+
+## Messenger Worker
+
+Symfony queues emails through Messenger. Production must therefore run a worker
+continuously, otherwise account validation and password reset emails remain in
+`messenger_messages`.
+
+Install or refresh the worker service on the server:
+
+```bash
+cd /var/www/crossfit
+sudo ./scripts/install_messenger_worker_service.sh
+```
+
+Useful overrides:
+
+```bash
+sudo PROJECT_DIR=/var/www/crossfit \
+PHP_BIN=/usr/bin/php \
+SERVICE_USER=ubuntu \
+SERVICE_GROUP=www-data \
+./scripts/install_messenger_worker_service.sh
+```
+
+Operate the worker:
+
+```bash
+sudo systemctl status monwod-symfony-messenger
+sudo systemctl restart monwod-symfony-messenger
+sudo journalctl -u monwod-symfony-messenger -f
+```
+
+Debug the queue:
+
+```bash
+php bin/console dbal:run-sql --force-fetch "SELECT COUNT(*) FROM messenger_messages;"
+php bin/console messenger:failed:show --env=prod
+php bin/console messenger:failed:retry --env=prod
+php bin/console messenger:failed:remove --all --env=prod
 ```
 
 ## Smoke Test
