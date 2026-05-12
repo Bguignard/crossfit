@@ -29,6 +29,14 @@ class AuthWorkflowTest extends AbstractIntegrationTest
         ]);
 
         self::assertResponseStatusCodeSame(403);
+        self::assertSame('email_not_verified', $this->jsonResponse()['code']);
+
+        $this->jsonRequest('POST', '/api/auth/resend-verification', [
+            'email' => 'athlete@example.com',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['status' => 'verification_email_requested'], $this->jsonResponse());
 
         /** @var UserToken|null $verificationToken */
         $verificationToken = $this->getRepository(UserToken::class)->findOneBy([
@@ -37,6 +45,11 @@ class AuthWorkflowTest extends AbstractIntegrationTest
             'consumedAt' => null,
         ]);
         self::assertNotNull($verificationToken);
+        self::assertCount(2, $this->getRepository(UserToken::class)->findBy([
+            'user' => $user,
+            'purpose' => UserToken::PURPOSE_EMAIL_VERIFICATION,
+            'consumedAt' => null,
+        ]));
 
         $this->jsonRequest('POST', '/api/auth/verify-email', [
             'token' => 'invalid-token',

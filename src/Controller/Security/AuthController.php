@@ -77,6 +77,29 @@ class AuthController extends AbstractController
         return $this->json(['status' => 'email_verified']);
     }
 
+    #[Route('/resend-verification', name: 'api_auth_resend_verification', methods: ['POST'])]
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $payload = $this->jsonPayload($request);
+        $email = $this->email($payload['email'] ?? null);
+
+        /** @var User|null $user */
+        $user = $email !== null ? $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]) : null;
+        if ($user !== null && !$user->isEmailVerified()) {
+            $plainToken = $this->tokenFactory->createPlainToken();
+            $this->entityManager->persist(new UserToken(
+                $user,
+                $plainToken,
+                UserToken::PURPOSE_EMAIL_VERIFICATION,
+                new \DateTimeImmutable('+48 hours'),
+            ));
+            $this->entityManager->flush();
+            $this->authEmailSender->sendEmailVerification($user, $plainToken);
+        }
+
+        return $this->json(['status' => 'verification_email_requested']);
+    }
+
     #[Route('/login', name: 'api_auth_login', methods: ['POST'])]
     public function login(Request $request): JsonResponse
     {
@@ -90,7 +113,10 @@ class AuthController extends AbstractController
             return $this->json(['error' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
         }
         if (!$user->isEmailVerified()) {
-            return $this->json(['error' => 'Email must be verified before login.'], Response::HTTP_FORBIDDEN);
+            return $this->json([
+                'error' => 'Email must be verified before login.',
+                'code' => 'email_not_verified',
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $plainToken = $this->tokenFactory->createPlainToken();
