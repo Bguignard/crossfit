@@ -132,6 +132,29 @@ class MeController extends AbstractController
         return $this->json(['performanceProfile' => $this->serializePerformanceProfile($profile)]);
     }
 
+    #[Route('/performance-profile/metrics/{key}', name: 'api_me_delete_performance_metric', methods: ['DELETE'])]
+    public function deletePerformanceMetric(string $key): JsonResponse
+    {
+        $metricKey = PerformanceMetricKeyEnum::tryFrom($key);
+        if ($metricKey === null) {
+            return $this->json(['error' => sprintf('Unknown metric key "%s".', $key)], Response::HTTP_BAD_REQUEST);
+        }
+
+        $profile = $this->getLatestPerformanceProfile($this->currentUser());
+        if ($profile === null) {
+            return $this->json(['performanceProfile' => null]);
+        }
+
+        $metric = $profile->getMetric($metricKey);
+        if ($metric !== null) {
+            $profile->removeMetric($metric);
+            $this->entityManager->remove($metric);
+            $this->entityManager->flush();
+        }
+
+        return $this->json(['performanceProfile' => $this->serializePerformanceProfile($profile)]);
+    }
+
     /**
      * @return array<string, mixed>
      */
