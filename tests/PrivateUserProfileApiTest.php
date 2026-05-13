@@ -4,7 +4,9 @@ namespace App\Tests;
 
 use App\Entity\Competition\Athlete;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
+use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\UserAthleteProfile;
+use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Entity\Security\UserToken;
@@ -141,6 +143,58 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             'Metric "strict_pull_up" expects a booleanValue.',
             $this->jsonResponse()['error']
         );
+    }
+
+    public function testUserCanCreateAnalysisAndProgrammingRequests(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('requests@example.com', 'requests-token');
+        $athlete = new Athlete('Bruno Athlete', 'competition_corner', 'bruno-123');
+        $athleteProfile = (new UserAthleteProfile($user, $athlete))->setPrimaryProfile(true);
+        $performanceProfile = new UserPerformanceProfile($user);
+        (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
+        (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::STRICT_PULL_UP))->setBooleanValue(true);
+
+        $this->getEntityManager()->persist($athlete);
+        $this->getEntityManager()->persist($athleteProfile);
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'athleteProfileId' => (string) $athleteProfile->getId(),
+            'parameters' => [
+                'goal' => 'identify weaknesses',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $analysisPayload = $this->jsonResponse()['analysisRequest'];
+        self::assertSame('queued', $analysisPayload['status']);
+        self::assertSame('identify weaknesses', $analysisPayload['parameters']['goal']);
+        self::assertSame('Bruno Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
+        self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'goal' => 'gymnastics endurance',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $programmingPayload = $this->jsonResponse()['programmingRequest'];
+        self::assertSame('queued', $programmingPayload['status']);
+        self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
+        self::assertSame('gymnastics endurance', $programmingPayload['constraints']['goal']);
+        self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        $requestsPayload = $this->jsonResponse();
+        self::assertCount(1, $requestsPayload['analysisRequests']);
+        self::assertCount(1, $requestsPayload['programmingRequests']);
     }
 
     /**
