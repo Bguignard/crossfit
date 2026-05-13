@@ -95,6 +95,15 @@ class UserPerformanceProfile
         return $this;
     }
 
+    public function removeMetric(UserPerformanceMetric $metric): self
+    {
+        if ($this->metrics->removeElement($metric)) {
+            $this->touch();
+        }
+
+        return $this;
+    }
+
     public function getMetric(PerformanceMetricKeyEnum $metricKey): ?UserPerformanceMetric
     {
         foreach ($this->metrics as $metric) {
