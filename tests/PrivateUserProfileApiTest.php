@@ -111,6 +111,18 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $storedProfile = $storedUser->getPerformanceProfiles()->first();
         self::assertSame(150.0, $storedProfile->getMetric(PerformanceMetricKeyEnum::BACK_SQUAT_1RM)?->getNumericValue());
         self::assertTrue($storedProfile->getMetric(PerformanceMetricKeyEnum::STRICT_PULL_UP)?->getBooleanValue());
+
+        $this->jsonRequest(
+            'DELETE',
+            '/api/me/performance-profile/metrics/'.PerformanceMetricKeyEnum::STRICT_PULL_UP->value,
+            [],
+            $token
+        );
+
+        self::assertResponseIsSuccessful();
+        $profilePayload = $this->jsonResponse()['performanceProfile'];
+        self::assertCount(1, $profilePayload['metrics']);
+        self::assertSame(PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value, $profilePayload['metrics'][0]['key']);
     }
 
     public function testMetricPayloadIsValidatedAgainstMetricType(): void
@@ -159,7 +171,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('queued', $analysisPayload['status']);
         self::assertSame('identify weaknesses', $analysisPayload['parameters']['goal']);
         self::assertSame('Bruno Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
-        self::assertSame(150.0, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
 
         $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
             'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
