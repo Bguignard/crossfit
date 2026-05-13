@@ -6,6 +6,9 @@ use App\Entity\Competition\Athlete;
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\PerformanceMetricValueTypeEnum;
+use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
+use App\Entity\Product\PerformanceAnalysisRequest;
+use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -132,6 +135,104 @@ class MeController extends AbstractController
         return $this->json(['performanceProfile' => $this->serializePerformanceProfile($profile)]);
     }
 
+    #[Route('/requests', name: 'api_me_requests', methods: ['GET'])]
+    public function requests(): JsonResponse
+    {
+        $user = $this->currentUser();
+
+        return $this->json([
+            'analysisRequests' => array_map(
+                fn (PerformanceAnalysisRequest $request): array => $this->serializeAnalysisRequest($request),
+                $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findBy(
+                    ['user' => $user],
+                    ['createdAt' => 'DESC'],
+                    20
+                )
+            ),
+            'programmingRequests' => array_map(
+                fn (ProgrammingGenerationRequest $request): array => $this->serializeProgrammingRequest($request),
+                $this->entityManager->getRepository(ProgrammingGenerationRequest::class)->findBy(
+                    ['user' => $user],
+                    ['createdAt' => 'DESC'],
+                    20
+                )
+            ),
+        ]);
+    }
+
+    #[Route('/performance-analysis-requests', name: 'api_me_create_performance_analysis_request', methods: ['POST'])]
+    public function createPerformanceAnalysisRequest(Request $request): JsonResponse
+    {
+        $user = $this->currentUser();
+        $profile = $this->getLatestPerformanceProfile($user);
+        if ($profile === null) {
+            return $this->json(['error' => 'Performance profile is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $payload = $this->jsonPayload($request);
+        $athleteProfile = null;
+        $athleteProfileId = $payload['athleteProfileId'] ?? null;
+        if (is_string($athleteProfileId) && $athleteProfileId !== '') {
+            /** @var UserAthleteProfile|null $athleteProfile */
+            $athleteProfile = $this->entityManager->getRepository(UserAthleteProfile::class)->find($athleteProfileId);
+            if ($athleteProfile === null || $athleteProfile->getUser() !== $user) {
+                return $this->json(['error' => 'Athlete profile not found.'], Response::HTTP_NOT_FOUND);
+            }
+        }
+
+        $parameters = $this->arrayPayload($payload['parameters'] ?? []);
+        $analysisRequest = (new PerformanceAnalysisRequest(
+            $user,
+            $profile,
+            $athleteProfile,
+            $parameters,
+            $this->buildAnalysisSnapshot($profile, $athleteProfile)
+        ))->markQueued();
+
+        $this->entityManager->persist($analysisRequest);
+        $this->entityManager->flush();
+
+        return $this->json(
+            ['analysisRequest' => $this->serializeAnalysisRequest($analysisRequest)],
+            Response::HTTP_CREATED
+        );
+    }
+
+    #[Route('/programming-generation-requests', name: 'api_me_create_programming_generation_request', methods: ['POST'])]
+    public function createProgrammingGenerationRequest(Request $request): JsonResponse
+    {
+        $user = $this->currentUser();
+        $payload = $this->jsonPayload($request);
+        $typeValue = $payload['type'] ?? null;
+        if (!is_string($typeValue)) {
+            return $this->json(['error' => 'type is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $type = ProgrammingGenerationTypeEnum::tryFrom($typeValue);
+        if ($type === null) {
+            return $this->json(['error' => 'Invalid programming generation type.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $profile = $this->getLatestPerformanceProfile($user);
+        $constraints = $this->arrayPayload($payload['constraints'] ?? []);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            $type,
+            $constraints,
+            $this->buildProgrammingSnapshot($profile)
+        ))
+            ->setPerformanceProfile($profile)
+            ->markQueued();
+
+        $this->entityManager->persist($programmingRequest);
+        $this->entityManager->flush();
+
+        return $this->json(
+            ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],
+            Response::HTTP_CREATED
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -220,6 +321,51 @@ class MeController extends AbstractController
             'booleanValue' => $metric->getBooleanValue(),
             'unit' => $metric->getUnit(),
             'notes' => $metric->getNotes(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeAnalysisRequest(PerformanceAnalysisRequest $request): array
+    {
+        return [
+            'id' => (string) $request->getId(),
+            'status' => $request->getStatus()->value,
+            'eligibleAtCreation' => $request->wasEligibleAtCreation(),
+            'parameters' => $request->getParameters(),
+            'inputSnapshot' => $request->getInputSnapshot(),
+            'result' => $request->getResult(),
+            'errorMessage' => $request->getErrorMessage(),
+            'createdAt' => $this->date($request->getCreatedAt()),
+            'updatedAt' => $this->date($request->getUpdatedAt()),
+            'queuedAt' => $this->date($request->getQueuedAt()),
+            'startedAt' => $this->date($request->getStartedAt()),
+            'completedAt' => $this->date($request->getCompletedAt()),
+            'athleteProfile' => $request->getAthleteProfile() !== null
+                ? $this->serializeAthleteProfile($request->getAthleteProfile())
+                : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeProgrammingRequest(ProgrammingGenerationRequest $request): array
+    {
+        return [
+            'id' => (string) $request->getId(),
+            'type' => $request->getType()->value,
+            'status' => $request->getStatus()->value,
+            'constraints' => $request->getConstraints(),
+            'inputSnapshot' => $request->getInputSnapshot(),
+            'generatedProgramming' => $request->getGeneratedProgramming(),
+            'errorMessage' => $request->getErrorMessage(),
+            'createdAt' => $this->date($request->getCreatedAt()),
+            'updatedAt' => $this->date($request->getUpdatedAt()),
+            'queuedAt' => $this->date($request->getQueuedAt()),
+            'startedAt' => $this->date($request->getStartedAt()),
+            'completedAt' => $this->date($request->getCompletedAt()),
         ];
     }
 
@@ -320,6 +466,49 @@ class MeController extends AbstractController
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function buildAnalysisSnapshot(UserPerformanceProfile $profile, ?UserAthleteProfile $athleteProfile): array
+    {
+        return [
+            'performance_metrics' => $this->performanceMetricSnapshot($profile),
+            'athlete_profile' => $athleteProfile !== null ? [
+                'id' => (string) $athleteProfile->getId(),
+                'athlete_id' => (string) $athleteProfile->getAthlete()->getId(),
+                'display_name' => $athleteProfile->getAthlete()->getDisplayName(),
+                'source_name' => $athleteProfile->getAthlete()->getSourceName(),
+                'external_id' => $athleteProfile->getAthlete()->getExternalId(),
+            ] : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildProgrammingSnapshot(?UserPerformanceProfile $profile): array
+    {
+        return [
+            'performance_profile_id' => $profile?->getId() !== null ? (string) $profile->getId() : null,
+            'performance_metrics' => $profile !== null ? $this->performanceMetricSnapshot($profile) : [],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function performanceMetricSnapshot(UserPerformanceProfile $profile): array
+    {
+        $metrics = [];
+        foreach ($profile->getMetrics() as $metric) {
+            $metrics[$metric->getMetricKey()->value] = $metric->getValueType() === PerformanceMetricValueTypeEnum::BOOLEAN
+                ? $metric->getBooleanValue()
+                : $metric->getNumericValue();
+        }
+
+        return $metrics;
+    }
+
+    /**
      * @return list<string>
      */
     private function missingRequiredMetrics(UserPerformanceProfile $profile): array
@@ -362,6 +551,18 @@ class MeController extends AbstractController
         }
 
         return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function arrayPayload(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return $value;
     }
 
     private function currentUser(): User
