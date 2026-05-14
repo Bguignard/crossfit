@@ -6,7 +6,10 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use App\Entity\Workout\Workout;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
@@ -25,7 +28,7 @@ class CompetitionEvent
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Competition $competition;
 
-    #[ORM\ManyToOne(targetEntity: Workout::class)]
+    #[ORM\ManyToOne(targetEntity: Workout::class, inversedBy: 'competitionEvents')]
     #[ORM\JoinColumn(nullable: true)]
     private ?Workout $workout = null;
 
@@ -50,6 +53,9 @@ class CompetitionEvent
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\OneToMany(mappedBy: 'event', targetEntity: WorkoutResult::class)]
+    private Collection $results;
+
     public function __construct(Competition $competition, string $name, string $sourceName, string $externalId)
     {
         $this->competition = $competition;
@@ -58,6 +64,7 @@ class CompetitionEvent
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+        $this->results = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -140,6 +147,15 @@ class CompetitionEvent
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * @return Collection<int, WorkoutResult>
+     */
+    #[Ignore]
+    public function getResults(): Collection
+    {
+        return $this->results;
     }
 
     private function touch(): void

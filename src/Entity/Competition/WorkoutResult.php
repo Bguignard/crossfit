@@ -38,7 +38,7 @@ class WorkoutResult
     #[ORM\JoinColumn(nullable: false)]
     private Athlete $athlete;
 
-    #[ORM\ManyToOne(targetEntity: CompetitionEvent::class)]
+    #[ORM\ManyToOne(targetEntity: CompetitionEvent::class, inversedBy: 'results')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private CompetitionEvent $event;
 
