@@ -2,6 +2,7 @@
 
 namespace App\Tests;
 
+use App\DataFixtures\WorkoutData;
 use App\Entity\Competition\Athlete;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
@@ -9,6 +10,7 @@ use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
+use App\Entity\Workout\Workout;
 
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 {
@@ -24,6 +26,48 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertContains('Fran', $names);
         self::assertLessThanOrEqual(50, count($workouts));
+    }
+
+    public function testFrontendCanReadWorkoutCompetitionContext(): void
+    {
+        $entityManager = $this->getEntityManager();
+        /** @var Workout $workout */
+        $workout = $this->getReference(WorkoutData::WORKOUT_OPEN_17_5, Workout::class);
+        $workoutId = (string) $workout->getId();
+        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-context');
+        $competition = (new Competition('CrossFit Games Open', 'crossfit_games', 'open-2017'))
+            ->setSeason(2017);
+        $event = (new CompetitionEvent($competition, 'Open 17.5', 'crossfit_games', 'open-2017-17-5'))
+            ->setEventOrder(5)
+            ->setWorkout($workout);
+        $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'open-2017-women');
+        $result = (new WorkoutResult($athlete, $event, new Score(ScoreTypeEnum::TIME, '10:21'), 'crossfit_games', 'open-2017-tia'))
+            ->setCompetitionDivision($division)
+            ->setDivision('Women')
+            ->setRank(1);
+
+        foreach ([$athlete, $competition, $event, $division, $result] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/workouts/%s', $workoutId));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame([
+            [
+                'competitionName' => 'CrossFit Games Open',
+                'competitionSeason' => 2017,
+                'eventName' => 'Open 17.5',
+                'eventOrder' => 5,
+                'sourceName' => 'crossfit_games',
+                'divisions' => ['Women'],
+            ],
+        ], $payload['competitionContexts']);
     }
 
     public function testFrontendCanListPublicAthletesEvenWhenCatalogIsEmpty(): void

@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use App\Entity\Competition\CompetitionEvent;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Repository\Workout\WorkoutRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -72,6 +73,9 @@ class Workout
     #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['remove'])]
     private ?WorkoutGeneration $workoutGeneration = null;
 
+    #[ORM\OneToMany(mappedBy: 'workout', targetEntity: CompetitionEvent::class)]
+    private Collection $competitionEvents;
+
     public function __construct(
         ?string $name,
         string $flow,
@@ -84,6 +88,7 @@ class Workout
     ) {
         $this->implements = new ArrayCollection();
         $this->movements = new ArrayCollection();
+        $this->competitionEvents = new ArrayCollection();
 
         $this->name = $name;
         $this->flow = $flow;
@@ -233,6 +238,76 @@ class Workout
     public function getWorkoutGeneration(): ?WorkoutGeneration
     {
         return $this->workoutGeneration;
+    }
+
+    /**
+     * @return list<array{
+     *     competitionName: string,
+     *     competitionSeason: int|null,
+     *     eventName: string,
+     *     eventOrder: int|null,
+     *     sourceName: string,
+     *     divisions: list<string>
+     * }>
+     */
+    public function getCompetitionContexts(): array
+    {
+        $contexts = [];
+        $seen = [];
+
+        /** @var CompetitionEvent $event */
+        foreach ($this->competitionEvents as $event) {
+            $competition = $event->getCompetition();
+            $divisions = [];
+
+            foreach ($event->getResults() as $result) {
+                $division = $result->getCompetitionDivision()?->getName() ?? $result->getDivision();
+                if ($division !== null && $division !== '') {
+                    $divisions[$division] = true;
+                }
+            }
+
+            $divisionNames = array_keys($divisions);
+            sort($divisionNames, SORT_NATURAL | SORT_FLAG_CASE);
+
+            $context = [
+                'competitionName' => $competition->getName(),
+                'competitionSeason' => $competition->getSeason(),
+                'eventName' => $event->getName(),
+                'eventOrder' => $event->getEventOrder(),
+                'sourceName' => $event->getSourceName(),
+                'divisions' => $divisionNames,
+            ];
+            $key = implode('|', [
+                $context['competitionName'],
+                (string) $context['competitionSeason'],
+                $context['eventName'],
+                (string) $context['eventOrder'],
+                $context['sourceName'],
+                implode(',', $divisionNames),
+            ]);
+
+            if (!isset($seen[$key])) {
+                $contexts[] = $context;
+                $seen[$key] = true;
+            }
+        }
+
+        usort($contexts, static function (array $left, array $right): int {
+            return [
+                $right['competitionSeason'] ?? 0,
+                $left['competitionName'],
+                $left['eventOrder'] ?? PHP_INT_MAX,
+                $left['eventName'],
+            ] <=> [
+                $left['competitionSeason'] ?? 0,
+                $right['competitionName'],
+                $right['eventOrder'] ?? PHP_INT_MAX,
+                $right['eventName'],
+            ];
+        });
+
+        return $contexts;
     }
 
     public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): static
