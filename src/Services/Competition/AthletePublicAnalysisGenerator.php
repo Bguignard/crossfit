@@ -250,10 +250,10 @@ final readonly class AthletePublicAnalysisGenerator
             $data = $response->toArray();
         } catch (
             ClientExceptionInterface
-            | DecodingExceptionInterface
-            | RedirectionExceptionInterface
-            | ServerExceptionInterface
-            | TransportExceptionInterface $exception
+            |DecodingExceptionInterface
+            |RedirectionExceptionInterface
+            |ServerExceptionInterface
+            |TransportExceptionInterface $exception
         ) {
             throw new \RuntimeException('OpenAI analysis request failed: '.$exception->getMessage(), 0, $exception);
         }
