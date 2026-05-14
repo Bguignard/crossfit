@@ -66,6 +66,9 @@ class Athlete
     #[ORM\OneToMany(mappedBy: 'athlete', targetEntity: UserAthleteProfile::class, orphanRemoval: true)]
     private Collection $linkedUserProfiles;
 
+    #[ORM\OneToMany(mappedBy: 'athlete', targetEntity: AthletePublicAnalysis::class, orphanRemoval: true)]
+    private Collection $publicAnalyses;
+
     public function __construct(string $displayName, string $sourceName, string $externalId)
     {
         $this->displayName = $displayName;
@@ -74,6 +77,7 @@ class Athlete
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
         $this->linkedUserProfiles = new ArrayCollection();
+        $this->publicAnalyses = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -179,10 +183,28 @@ class Athlete
         return $this->updatedAt;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getPublicAnalysis(): ?array
+    {
+        $analysis = $this->publicAnalyses
+            ->filter(static fn (AthletePublicAnalysis $analysis): bool => $analysis->getKind() === AthletePublicAnalysis::KIND_GAMES_PUBLIC)
+            ->first();
+
+        return $analysis instanceof AthletePublicAnalysis ? $analysis->toPublicPayload() : null;
+    }
+
     #[Ignore]
     public function getLinkedUserProfiles(): Collection
     {
         return $this->linkedUserProfiles;
+    }
+
+    #[Ignore]
+    public function getPublicAnalyses(): Collection
+    {
+        return $this->publicAnalyses;
     }
 
     private function touch(): void

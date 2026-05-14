@@ -35,6 +35,10 @@ services:
         arguments:
             $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
 
+    App\Services\Competition\AthletePublicAnalysisGenerator:
+        arguments:
+            $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
+
     App\Services\Workout\MovementDifficultyServiceInterface:
         class: App\Services\Workout\MovementDifficultyService
         public: true
