@@ -86,7 +86,10 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
     public function testFrontendCanSearchAthletesByDisplayName(): void
     {
         $entityManager = $this->getEntityManager();
-        $entityManager->persist(new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-toomey'));
+        $entityManager->persist(
+            (new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-toomey'))
+                ->setAvatarUrl('https://profilepicsbucket.crossfit.com/tia.jpg')
+        );
         $entityManager->persist(new Athlete('Mat Fraser', 'crossfit_games', 'mat-fraser'));
         $entityManager->flush();
 
@@ -100,6 +103,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertContains('Tia-Clair Toomey', $names);
         self::assertNotContains('Mat Fraser', $names);
+        self::assertSame('https://profilepicsbucket.crossfit.com/tia.jpg', $athletes[0]['avatarUrl']);
     }
 
     public function testFrontendCanReadStoredPublicAthleteAnalysis(): void

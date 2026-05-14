@@ -79,7 +79,11 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                 ],
             ],
             'athletes' => [
-                ['source' => ['externalId' => 'athlete-1'], 'displayName' => 'Athlete One'],
+                [
+                    'source' => ['externalId' => 'athlete-1'],
+                    'displayName' => 'Athlete One',
+                    'avatarUrl' => 'https://profilepicsbucket.crossfit.com/athlete-one.jpg',
+                ],
                 ['source' => ['externalId' => 'athlete-2'], 'displayName' => 'Athlete Two'],
             ],
             'competitions' => [
@@ -134,6 +138,14 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertCount(2, $results);
             self::assertSame((string) $divisions[0]->getId(), (string) $results[0]->getCompetitionDivision()?->getId());
             self::assertSame((string) $divisions[0]->getId(), (string) $results[1]->getCompetitionDivision()?->getId());
+
+            /** @var Athlete|null $athlete */
+            $athlete = $this->getRepository(Athlete::class)->findOneBy([
+                'sourceName' => 'crossfit_games',
+                'externalId' => 'athlete-1',
+            ]);
+            self::assertNotNull($athlete);
+            self::assertSame('https://profilepicsbucket.crossfit.com/athlete-one.jpg', $athlete->getAvatarUrl());
         } finally {
             @unlink($file);
         }

@@ -250,7 +250,8 @@ class ImportCompetitionResultsCommand extends Command
             ->setLastName($this->stringOrNull($row['lastName'] ?? null))
             ->setGender($this->stringOrNull($row['gender'] ?? null))
             ->setCountry($this->stringOrNull($row['country'] ?? null))
-            ->setSourceUrl($sourceUrl);
+            ->setSourceUrl($sourceUrl)
+            ->setAvatarUrl($this->stringOrNull($row['avatarUrl'] ?? null));
 
         return $status;
     }

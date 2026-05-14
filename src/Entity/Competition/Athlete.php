@@ -57,6 +57,9 @@ class Athlete
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $sourceUrl = null;
 
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $avatarUrl = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -168,6 +171,19 @@ class Athlete
     public function setSourceUrl(?string $sourceUrl): self
     {
         $this->sourceUrl = $sourceUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getAvatarUrl(): ?string
+    {
+        return $this->avatarUrl;
+    }
+
+    public function setAvatarUrl(?string $avatarUrl): self
+    {
+        $this->avatarUrl = $avatarUrl;
         $this->touch();
 
         return $this;
