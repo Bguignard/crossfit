@@ -4,6 +4,7 @@ namespace App\Tests;
 
 use App\DataFixtures\WorkoutData;
 use App\Entity\Competition\Athlete;
+use App\Entity\Competition\AthletePublicAnalysis;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
@@ -99,6 +100,36 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertContains('Tia-Clair Toomey', $names);
         self::assertNotContains('Mat Fraser', $names);
+    }
+
+    public function testFrontendCanReadStoredPublicAthleteAnalysis(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-analysis');
+        $analysis = new AthletePublicAnalysis($athlete, AthletePublicAnalysis::KIND_GAMES_PUBLIC, 'hash', [
+            'summary' => 'Dominant Games profile.',
+            'strengths' => ['Engine under fatigue'],
+            'weaknesses' => ['Limited weaknesses in imported data'],
+            'eventProfile' => ['Strong across mixed modal events'],
+            'trainingPriorities' => ['Keep high-skill volume healthy'],
+            'conclusion' => 'A benchmark athlete for public teaser analysis.',
+            'model' => 'test-model',
+        ]);
+
+        $entityManager->persist($athlete);
+        $entityManager->persist($analysis);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/athletes/%s', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('Dominant Games profile.', $payload['publicAnalysis']['summary']);
+        self::assertSame(['Engine under fatigue'], $payload['publicAnalysis']['strengths']);
+        self::assertArrayHasKey('generatedAt', $payload['publicAnalysis']);
     }
 
     public function testFrontendCanFilterWorkoutResultsByAthleteIri(): void
