@@ -175,6 +175,51 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertArrayHasKey('generatedAt', $payload['publicAnalysis']);
     }
 
+    public function testFrontendCanRequestExistingPublicAthleteAnalysis(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-analysis-request');
+        $analysis = new AthletePublicAnalysis($athlete, AthletePublicAnalysis::KIND_GAMES_PUBLIC, 'hash', [
+            'summary' => 'Existing Games profile.',
+            'strengths' => ['Complete athlete'],
+            'model' => 'test-model',
+        ]);
+
+        $entityManager->persist($athlete);
+        $entityManager->persist($analysis);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('POST', sprintf('/api/athletes/%s/public-analysis', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertTrue($payload['eligible']);
+        self::assertSame('Existing Games profile.', $payload['analysis']['summary']);
+        self::assertSame(['Complete athlete'], $payload['analysis']['strengths']);
+    }
+
+    public function testFrontendDoesNotGeneratePublicAnalysisForNonGamesAthlete(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Local Athlete', 'competition_corner', 'local-athlete-analysis');
+
+        $entityManager->persist($athlete);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('POST', sprintf('/api/athletes/%s/public-analysis', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertFalse($payload['eligible']);
+        self::assertNull($payload['analysis']);
+    }
+
     public function testFrontendCanFilterWorkoutResultsByAthleteIri(): void
     {
         $entityManager = $this->getEntityManager();
@@ -258,7 +303,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertCount(2, $payload['member']);
         self::assertSame('2019 Games', $payload['member'][0]['competitionDetails']['name']);
         self::assertSame('Event 1', $payload['member'][0]['eventDetails']['name']);
-        self::assertSame('17.5', $payload['member'][0]['workoutDetails']['name']);
+        self::assertSame('Open 17.5', $payload['member'][0]['workoutDetails']['name']);
         self::assertArrayHasKey('scoreDetails', $payload['member'][0]);
         self::assertContains('/api/athletes/'.$cornerProfile->getId(), array_column($payload['member'], 'athlete'));
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
