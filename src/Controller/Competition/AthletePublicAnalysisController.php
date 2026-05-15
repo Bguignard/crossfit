@@ -24,7 +24,15 @@ final class AthletePublicAnalysisController extends AbstractController
             throw new NotFoundHttpException('Athlete not found.');
         }
 
-        $analysis = $generator->generateIfNeeded($athlete);
+        try {
+            $analysis = $generator->generateIfNeeded($athlete);
+        } catch (\RuntimeException $exception) {
+            return $this->json([
+                'analysis' => null,
+                'eligible' => true,
+                'error' => $exception->getMessage(),
+            ], 503);
+        }
 
         if ($analysis === null) {
             return $this->json([
