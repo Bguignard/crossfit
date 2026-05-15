@@ -106,6 +106,45 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('https://profilepicsbucket.crossfit.com/tia.jpg', $athletes[0]['avatarUrl']);
     }
 
+    public function testFrontendListsLatestEliteGamesAthletesFirst(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist(
+            new Athlete('Alphabetical Athlete', 'competition_corner', 'local-athlete')
+        );
+        $entityManager->persist(
+            (new Athlete('Former Champion', 'crossfit_games', 'former-champion'))
+                ->setEliteGamesSeason(2023)
+                ->setEliteGamesRank(1)
+        );
+        $entityManager->persist(
+            (new Athlete('Recent Runner Up', 'crossfit_games', 'recent-runner-up'))
+                ->setEliteGamesSeason(2025)
+                ->setEliteGamesRank(2)
+        );
+        $entityManager->persist(
+            (new Athlete('Recent Champion', 'crossfit_games', 'recent-champion'))
+                ->setEliteGamesSeason(2025)
+                ->setEliteGamesRank(1)
+        );
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/athletes');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $athletes = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $athlete): ?string => $athlete['displayName'] ?? null, $athletes);
+
+        self::assertSame(
+            ['Recent Champion', 'Recent Runner Up', 'Former Champion', 'Alphabetical Athlete'],
+            array_slice($names, 0, 4),
+        );
+        self::assertSame(1, $athletes[0]['eliteGamesRank']);
+        self::assertSame(2025, $athletes[0]['eliteGamesSeason']);
+    }
+
     public function testFrontendCanReadStoredPublicAthleteAnalysis(): void
     {
         $entityManager = $this->getEntityManager();

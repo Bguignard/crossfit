@@ -251,7 +251,9 @@ class ImportCompetitionResultsCommand extends Command
             ->setGender($this->stringOrNull($row['gender'] ?? null))
             ->setCountry($this->stringOrNull($row['country'] ?? null))
             ->setSourceUrl($sourceUrl)
-            ->setAvatarUrl($this->stringOrNull($row['avatarUrl'] ?? null));
+            ->setAvatarUrl($this->stringOrNull($row['avatarUrl'] ?? null))
+            ->setEliteGamesRank($this->intOrNull($row['eliteGamesRank'] ?? null))
+            ->setEliteGamesSeason($this->intOrNull($row['eliteGamesSeason'] ?? null));
 
         return $status;
     }

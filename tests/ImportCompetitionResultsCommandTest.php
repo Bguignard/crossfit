@@ -83,6 +83,8 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'source' => ['externalId' => 'athlete-1'],
                     'displayName' => 'Athlete One',
                     'avatarUrl' => 'https://profilepicsbucket.crossfit.com/athlete-one.jpg',
+                    'eliteGamesRank' => 1,
+                    'eliteGamesSeason' => 2024,
                 ],
                 ['source' => ['externalId' => 'athlete-2'], 'displayName' => 'Athlete Two'],
             ],
@@ -148,6 +150,8 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             ]);
             self::assertNotNull($athlete);
             self::assertSame('https://profilepicsbucket.crossfit.com/athlete-one.jpg', $athlete->getAvatarUrl());
+            self::assertSame(1, $athlete->getEliteGamesRank());
+            self::assertSame(2024, $athlete->getEliteGamesSeason());
         } finally {
             @unlink($file);
         }
