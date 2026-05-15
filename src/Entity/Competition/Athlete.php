@@ -17,7 +17,10 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity]
 #[ORM\Table(name: 'athlete')]
 #[ORM\UniqueConstraint(name: 'UNIQ_ATHLETE_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
-#[ApiResource(operations: [new Get(), new GetCollection()])]
+#[ApiResource(operations: [new Get(), new GetCollection()], order: [
+    'eliteGamesSortScore' => 'ASC',
+    'displayName' => 'ASC',
+])]
 #[ApiFilter(SearchFilter::class, properties: [
     'displayName' => 'ipartial',
     'firstName' => 'ipartial',
@@ -59,6 +62,15 @@ class Athlete
 
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $avatarUrl = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $eliteGamesRank = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $eliteGamesSeason = null;
+
+    #[ORM\Column(options: ['default' => 2147483647])]
+    private int $eliteGamesSortScore = 2147483647;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
@@ -189,6 +201,34 @@ class Athlete
         return $this;
     }
 
+    public function getEliteGamesRank(): ?int
+    {
+        return $this->eliteGamesRank;
+    }
+
+    public function setEliteGamesRank(?int $eliteGamesRank): self
+    {
+        $this->eliteGamesRank = $eliteGamesRank;
+        $this->refreshEliteGamesSortScore();
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getEliteGamesSeason(): ?int
+    {
+        return $this->eliteGamesSeason;
+    }
+
+    public function setEliteGamesSeason(?int $eliteGamesSeason): self
+    {
+        $this->eliteGamesSeason = $eliteGamesSeason;
+        $this->refreshEliteGamesSortScore();
+        $this->touch();
+
+        return $this;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -226,5 +266,16 @@ class Athlete
     private function touch(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    private function refreshEliteGamesSortScore(): void
+    {
+        if ($this->eliteGamesRank === null || $this->eliteGamesSeason === null) {
+            $this->eliteGamesSortScore = 2147483647;
+
+            return;
+        }
+
+        $this->eliteGamesSortScore = max(0, 9999 - $this->eliteGamesSeason) * 10000 + $this->eliteGamesRank;
     }
 }
