@@ -26,7 +26,7 @@ final class AthletePublicAnalysisController extends AbstractController
 
         try {
             $analysis = $generator->generateIfNeeded($athlete);
-        } catch (\RuntimeException $exception) {
+        } catch (\Throwable $exception) {
             return $this->json([
                 'analysis' => null,
                 'eligible' => true,
