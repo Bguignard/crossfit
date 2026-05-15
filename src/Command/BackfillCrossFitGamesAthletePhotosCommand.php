@@ -111,6 +111,7 @@ final class BackfillCrossFitGamesAthletePhotosCommand extends Command
     private function fetchAvatarUrl(Athlete $athlete): ?string
     {
         $profileUrl = $athlete->getSourceUrl() ?: sprintf('https://games.crossfit.com/athlete/%s', $athlete->getExternalId());
+
         return $this->photoFetcher->fetch($profileUrl);
     }
 }
