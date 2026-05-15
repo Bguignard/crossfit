@@ -147,7 +147,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2017-women');
         $tiaResult = (new WorkoutResult($tia, $event, new Score(ScoreTypeEnum::TIME, '6:35'), 'crossfit_games', 'tia-17-5'))
             ->setCompetitionDivision($division)
-            ->setRank(1);
+            ->setRank(1)
+            ->setFieldSize(40);
         $matResult = (new WorkoutResult($mat, $event, new Score(ScoreTypeEnum::TIME, '6:24'), 'crossfit_games', 'mat-17-5'))
             ->setRank(1);
 
@@ -166,6 +167,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertCount(1, $results);
         self::assertSame('/api/athletes/'.$tia->getId(), $results[0]['athlete']);
         self::assertSame(1, $results[0]['rank']);
+        self::assertSame(40, $results[0]['fieldSize']);
     }
 
     public function testPublicWorkoutCatalogIsReadOnly(): void

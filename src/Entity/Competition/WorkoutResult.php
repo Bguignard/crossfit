@@ -53,6 +53,9 @@ class WorkoutResult
     #[ORM\Column(nullable: true)]
     private ?int $rank = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $fieldSize = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $division = null;
 
@@ -139,6 +142,19 @@ class WorkoutResult
     public function setRank(?int $rank): self
     {
         $this->rank = $rank;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getFieldSize(): ?int
+    {
+        return $this->fieldSize;
+    }
+
+    public function setFieldSize(?int $fieldSize): self
+    {
+        $this->fieldSize = $fieldSize;
         $this->touch();
 
         return $this;

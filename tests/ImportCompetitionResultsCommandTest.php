@@ -108,6 +108,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'athleteSourceId' => 'athlete-1',
                     'eventSourceId' => 'games-2024-event-1-women',
                     'rank' => 1,
+                    'fieldSize' => 40,
                     'division' => 'Women',
                     'score' => ['type' => 'time', 'rawValue' => '10:00', 'displayValue' => '10:00', 'timeInSeconds' => 600],
                 ],
@@ -138,6 +139,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertCount(2, $results);
             self::assertSame((string) $divisions[0]->getId(), (string) $results[0]->getCompetitionDivision()?->getId());
             self::assertSame((string) $divisions[0]->getId(), (string) $results[1]->getCompetitionDivision()?->getId());
+            self::assertSame(40, $results[0]->getFieldSize());
 
             /** @var Athlete|null $athlete */
             $athlete = $this->getRepository(Athlete::class)->findOneBy([
