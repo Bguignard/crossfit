@@ -348,6 +348,7 @@ class ImportCompetitionResultsCommand extends Command
         $result
             ->setScore($score)
             ->setRank($this->intOrNull($row['rank'] ?? null))
+            ->setFieldSize($this->intOrNull($row['fieldSize'] ?? null))
             ->setDivision($divisionName)
             ->setCompetitionDivision($competitionDivision)
             ->setPoints($this->intOrNull($row['points'] ?? null))
