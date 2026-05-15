@@ -175,6 +175,51 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertArrayHasKey('generatedAt', $payload['publicAnalysis']);
     }
 
+    public function testFrontendCanRequestExistingPublicAthleteAnalysis(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-analysis-request');
+        $analysis = new AthletePublicAnalysis($athlete, AthletePublicAnalysis::KIND_GAMES_PUBLIC, 'hash', [
+            'summary' => 'Existing Games profile.',
+            'strengths' => ['Complete athlete'],
+            'model' => 'test-model',
+        ]);
+
+        $entityManager->persist($athlete);
+        $entityManager->persist($analysis);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('POST', sprintf('/api/athletes/%s/public-analysis', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertTrue($payload['eligible']);
+        self::assertSame('Existing Games profile.', $payload['analysis']['summary']);
+        self::assertSame(['Complete athlete'], $payload['analysis']['strengths']);
+    }
+
+    public function testFrontendDoesNotGeneratePublicAnalysisForNonGamesAthlete(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Local Athlete', 'competition_corner', 'local-athlete-analysis');
+
+        $entityManager->persist($athlete);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('POST', sprintf('/api/athletes/%s/public-analysis', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertFalse($payload['eligible']);
+        self::assertNull($payload['analysis']);
+    }
+
     public function testFrontendCanFilterWorkoutResultsByAthleteIri(): void
     {
         $entityManager = $this->getEntityManager();
@@ -207,6 +252,61 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('/api/athletes/'.$tia->getId(), $results[0]['athlete']);
         self::assertSame(1, $results[0]['rank']);
         self::assertSame(40, $results[0]['fieldSize']);
+    }
+
+    public function testFrontendCanReadCompactAthleteResultSummary(): void
+    {
+        $entityManager = $this->getEntityManager();
+        /** @var Workout $workout */
+        $workout = $this->getReference(WorkoutData::WORKOUT_OPEN_17_5, Workout::class);
+        $gamesProfile = new Athlete('Sabrina Caron', 'crossfit_games', 'sabrina-games');
+        $cornerProfile = new Athlete('Sabrina Caron', 'competition_corner', 'sabrina-corner');
+        $otherAthlete = new Athlete('Other Athlete', 'crossfit_games', 'other-athlete');
+        $competition = (new Competition('2019 Games', 'crossfit_games', 'games-2019'))
+            ->setSeason(2019);
+        $event = (new CompetitionEvent($competition, 'Event 1', 'crossfit_games', 'games-2019-event-1'))
+            ->setWorkout($workout);
+        $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2019-women');
+        $gamesResult = (new WorkoutResult($gamesProfile, $event, new Score(ScoreTypeEnum::TIME, '8:21'), 'crossfit_games', 'sabrina-games-event-1'))
+            ->setCompetitionDivision($division)
+            ->setRank(12)
+            ->setFieldSize(40);
+        $cornerResult = (new WorkoutResult($cornerProfile, $event, new Score(ScoreTypeEnum::REPS, '127'), 'competition_corner', 'sabrina-corner-event-1'))
+            ->setCompetitionDivision($division)
+            ->setRank(2)
+            ->setFieldSize(18);
+        $otherResult = new WorkoutResult($otherAthlete, $event, new Score(ScoreTypeEnum::TIME, '7:55'), 'crossfit_games', 'other-event-1');
+
+        foreach ([
+            $gamesProfile,
+            $cornerProfile,
+            $otherAthlete,
+            $competition,
+            $event,
+            $division,
+            $gamesResult,
+            $cornerResult,
+            $otherResult,
+        ] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/athletes/%s/result-summary', $gamesProfile->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(2, $payload['totalItems']);
+        self::assertCount(2, $payload['member']);
+        self::assertSame('2019 Games', $payload['member'][0]['competitionDetails']['name']);
+        self::assertSame('Event 1', $payload['member'][0]['eventDetails']['name']);
+        self::assertSame('Open 17.5', $payload['member'][0]['workoutDetails']['name']);
+        self::assertArrayHasKey('scoreDetails', $payload['member'][0]);
+        self::assertContains('/api/athletes/'.$cornerProfile->getId(), array_column($payload['member'], 'athlete'));
+        self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
     }
 
     public function testPublicWorkoutCatalogIsReadOnly(): void
