@@ -106,6 +106,27 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('https://profilepicsbucket.crossfit.com/tia.jpg', $athletes[0]['avatarUrl']);
     }
 
+    public function testFrontendCanSearchAthletesWithAccentInsensitiveNormalizedNames(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist(new Athlete('Oceane Garat', 'crossfit_games', 'oceane-games'));
+        $entityManager->persist(new Athlete('Océane Garat', 'scoring_fit', 'oceane-scoring-fit'));
+        $entityManager->persist(new Athlete('Ocean Other', 'crossfit_games', 'ocean-other'));
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/athletes?normalizedName=oceane%20garat');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $athletes = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $athlete): ?string => $athlete['displayName'] ?? null, $athletes);
+
+        self::assertContains('Oceane Garat', $names);
+        self::assertContains('Océane Garat', $names);
+        self::assertNotContains('Ocean Other', $names);
+    }
+
     public function testFrontendListsLatestEliteGamesAthletesFirst(): void
     {
         $entityManager = $this->getEntityManager();
@@ -259,19 +280,19 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $entityManager = $this->getEntityManager();
         /** @var Workout $workout */
         $workout = $this->getReference(WorkoutData::WORKOUT_OPEN_17_5, Workout::class);
-        $gamesProfile = new Athlete('Sabrina Caron', 'crossfit_games', 'sabrina-games');
-        $cornerProfile = new Athlete('Sabrina Caron', 'competition_corner', 'sabrina-corner');
+        $gamesProfile = new Athlete('Oceane Garat', 'crossfit_games', 'oceane-games');
+        $cornerProfile = new Athlete('Océane Garat', 'competition_corner', 'oceane-corner');
         $otherAthlete = new Athlete('Other Athlete', 'crossfit_games', 'other-athlete');
         $competition = (new Competition('2019 Games', 'crossfit_games', 'games-2019'))
             ->setSeason(2019);
         $event = (new CompetitionEvent($competition, 'Event 1', 'crossfit_games', 'games-2019-event-1'))
             ->setWorkout($workout);
         $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2019-women');
-        $gamesResult = (new WorkoutResult($gamesProfile, $event, new Score(ScoreTypeEnum::TIME, '8:21'), 'crossfit_games', 'sabrina-games-event-1'))
+        $gamesResult = (new WorkoutResult($gamesProfile, $event, new Score(ScoreTypeEnum::TIME, '8:21'), 'crossfit_games', 'oceane-games-event-1'))
             ->setCompetitionDivision($division)
             ->setRank(12)
             ->setFieldSize(40);
-        $cornerResult = (new WorkoutResult($cornerProfile, $event, new Score(ScoreTypeEnum::REPS, '127'), 'competition_corner', 'sabrina-corner-event-1'))
+        $cornerResult = (new WorkoutResult($cornerProfile, $event, new Score(ScoreTypeEnum::REPS, '127'), 'competition_corner', 'oceane-corner-event-1'))
             ->setCompetitionDivision($division)
             ->setRank(2)
             ->setFieldSize(18);
