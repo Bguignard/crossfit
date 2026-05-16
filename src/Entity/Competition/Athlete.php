@@ -16,6 +16,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'athlete')]
+#[ORM\Index(name: 'IDX_ATHLETE_NORMALIZED_NAME', columns: ['normalized_name'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_ATHLETE_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
 #[ApiResource(operations: [new Get(), new GetCollection()], order: [
     'eliteGamesSortScore' => 'ASC',
