@@ -5,6 +5,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     env(CHAT_GPT_API_KEY): ''
+    env(OPENAI_MODEL): 'gpt-5.4-mini'
     maxNumberOfRounds: 10
 
 services:
@@ -39,6 +40,7 @@ services:
     App\Services\Competition\AthletePublicAnalysisGenerator:
         arguments:
             $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
+            $openAiModel: '%env(OPENAI_MODEL)%'
 
     App\Services\Workout\MovementDifficultyServiceInterface:
         class: App\Services\Workout\MovementDifficultyService
