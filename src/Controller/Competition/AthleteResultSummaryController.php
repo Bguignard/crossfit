@@ -5,6 +5,7 @@ namespace App\Controller\Competition;
 use App\Entity\Competition\Athlete;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
+use App\Services\Competition\AthleteNameNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,16 +15,20 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AthleteResultSummaryController extends AbstractController
 {
     #[Route('/api/athletes/{id}/result-summary', name: 'api_athlete_result_summary', methods: ['GET'])]
-    public function __invoke(string $id, EntityManagerInterface $entityManager): JsonResponse
-    {
+    public function __invoke(
+        string $id,
+        EntityManagerInterface $entityManager,
+        AthleteNameNormalizer $athleteNameNormalizer,
+    ): JsonResponse {
         $athlete = $entityManager->getRepository(Athlete::class)->find($id);
 
         if (!$athlete instanceof Athlete) {
             throw new NotFoundHttpException('Athlete not found.');
         }
 
+        $normalizedName = $athlete->getNormalizedName() ?: $athleteNameNormalizer->normalize($athlete->getDisplayName());
         $relatedAthletes = $entityManager->getRepository(Athlete::class)->findBy([
-            'displayName' => $athlete->getDisplayName(),
+            'normalizedName' => $normalizedName,
         ]);
 
         $results = $entityManager->createQueryBuilder()

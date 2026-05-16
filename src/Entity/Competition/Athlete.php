@@ -16,6 +16,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'athlete')]
+#[ORM\Index(name: 'IDX_ATHLETE_NORMALIZED_NAME', columns: ['normalized_name'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_ATHLETE_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
 #[ApiResource(operations: [new Get(), new GetCollection()], order: [
     'eliteGamesSortScore' => 'ASC',
@@ -23,6 +24,7 @@ use Symfony\Component\Uid\Uuid;
 ])]
 #[ApiFilter(SearchFilter::class, properties: [
     'displayName' => 'ipartial',
+    'normalizedName' => 'ipartial',
     'firstName' => 'ipartial',
     'lastName' => 'ipartial',
     'sourceName' => 'exact',
@@ -38,6 +40,9 @@ class Athlete
 
     #[ORM\Column(length: 255)]
     private string $displayName;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $normalizedName = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $firstName = null;
@@ -87,6 +92,7 @@ class Athlete
     public function __construct(string $displayName, string $sourceName, string $externalId)
     {
         $this->displayName = $displayName;
+        $this->normalizedName = self::normalizeDisplayName($displayName);
         $this->sourceName = $sourceName;
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();
@@ -108,6 +114,20 @@ class Athlete
     public function setDisplayName(string $displayName): self
     {
         $this->displayName = $displayName;
+        $this->normalizedName = self::normalizeDisplayName($displayName);
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getNormalizedName(): ?string
+    {
+        return $this->normalizedName;
+    }
+
+    public function setNormalizedName(?string $normalizedName): self
+    {
+        $this->normalizedName = $normalizedName;
         $this->touch();
 
         return $this;
@@ -277,5 +297,31 @@ class Athlete
         }
 
         $this->eliteGamesSortScore = max(0, 9999 - $this->eliteGamesSeason) * 10000 + $this->eliteGamesRank;
+    }
+
+    private static function normalizeDisplayName(string $name): string
+    {
+        $normalized = trim($name);
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (function_exists('transliterator_transliterate')) {
+            $transliterated = transliterator_transliterate('Any-Latin; Latin-ASCII', $normalized);
+            if (is_string($transliterated)) {
+                $normalized = $transliterated;
+            }
+        } else {
+            $transliterated = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+            if (is_string($transliterated)) {
+                $normalized = $transliterated;
+            }
+        }
+
+        $normalized = strtolower($normalized);
+        $normalized = str_replace(['-', '_'], ' ', $normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? $normalized;
+
+        return trim(preg_replace('/\s+/', ' ', $normalized) ?? $normalized);
     }
 }

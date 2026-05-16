@@ -17,6 +17,7 @@ use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutType;
+use App\Services\Competition\AthleteNameNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -49,8 +50,10 @@ class ImportCompetitionResultsCommand extends Command
      */
     private array $competitionDivisions = [];
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly AthleteNameNormalizer $athleteNameNormalizer,
+    ) {
         parent::__construct();
     }
 
@@ -246,6 +249,7 @@ class ImportCompetitionResultsCommand extends Command
 
         $athlete
             ->setDisplayName($displayName)
+            ->setNormalizedName($this->athleteNameNormalizer->normalize($displayName))
             ->setFirstName($this->stringOrNull($row['firstName'] ?? null))
             ->setLastName($this->stringOrNull($row['lastName'] ?? null))
             ->setGender($this->stringOrNull($row['gender'] ?? null))
