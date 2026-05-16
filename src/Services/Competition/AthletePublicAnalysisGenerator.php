@@ -209,7 +209,7 @@ final readonly class AthletePublicAnalysisGenerator
      */
     private function requestAnalysis(Athlete $athlete, array $input): array
     {
-        if ($this->chatGPTApiKey === '') {
+        if (trim($this->chatGPTApiKey) === '') {
             throw new \RuntimeException('CHAT_GPT_API_KEY is required to generate athlete public analyses.');
         }
 
