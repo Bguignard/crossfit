@@ -25,6 +25,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 class MeController extends AbstractController
 {
+    private const ANALYSIS_REQUEST_COOLDOWN = 'PT5M';
+
     private const VALID_LINK_TYPES = [
         UserAthleteProfile::LINK_SELF,
         UserAthleteProfile::LINK_COACHED,
@@ -164,6 +166,16 @@ class MeController extends AbstractController
     public function createPerformanceAnalysisRequest(Request $request): JsonResponse
     {
         $user = $this->currentUser();
+        $latestRequest = $this->latestAnalysisRequest($user);
+        $nextAvailableAt = $latestRequest?->getCreatedAt()->add(new \DateInterval(self::ANALYSIS_REQUEST_COOLDOWN));
+        if ($nextAvailableAt !== null && $nextAvailableAt > new \DateTimeImmutable()) {
+            return $this->json([
+                'error' => 'A recent performance analysis request already exists.',
+                'latestAnalysisRequest' => $this->serializeAnalysisRequest($latestRequest),
+                'nextAvailableAt' => $this->date($nextAvailableAt),
+            ], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
         $profile = $this->getLatestPerformanceProfile($user);
         if ($profile === null) {
             return $this->json(['error' => 'Performance profile is required.'], Response::HTTP_BAD_REQUEST);
@@ -486,6 +498,17 @@ class MeController extends AbstractController
         );
 
         return $profile;
+    }
+
+    private function latestAnalysisRequest(User $user): ?PerformanceAnalysisRequest
+    {
+        /** @var PerformanceAnalysisRequest|null $request */
+        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findOneBy(
+            ['user' => $user],
+            ['createdAt' => 'DESC']
+        );
+
+        return $request;
     }
 
     /**

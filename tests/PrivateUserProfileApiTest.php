@@ -197,6 +197,36 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertCount(1, $requestsPayload['programmingRequests']);
     }
 
+    public function testUserCannotCreateAnotherAnalysisRequestWithinFiveMinutes(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('analysis-cooldown@example.com', 'analysis-cooldown-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'parameters' => [
+                'goal' => 'first pass',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'parameters' => [
+                'goal' => 'too soon',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(429);
+        $payload = $this->jsonResponse();
+        self::assertSame('A recent performance analysis request already exists.', $payload['error']);
+        self::assertSame('first pass', $payload['latestAnalysisRequest']['parameters']['goal']);
+        self::assertArrayHasKey('nextAvailableAt', $payload);
+    }
+
     /**
      * @return array{0: string, 1: User}
      */
