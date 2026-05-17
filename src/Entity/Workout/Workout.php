@@ -244,6 +244,7 @@ class Workout
      * @return list<array{
      *     competitionName: string,
      *     competitionSeason: int|null,
+     *     competitionLogoUrl: string|null,
      *     eventName: string,
      *     eventOrder: int|null,
      *     sourceName: string,
@@ -273,6 +274,7 @@ class Workout
             $context = [
                 'competitionName' => $competition->getName(),
                 'competitionSeason' => $competition->getSeason(),
+                'competitionLogoUrl' => $competition->getLogoUrl(),
                 'eventName' => $event->getName(),
                 'eventOrder' => $event->getEventOrder(),
                 'sourceName' => $event->getSourceName(),

@@ -106,6 +106,7 @@ final class AthleteResultSummaryController extends AbstractController
                 'sourceName' => $competition->getSourceName(),
                 'externalId' => $competition->getExternalId(),
                 'sourceUrl' => $competition->getSourceUrl(),
+                'logoUrl' => $competition->getLogoUrl(),
             ],
             'competitionDivisionDetails' => $division ? [
                 '@id' => '/api/competition_divisions/'.$division->getId(),

@@ -63,6 +63,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             [
                 'competitionName' => 'CrossFit Games Open',
                 'competitionSeason' => 2017,
+                'competitionLogoUrl' => null,
                 'eventName' => 'Open 17.5',
                 'eventOrder' => 5,
                 'sourceName' => 'crossfit_games',
@@ -323,6 +324,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(2, $payload['totalItems']);
         self::assertCount(2, $payload['member']);
         self::assertSame('2019 Games', $payload['member'][0]['competitionDetails']['name']);
+        self::assertArrayHasKey('logoUrl', $payload['member'][0]['competitionDetails']);
         self::assertSame('Event 1', $payload['member'][0]['eventDetails']['name']);
         self::assertSame('Open 17.5', $payload['member'][0]['workoutDetails']['name']);
         self::assertArrayHasKey('scoreDetails', $payload['member'][0]);

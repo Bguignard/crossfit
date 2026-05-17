@@ -285,7 +285,8 @@ class ImportCompetitionResultsCommand extends Command
         $competition
             ->setName($name)
             ->setSeason($this->intOrNull($row['season'] ?? null))
-            ->setSourceUrl($sourceUrl);
+            ->setSourceUrl($sourceUrl)
+            ->setLogoUrl($this->stringOrNull($row['logoUrl'] ?? null));
 
         return $status;
     }
