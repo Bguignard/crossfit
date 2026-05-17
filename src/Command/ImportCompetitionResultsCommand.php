@@ -286,7 +286,19 @@ class ImportCompetitionResultsCommand extends Command
             ->setName($name)
             ->setSeason($this->intOrNull($row['season'] ?? null))
             ->setSourceUrl($sourceUrl)
-            ->setLogoUrl($this->stringOrNull($row['logoUrl'] ?? null));
+            ->setLogoUrl($this->stringOrNull($row['logoUrl'] ?? null))
+            ->setStatus($this->stringOrNull($row['status'] ?? null))
+            ->setStartsAt($this->dateTimeOrNull($row['startsAt'] ?? null))
+            ->setEndsAt($this->dateTimeOrNull($row['endsAt'] ?? null))
+            ->setRegistrationUrl($this->stringOrNull($row['registrationUrl'] ?? null))
+            ->setLocationLabel($this->stringOrNull($row['locationLabel'] ?? null))
+            ->setIsOnline($this->boolOrNull($row['isOnline'] ?? null))
+            ->setCompetitionType($this->stringOrNull($row['competitionType'] ?? null))
+            ->setParticipationType($this->stringOrNull($row['participationType'] ?? null))
+            ->setCoverImageUrl($this->stringOrNull($row['coverImageUrl'] ?? null))
+            ->setPriceLabel($this->stringOrNull($row['priceLabel'] ?? null))
+            ->setMetadata($this->arrayOrNull($row['metadata'] ?? null))
+            ->setLastDiscoveredAt($this->dateTimeOrNull($row['lastDiscoveredAt'] ?? null));
 
         return $status;
     }
@@ -676,6 +688,44 @@ class ImportCompetitionResultsCommand extends Command
         }
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function boolOrNull(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    }
+
+    private function dateTimeOrNull(mixed $value): ?\DateTimeImmutable
+    {
+        $value = $this->stringOrNull($value);
+        if ($value === null) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function arrayOrNull(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        return $value;
     }
 
     private function hasFailures(): bool

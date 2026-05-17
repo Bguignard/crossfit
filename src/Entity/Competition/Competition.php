@@ -40,6 +40,45 @@ class Competition
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $logoUrl = null;
 
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $status = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $startsAt = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $endsAt = null;
+
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $registrationUrl = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $locationLabel = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $isOnline = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $competitionType = null;
+
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $participationType = null;
+
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $coverImageUrl = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $priceLabel = null;
+
+    /**
+     * @var array<string, mixed>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $metadata = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $lastDiscoveredAt = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -121,6 +160,168 @@ class Competition
     public function setLogoUrl(?string $logoUrl): self
     {
         $this->logoUrl = $logoUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(?string $status): self
+    {
+        $this->status = $status;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getStartsAt(): ?\DateTimeImmutable
+    {
+        return $this->startsAt;
+    }
+
+    public function setStartsAt(?\DateTimeImmutable $startsAt): self
+    {
+        $this->startsAt = $startsAt;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getEndsAt(): ?\DateTimeImmutable
+    {
+        return $this->endsAt;
+    }
+
+    public function setEndsAt(?\DateTimeImmutable $endsAt): self
+    {
+        $this->endsAt = $endsAt;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getRegistrationUrl(): ?string
+    {
+        return $this->registrationUrl;
+    }
+
+    public function setRegistrationUrl(?string $registrationUrl): self
+    {
+        $this->registrationUrl = $registrationUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getLocationLabel(): ?string
+    {
+        return $this->locationLabel;
+    }
+
+    public function setLocationLabel(?string $locationLabel): self
+    {
+        $this->locationLabel = $locationLabel;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function isOnline(): ?bool
+    {
+        return $this->isOnline;
+    }
+
+    public function setIsOnline(?bool $isOnline): self
+    {
+        $this->isOnline = $isOnline;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCompetitionType(): ?string
+    {
+        return $this->competitionType;
+    }
+
+    public function setCompetitionType(?string $competitionType): self
+    {
+        $this->competitionType = $competitionType;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getParticipationType(): ?string
+    {
+        return $this->participationType;
+    }
+
+    public function setParticipationType(?string $participationType): self
+    {
+        $this->participationType = $participationType;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCoverImageUrl(): ?string
+    {
+        return $this->coverImageUrl;
+    }
+
+    public function setCoverImageUrl(?string $coverImageUrl): self
+    {
+        $this->coverImageUrl = $coverImageUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getPriceLabel(): ?string
+    {
+        return $this->priceLabel;
+    }
+
+    public function setPriceLabel(?string $priceLabel): self
+    {
+        $this->priceLabel = $priceLabel;
+        $this->touch();
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getMetadata(): ?array
+    {
+        return $this->metadata;
+    }
+
+    /**
+     * @param array<string, mixed>|null $metadata
+     */
+    public function setMetadata(?array $metadata): self
+    {
+        $this->metadata = $metadata;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getLastDiscoveredAt(): ?\DateTimeImmutable
+    {
+        return $this->lastDiscoveredAt;
+    }
+
+    public function setLastDiscoveredAt(?\DateTimeImmutable $lastDiscoveredAt): self
+    {
+        $this->lastDiscoveredAt = $lastDiscoveredAt;
         $this->touch();
 
         return $this;
