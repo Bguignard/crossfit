@@ -101,7 +101,7 @@ final class BackfillCompetitionLogosCommand extends Command
             ->andWhere('competition.sourceName IN (:sources)')
             ->setParameter('sources', $sources)
             ->orderBy('competition.sourceName', 'ASC')
-            ->addOrderBy('competition.externalId', 'ASC')
+            ->addOrderBy('competition.externalId', 'DESC')
             ->setMaxResults($limit);
 
         if ($externalIds !== []) {

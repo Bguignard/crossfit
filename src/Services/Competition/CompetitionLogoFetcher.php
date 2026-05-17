@@ -14,6 +14,13 @@ final class CompetitionLogoFetcher
 
     public function fetch(Competition $competition): ?string
     {
+        if ($competition->getSourceName() === 'scoring_fit') {
+            $logoUrl = $this->fetchScoringFitStoredLogo($competition->getExternalId());
+            if ($logoUrl !== null) {
+                return $logoUrl;
+            }
+        }
+
         foreach ($this->candidateUrls($competition) as $url) {
             try {
                 $html = $this->httpClient->request('GET', $url)->getContent();
@@ -124,6 +131,29 @@ final class CompetitionLogoFetcher
         }
 
         return $this->absoluteUrl(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5), $sourceUrl);
+    }
+
+    private function fetchScoringFitStoredLogo(string $externalId): ?string
+    {
+        if (preg_match('~^[a-f0-9]{24}$~i', $externalId) !== 1) {
+            return null;
+        }
+
+        $logoUrl = sprintf('https://scoring-images.s3.eu-west-3.amazonaws.com/events/%s/logo.png', $externalId);
+
+        try {
+            $statusCode = $this->httpClient->request('HEAD', $logoUrl)->getStatusCode();
+        } catch (TransportExceptionInterface $exception) {
+            throw new \RuntimeException(sprintf('Could not fetch Scoring.fit logo %s.', $logoUrl), previous: $exception);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($statusCode >= 200 && $statusCode < 300) {
+            return $logoUrl;
+        }
+
+        return null;
     }
 
     private function absoluteUrl(string $url, string $sourceUrl): string
