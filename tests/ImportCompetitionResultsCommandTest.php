@@ -94,6 +94,18 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'name' => 'CrossFit Games',
                     'season' => 2024,
                     'logoUrl' => 'https://example.test/crossfit-games.png',
+                    'status' => 'past',
+                    'startsAt' => '2024-08-08T12:00:00+00:00',
+                    'endsAt' => '2024-08-11T20:00:00+00:00',
+                    'registrationUrl' => 'https://example.test/register',
+                    'locationLabel' => 'Fort Worth, TX',
+                    'isOnline' => false,
+                    'competitionType' => 'functional_fitness',
+                    'participationType' => 'individual',
+                    'coverImageUrl' => 'https://example.test/cover.jpg',
+                    'priceLabel' => '$25',
+                    'metadata' => ['sourceCategory' => 'Games'],
+                    'lastDiscoveredAt' => '2026-05-17T10:30:00+00:00',
                 ],
             ],
             'events' => [
@@ -161,6 +173,18 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             ]);
             self::assertNotNull($competition);
             self::assertSame('https://example.test/crossfit-games.png', $competition->getLogoUrl());
+            self::assertSame('past', $competition->getStatus());
+            self::assertSame('2024-08-08T12:00:00+00:00', $competition->getStartsAt()?->format(DATE_ATOM));
+            self::assertSame('2024-08-11T20:00:00+00:00', $competition->getEndsAt()?->format(DATE_ATOM));
+            self::assertSame('https://example.test/register', $competition->getRegistrationUrl());
+            self::assertSame('Fort Worth, TX', $competition->getLocationLabel());
+            self::assertFalse($competition->isOnline());
+            self::assertSame('functional_fitness', $competition->getCompetitionType());
+            self::assertSame('individual', $competition->getParticipationType());
+            self::assertSame('https://example.test/cover.jpg', $competition->getCoverImageUrl());
+            self::assertSame('$25', $competition->getPriceLabel());
+            self::assertSame(['sourceCategory' => 'Games'], $competition->getMetadata());
+            self::assertSame('2026-05-17T10:30:00+00:00', $competition->getLastDiscoveredAt()?->format(DATE_ATOM));
         } finally {
             @unlink($file);
         }
