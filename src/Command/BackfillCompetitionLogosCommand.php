@@ -52,6 +52,7 @@ final class BackfillCompetitionLogosCommand extends Command
 
         $inspected = 0;
         $updated = 0;
+        $cleared = 0;
         $missing = 0;
         $failed = 0;
         $pendingFlushes = 0;
@@ -72,6 +73,16 @@ final class BackfillCompetitionLogosCommand extends Command
             if ($logoUrl === null) {
                 ++$missing;
                 $io->writeln(sprintf('Missing %s (%s/%s)', $competition->getName(), $competition->getSourceName(), $competition->getExternalId()));
+                if ($force && $competition->getLogoUrl() !== null && !$dryRun) {
+                    $competition->setLogoUrl(null);
+                    ++$cleared;
+                    ++$pendingFlushes;
+
+                    if ($pendingFlushes >= 20) {
+                        $this->entityManager->flush();
+                        $pendingFlushes = 0;
+                    }
+                }
                 continue;
             }
 
@@ -96,6 +107,9 @@ final class BackfillCompetitionLogosCommand extends Command
             ['inspected', 'updated', 'missing', 'failed'],
             [[$inspected, $updated, $missing, $failed]],
         );
+        if ($cleared > 0) {
+            $io->writeln(sprintf('Cleared stale logos: %d', $cleared));
+        }
 
         if ($lastExternalId !== null && $externalIds === []) {
             $io->writeln(sprintf('Next cursor: --before-external-id=%s', $lastExternalId));

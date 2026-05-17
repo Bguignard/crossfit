@@ -192,7 +192,28 @@ final class CompetitionLogoFetcher
             return null;
         }
 
+        if (!$this->isPublicImageUrl($logoUrl)) {
+            return null;
+        }
+
         return $logoUrl;
+    }
+
+    private function isPublicImageUrl(string $url): bool
+    {
+        try {
+            $statusCode = $this->httpClient->request('GET', $url, [
+                'headers' => [
+                    'Range' => 'bytes=0-0',
+                ],
+            ])->getStatusCode();
+        } catch (TransportExceptionInterface $exception) {
+            throw new \RuntimeException(sprintf('Could not validate image URL %s.', $url), previous: $exception);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return $statusCode >= 200 && $statusCode < 300;
     }
 
     private function absoluteUrl(string $url, string $sourceUrl): string
