@@ -52,9 +52,10 @@ final class CompetitionLogoFetcherTest extends TestCase
     public function testFetchesScoringFitLogo(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('', ['http_code' => 404]),
             new MockResponse('<div class="hero-image-logo"><img src="https://scoring-images.s3.eu-west-3.amazonaws.com/events/logo.png?1779003354922" alt="logo"></div>'),
         ]));
-        $competition = new Competition('Scoring Event', 'scoring_fit', '3051');
+        $competition = new Competition('Scoring Event', 'scoring_fit', '6011528bc482ba00041018ad');
 
         self::assertSame(
             'https://scoring-images.s3.eu-west-3.amazonaws.com/events/logo.png?1779003354922',
@@ -62,9 +63,23 @@ final class CompetitionLogoFetcherTest extends TestCase
         );
     }
 
+    public function testFetchesScoringFitStoredLogoFromExternalId(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('', ['http_code' => 200]),
+        ]));
+        $competition = new Competition('Scoring Event', 'scoring_fit', '69a8200cf6c7b70033e2377e');
+
+        self::assertSame(
+            'https://scoring-images.s3.eu-west-3.amazonaws.com/events/69a8200cf6c7b70033e2377e/logo.png',
+            $fetcher->fetch($competition),
+        );
+    }
+
     public function testReturnsNullWhenNoLogoIsPresent(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('', ['http_code' => 404]),
             new MockResponse('<html>No logo here.</html>'),
         ]));
         $competition = new Competition('Scoring Event', 'scoring_fit', '3051');
