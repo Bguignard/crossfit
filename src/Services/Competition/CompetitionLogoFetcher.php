@@ -15,6 +15,11 @@ final class CompetitionLogoFetcher
     public function fetch(Competition $competition): ?string
     {
         if ($competition->getSourceName() === 'scoring_fit') {
+            $logoUrl = $this->fetchScoringFitApiLogo($competition->getExternalId());
+            if ($logoUrl !== null) {
+                return $logoUrl;
+            }
+
             $logoUrl = $this->fetchScoringFitStoredLogo($competition->getExternalId());
             if ($logoUrl !== null) {
                 return $logoUrl;
@@ -154,6 +159,40 @@ final class CompetitionLogoFetcher
         }
 
         return null;
+    }
+
+    private function fetchScoringFitApiLogo(string $externalId): ?string
+    {
+        $apiUrl = sprintf('https://scoring-fit-prod-7a29180d25c8.herokuapp.com/api/leaderboard/competition/%s', rawurlencode($externalId));
+
+        try {
+            $response = $this->httpClient->request('GET', $apiUrl);
+            if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+                return null;
+            }
+
+            $payload = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+        } catch (TransportExceptionInterface $exception) {
+            throw new \RuntimeException(sprintf('Could not fetch Scoring.fit competition API %s.', $apiUrl), previous: $exception);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $logoUrl = $payload['data']['competition']['iconLink'] ?? null;
+        if (!is_string($logoUrl)) {
+            return null;
+        }
+
+        $logoUrl = trim($logoUrl);
+        if ($logoUrl === '' || preg_match('~^https?://~i', $logoUrl) !== 1) {
+            return null;
+        }
+
+        return $logoUrl;
     }
 
     private function absoluteUrl(string $url, string $sourceUrl): string
