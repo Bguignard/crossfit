@@ -93,6 +93,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'source' => ['externalId' => 'games-2024'],
                     'name' => 'CrossFit Games',
                     'season' => 2024,
+                    'logoUrl' => 'https://example.test/crossfit-games.png',
                 ],
             ],
             'events' => [
@@ -152,6 +153,14 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertSame('https://profilepicsbucket.crossfit.com/athlete-one.jpg', $athlete->getAvatarUrl());
             self::assertSame(1, $athlete->getEliteGamesRank());
             self::assertSame(2024, $athlete->getEliteGamesSeason());
+
+            /** @var Competition|null $competition */
+            $competition = $this->getRepository(Competition::class)->findOneBy([
+                'sourceName' => 'crossfit_games',
+                'externalId' => 'games-2024',
+            ]);
+            self::assertNotNull($competition);
+            self::assertSame('https://example.test/crossfit-games.png', $competition->getLogoUrl());
         } finally {
             @unlink($file);
         }

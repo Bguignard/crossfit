@@ -37,6 +37,9 @@ class Competition
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $sourceUrl = null;
 
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $logoUrl = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -105,6 +108,19 @@ class Competition
     public function setSourceUrl(?string $sourceUrl): self
     {
         $this->sourceUrl = $sourceUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getLogoUrl(): ?string
+    {
+        return $this->logoUrl;
+    }
+
+    public function setLogoUrl(?string $logoUrl): self
+    {
+        $this->logoUrl = $logoUrl;
         $this->touch();
 
         return $this;
