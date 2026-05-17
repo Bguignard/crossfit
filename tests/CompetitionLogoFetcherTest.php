@@ -53,6 +53,7 @@ final class CompetitionLogoFetcherTest extends TestCase
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
             new MockResponse('', ['http_code' => 404]),
+            new MockResponse('', ['http_code' => 404]),
             new MockResponse('<div class="hero-image-logo"><img src="https://scoring-images.s3.eu-west-3.amazonaws.com/events/logo.png?1779003354922" alt="logo"></div>'),
         ]));
         $competition = new Competition('Scoring Event', 'scoring_fit', '6011528bc482ba00041018ad');
@@ -63,9 +64,29 @@ final class CompetitionLogoFetcherTest extends TestCase
         );
     }
 
+    public function testFetchesScoringFitApiLogo(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse(json_encode([
+                'data' => [
+                    'competition' => [
+                        'iconLink' => 'https://scoring-images.s3.eu-west-3.amazonaws.com/events/68bbf76337b8e90033ff88e7/logo.jpg',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)),
+        ]));
+        $competition = new Competition('Camp Major', 'scoring_fit', '68bbf76337b8e90033ff88e7');
+
+        self::assertSame(
+            'https://scoring-images.s3.eu-west-3.amazonaws.com/events/68bbf76337b8e90033ff88e7/logo.jpg',
+            $fetcher->fetch($competition),
+        );
+    }
+
     public function testFetchesScoringFitStoredLogoFromExternalId(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('', ['http_code' => 404]),
             new MockResponse('', ['http_code' => 200]),
         ]));
         $competition = new Competition('Scoring Event', 'scoring_fit', '69a8200cf6c7b70033e2377e');
@@ -79,6 +100,7 @@ final class CompetitionLogoFetcherTest extends TestCase
     public function testReturnsNullWhenNoLogoIsPresent(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('', ['http_code' => 404]),
             new MockResponse('', ['http_code' => 404]),
             new MockResponse('<html>No logo here.</html>'),
         ]));
