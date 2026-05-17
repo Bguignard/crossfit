@@ -23,6 +23,32 @@ final class CompetitionLogoFetcherTest extends TestCase
         );
     }
 
+    public function testFetchesCompetitionCornerLogoFromEncodedEventPayload(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('<app-root visual="{&quot;logo&quot;:&quot;https://competitioncorner.net/file.aspx/mainFilesystem?Events%2fck56xibbz.jpg&amp;thumbnail=1080,1080&quot;}" eventdata="{&quot;event&quot;:{&quot;eventPageLogoImage&quot;:&quot;General/6g7sow2b3.jpg&quot;}}"></app-root>'),
+        ]));
+        $competition = new Competition('French Throwdown', 'competition_corner', '20465');
+
+        self::assertSame(
+            'https://competitioncorner.net/file.aspx/mainFilesystem?General%2f6g7sow2b3.jpg&thumbnail=1080,1080',
+            $fetcher->fetch($competition),
+        );
+    }
+
+    public function testFetchesCompetitionCornerLogoFromVisualPayloadWhenNoEventPageLogoExists(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse('<app-root visual="{&quot;logo&quot;:&quot;https://competitioncorner.net/file.aspx/mainFilesystem?Events%2f455a18m3n.png&amp;thumbnail=1080,1080&quot;}"></app-root>'),
+        ]));
+        $competition = new Competition('Wodapalooza', 'competition_corner', '19193');
+
+        self::assertSame(
+            'https://competitioncorner.net/file.aspx/mainFilesystem?Events%2f455a18m3n.png&thumbnail=1080,1080',
+            $fetcher->fetch($competition),
+        );
+    }
+
     public function testFetchesScoringFitLogo(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([

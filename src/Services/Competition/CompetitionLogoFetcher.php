@@ -64,10 +64,57 @@ final class CompetitionLogoFetcher
     private function extractCompetitionCornerLogo(string $html, string $sourceUrl): ?string
     {
         if (preg_match('~<img\b(?=[^>]*\bcustom-logo\b)[^>]*\bsrc=["\']([^"\']+)["\']~i', $html, $matches) !== 1) {
+            foreach ($this->competitionCornerLogoCandidates($html) as $candidate) {
+                return $this->competitionCornerImageUrl($candidate, $sourceUrl);
+            }
+
             return null;
         }
 
-        return $this->absoluteUrl(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5), $sourceUrl);
+        return $this->competitionCornerImageUrl(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5), $sourceUrl);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function competitionCornerLogoCandidates(string $html): array
+    {
+        $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
+        $patterns = [
+            '~"eventPageLogoImage"\s*:\s*"([^"]+)"~',
+            '~"logo"\s*:\s*"([^"]+)"~',
+            '~<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']~i',
+            '~<meta\s+name=["\']twitter:image["\']\s+content=["\']([^"\']+)["\']~i',
+        ];
+
+        $candidates = [];
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $decoded, $matches) !== false) {
+                foreach ($matches[1] as $match) {
+                    $candidate = trim($match);
+                    if ($candidate !== '') {
+                        $candidates[] = $candidate;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($candidates));
+    }
+
+    private function competitionCornerImageUrl(string $url, string $sourceUrl): string
+    {
+        if (preg_match('~^(?:https?:)?//|^/~i', $url) === 1 || str_starts_with($url, 'file.aspx')) {
+            return $this->absoluteUrl($url, $sourceUrl);
+        }
+
+        if (preg_match('~^[A-Za-z]+/.+\.(?:jpe?g|png|gif|webp)$~i', $url) === 1) {
+            $path = str_replace('%2F', '%2f', rawurlencode($url));
+
+            return sprintf('https://competitioncorner.net/file.aspx/mainFilesystem?%s&thumbnail=1080,1080', $path);
+        }
+
+        return $this->absoluteUrl($url, $sourceUrl);
     }
 
     private function extractScoringFitLogo(string $html, string $sourceUrl): ?string
