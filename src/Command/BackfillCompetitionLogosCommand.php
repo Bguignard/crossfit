@@ -31,6 +31,7 @@ final class BackfillCompetitionLogosCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum competitions to inspect.', '50')
             ->addOption('source', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Limit to a source name. Defaults to competition_corner and scoring_fit.')
             ->addOption('external-id', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Only inspect one competition external id. Can be passed multiple times.')
+            ->addOption('before-external-id', null, InputOption::VALUE_REQUIRED, 'Only inspect competitions with an external id lower than this value. Useful to page through missing logos.')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Refresh logos even when logo_url is already present.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Fetch logos and print what would change without writing to the database.');
     }
@@ -41,6 +42,7 @@ final class BackfillCompetitionLogosCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $sources = array_values(array_filter(array_map('strval', (array) $input->getOption('source'))));
         $externalIds = array_values(array_filter(array_map('strval', (array) $input->getOption('external-id'))));
+        $beforeExternalId = trim((string) ($input->getOption('before-external-id') ?? ''));
         $force = (bool) $input->getOption('force');
         $dryRun = (bool) $input->getOption('dry-run');
 
@@ -52,9 +54,12 @@ final class BackfillCompetitionLogosCommand extends Command
         $updated = 0;
         $missing = 0;
         $failed = 0;
+        $pendingFlushes = 0;
+        $lastExternalId = null;
 
-        foreach ($this->findCompetitions($limit, $sources, $externalIds, $force) as $competition) {
+        foreach ($this->findCompetitions($limit, $sources, $externalIds, $beforeExternalId, $force) as $competition) {
             ++$inspected;
+            $lastExternalId = $competition->getExternalId();
 
             try {
                 $logoUrl = $this->logoFetcher->fetch($competition);
@@ -74,10 +79,16 @@ final class BackfillCompetitionLogosCommand extends Command
             if (!$dryRun) {
                 $competition->setLogoUrl($logoUrl);
                 ++$updated;
+                ++$pendingFlushes;
+
+                if ($pendingFlushes >= 20) {
+                    $this->entityManager->flush();
+                    $pendingFlushes = 0;
+                }
             }
         }
 
-        if ($updated > 0 && !$dryRun) {
+        if ($pendingFlushes > 0 && !$dryRun) {
             $this->entityManager->flush();
         }
 
@@ -85,6 +96,10 @@ final class BackfillCompetitionLogosCommand extends Command
             ['inspected', 'updated', 'missing', 'failed'],
             [[$inspected, $updated, $missing, $failed]],
         );
+
+        if ($lastExternalId !== null && $externalIds === []) {
+            $io->writeln(sprintf('Next cursor: --before-external-id=%s', $lastExternalId));
+        }
 
         return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
     }
@@ -95,7 +110,7 @@ final class BackfillCompetitionLogosCommand extends Command
      *
      * @return list<Competition>
      */
-    private function findCompetitions(int $limit, array $sources, array $externalIds, bool $force): array
+    private function findCompetitions(int $limit, array $sources, array $externalIds, string $beforeExternalId, bool $force): array
     {
         $queryBuilder = $this->entityManager->getRepository(Competition::class)->createQueryBuilder('competition')
             ->andWhere('competition.sourceName IN (:sources)')
@@ -108,8 +123,16 @@ final class BackfillCompetitionLogosCommand extends Command
             $queryBuilder
                 ->andWhere('competition.externalId IN (:externalIds)')
                 ->setParameter('externalIds', $externalIds);
-        } elseif (!$force) {
-            $queryBuilder->andWhere('competition.logoUrl IS NULL');
+        } else {
+            if ($beforeExternalId !== '') {
+                $queryBuilder
+                    ->andWhere('competition.externalId < :beforeExternalId')
+                    ->setParameter('beforeExternalId', $beforeExternalId);
+            }
+
+            if (!$force) {
+                $queryBuilder->andWhere('competition.logoUrl IS NULL');
+            }
         }
 
         return $queryBuilder->getQuery()->getResult();
