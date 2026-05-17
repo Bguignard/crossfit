@@ -105,6 +105,26 @@ final class CompetitionLogoFetcherTest extends TestCase
         self::assertNull($fetcher->fetch($competition));
     }
 
+    public function testSkipsUnreachableScoringFitApiLogo(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse(json_encode([
+                'data' => [
+                    'competition' => [
+                        'iconLink' => 'https://rsnatch.com/wp-content/uploads/2022/08/logo.png',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)),
+            new MockResponse('', ['error' => 'Could not resolve host: rsnatch.com']),
+            new MockResponse('', ['http_code' => 404]),
+            new MockResponse('', ['http_code' => 404]),
+            new MockResponse('<html>No logo here.</html>'),
+        ]));
+        $competition = new Competition('Unreachable Logo', 'scoring_fit', '62fc9a5c65709e0004c3f97e');
+
+        self::assertNull($fetcher->fetch($competition));
+    }
+
     public function testFetchesScoringFitStoredLogoFromExternalId(): void
     {
         $fetcher = new CompetitionLogoFetcher(new MockHttpClient([

@@ -209,8 +209,8 @@ final class CompetitionLogoFetcher
                     'Range' => 'bytes=0-0',
                 ],
             ])->getStatusCode();
-        } catch (TransportExceptionInterface $exception) {
-            throw new \RuntimeException(sprintf('Could not validate image URL %s.', $url), previous: $exception);
+        } catch (TransportExceptionInterface) {
+            return false;
         } catch (\Throwable) {
             return false;
         }
