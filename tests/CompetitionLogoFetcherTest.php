@@ -74,6 +74,7 @@ final class CompetitionLogoFetcherTest extends TestCase
                     ],
                 ],
             ], JSON_THROW_ON_ERROR)),
+            new MockResponse('x', ['http_code' => 206]),
         ]));
         $competition = new Competition('Camp Major', 'scoring_fit', '68bbf76337b8e90033ff88e7');
 
@@ -81,6 +82,25 @@ final class CompetitionLogoFetcherTest extends TestCase
             'https://scoring-images.s3.eu-west-3.amazonaws.com/events/68bbf76337b8e90033ff88e7/logo.jpg',
             $fetcher->fetch($competition),
         );
+    }
+
+    public function testSkipsPrivateScoringFitApiLogo(): void
+    {
+        $fetcher = new CompetitionLogoFetcher(new MockHttpClient([
+            new MockResponse(json_encode([
+                'data' => [
+                    'competition' => [
+                        'iconLink' => 'https://scoring-images.s3.eu-west-3.amazonaws.com/private-logo.png',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)),
+            new MockResponse('', ['http_code' => 403]),
+            new MockResponse('', ['http_code' => 404]),
+            new MockResponse('<html>No logo here.</html>'),
+        ]));
+        $competition = new Competition('Private Logo', 'scoring_fit', '65c4e3d394353c0033aea8d6');
+
+        self::assertNull($fetcher->fetch($competition));
     }
 
     public function testFetchesScoringFitStoredLogoFromExternalId(): void
