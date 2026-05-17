@@ -144,18 +144,20 @@ final class CompetitionLogoFetcher
             return null;
         }
 
-        $logoUrl = sprintf('https://scoring-images.s3.eu-west-3.amazonaws.com/events/%s/logo.png', $externalId);
+        foreach (['png', 'jpg'] as $extension) {
+            $logoUrl = sprintf('https://scoring-images.s3.eu-west-3.amazonaws.com/events/%s/logo.%s', $externalId, $extension);
 
-        try {
-            $statusCode = $this->httpClient->request('HEAD', $logoUrl)->getStatusCode();
-        } catch (TransportExceptionInterface $exception) {
-            throw new \RuntimeException(sprintf('Could not fetch Scoring.fit logo %s.', $logoUrl), previous: $exception);
-        } catch (\Throwable) {
-            return null;
-        }
+            try {
+                $statusCode = $this->httpClient->request('HEAD', $logoUrl)->getStatusCode();
+            } catch (TransportExceptionInterface $exception) {
+                throw new \RuntimeException(sprintf('Could not fetch Scoring.fit logo %s.', $logoUrl), previous: $exception);
+            } catch (\Throwable) {
+                continue;
+            }
 
-        if ($statusCode >= 200 && $statusCode < 300) {
-            return $logoUrl;
+            if ($statusCode >= 200 && $statusCode < 300) {
+                return $logoUrl;
+            }
         }
 
         return null;
