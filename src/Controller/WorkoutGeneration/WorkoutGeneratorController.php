@@ -22,6 +22,7 @@ class WorkoutGeneratorController extends AbstractController
     }
 
     #[Route('/api/workout-generator/{id}', name: 'workout-generator', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
+    #[Route('/api/simple-workout-generator/{id}', name: 'simple-workout-generator', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function index(string $id): Response
     {
@@ -32,6 +33,13 @@ class WorkoutGeneratorController extends AbstractController
         $workout = $this->workoutCreator->createWorkout($workoutGeneration);
         $this->workoutRepository->persist($workout);
 
-        return $this->json($workout->getId()->toString());
+        return $this->json([
+            'id' => $workout->getId()->toString(),
+            'name' => $workout->getName(),
+            'flow' => $workout->getFlow(),
+            'timeCap' => $workout->getTimeCap(),
+            'numberOfRounds' => $workout->getNumberOfRounds(),
+            'workoutType' => $workout->getWorkoutType()?->getName(),
+        ]);
     }
 }

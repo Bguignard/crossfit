@@ -1,0 +1,323 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\WorkoutGeneration;
+
+use App\Entity\Workout\BodyPart;
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
+use App\Entity\Workout\MovementDifficulty;
+use App\Entity\Workout\MovementType;
+use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutMovementGenerationType;
+use App\Entity\Workout\WorkoutType;
+use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\MovementRepository;
+use App\Services\Workout\MovementDifficultyService;
+use App\Services\Workout\WorkoutCreatorServiceInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Uid\Uuid;
+
+#[Route('/api/workout-generation-flow')]
+class WorkoutGenerationFlowController extends AbstractController
+{
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly MovementRepository $movementRepository,
+        private readonly MovementDifficultyService $movementDifficultyService,
+        private readonly WorkoutCreatorServiceInterface $workoutCreator,
+    ) {
+    }
+
+    #[Route('/options', name: 'workout_generation_flow_options', methods: ['GET'])]
+    public function options(): JsonResponse
+    {
+        return $this->json([
+            'workoutTypes' => $this->catalog(WorkoutType::class),
+            'movementGenerationTypes' => $this->catalog(WorkoutMovementGenerationType::class),
+            'movementTypes' => $this->catalog(MovementType::class),
+            'movementDifficulties' => $this->catalog(MovementDifficulty::class),
+            'bodyParts' => $this->catalog(BodyPart::class),
+            'implements' => $this->catalog(Implement::class),
+        ]);
+    }
+
+    #[Route('', name: 'workout_generation_flow_create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
+    {
+        $workoutGeneration = new WorkoutGeneration();
+        $this->hydrate($workoutGeneration, $this->payload($request));
+        $this->entityManager->persist($workoutGeneration);
+        $this->entityManager->flush();
+
+        return $this->json($this->serializeWorkoutGeneration($workoutGeneration), Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id}', name: 'workout_generation_flow_update', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['PATCH'])]
+    public function update(string $id, Request $request): JsonResponse
+    {
+        $workoutGeneration = $this->findWorkoutGeneration($id);
+        if ($workoutGeneration === null) {
+            return $this->json(['error' => 'Workout generation not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->hydrate($workoutGeneration, $this->payload($request));
+        $this->entityManager->flush();
+
+        return $this->json($this->serializeWorkoutGeneration($workoutGeneration));
+    }
+
+    #[Route('/{id}/possible-movements', name: 'workout_generation_flow_possible_movements', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['GET'])]
+    public function possibleMovements(string $id): JsonResponse
+    {
+        $workoutGeneration = $this->findWorkoutGeneration($id);
+        if ($workoutGeneration === null) {
+            return $this->json(['error' => 'Workout generation not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'workoutGenerationId' => $id,
+            'movements' => array_map(
+                fn (Movement $movement): array => $this->serializeMovement($movement),
+                $this->getPossibleMovements($workoutGeneration),
+            ),
+        ]);
+    }
+
+    #[Route('/{id}/workout', name: 'workout_generation_flow_generate_workout', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
+    public function generateWorkout(string $id): JsonResponse
+    {
+        $workoutGeneration = $this->findWorkoutGeneration($id);
+        if ($workoutGeneration === null) {
+            return $this->json(['error' => 'Workout generation not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+        $this->entityManager->persist($workout);
+        $this->entityManager->flush();
+
+        return $this->json($this->serializeWorkout($workout), Response::HTTP_CREATED);
+    }
+
+    private function hydrate(WorkoutGeneration $workoutGeneration, array $payload): void
+    {
+        if (array_key_exists('name', $payload)) {
+            $workoutGeneration->setName((string) $payload['name']);
+        }
+        if (array_key_exists('timeCap', $payload)) {
+            $workoutGeneration->setTimeCap((int) $payload['timeCap']);
+        }
+        if (array_key_exists('numberOfDifferentMovements', $payload)) {
+            $workoutGeneration->setNumberOfDifferentMovements((int) $payload['numberOfDifferentMovements']);
+        }
+        if (array_key_exists('isTeamWorkout', $payload)) {
+            $workoutGeneration->setIsTeamWorkout((bool) $payload['isTeamWorkout']);
+        }
+        if (array_key_exists('intervalsTime', $payload)) {
+            $workoutGeneration->setIntervalsTime($payload['intervalsTime'] === null ? null : (int) $payload['intervalsTime']);
+        }
+        if (array_key_exists('intervalsRestTime', $payload)) {
+            $workoutGeneration->setIntervalsRestTime($payload['intervalsRestTime'] === null ? null : (int) $payload['intervalsRestTime']);
+        }
+        if (array_key_exists('numberOfRounds', $payload)) {
+            $workoutGeneration->setNumberOfRounds($payload['numberOfRounds'] === null ? null : (int) $payload['numberOfRounds']);
+        }
+        if (array_key_exists('workoutType', $payload)) {
+            $workoutGeneration->setWorkoutType($this->requiredCatalogEntity(WorkoutType::class, $payload['workoutType']));
+        }
+        if (array_key_exists('movementDifficulty', $payload)) {
+            $workoutGeneration->setMovementDifficulty($this->requiredCatalogEntity(MovementDifficulty::class, $payload['movementDifficulty']));
+        }
+        if (array_key_exists('movementGenerationType', $payload)) {
+            $workoutGeneration->setMovementGenerationType($this->requiredCatalogEntity(WorkoutMovementGenerationType::class, $payload['movementGenerationType']));
+        }
+        if (array_key_exists('movementTypes', $payload)) {
+            $workoutGeneration->setMovementTypes($this->catalogEntities(MovementType::class, $payload['movementTypes']));
+        }
+        if (array_key_exists('availableImplements', $payload)) {
+            $workoutGeneration->setAvailableImplements($this->catalogEntities(Implement::class, $payload['availableImplements']));
+        }
+        if (array_key_exists('mandatoryBodyParts', $payload)) {
+            $workoutGeneration->setMandatoryBodyParts($this->catalogEntities(BodyPart::class, $payload['mandatoryBodyParts']));
+        }
+        if (array_key_exists('bannedMovements', $payload)) {
+            $workoutGeneration->setBannedMovements($this->movementEntities($payload['bannedMovements']));
+        }
+        if (array_key_exists('mandatoryMovements', $payload)) {
+            $workoutGeneration->setMandatoryMovements($this->movementEntities($payload['mandatoryMovements']));
+        }
+    }
+
+    private function getPossibleMovements(WorkoutGeneration $workoutGeneration): array
+    {
+        return $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
+            $workoutGeneration->getMovementTypes()->toArray(),
+            $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
+            $workoutGeneration->getBannedMovements()->toArray(),
+            $workoutGeneration->getAvailableImplements()->toArray(),
+            $workoutGeneration->getMandatoryBodyParts()->toArray(),
+        );
+    }
+
+    private function findWorkoutGeneration(string $id): ?WorkoutGeneration
+    {
+        return $this->entityManager->getRepository(WorkoutGeneration::class)->find(Uuid::fromString($id));
+    }
+
+    private function payload(Request $request): array
+    {
+        $payload = json_decode($request->getContent(), true);
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $className
+     *
+     * @return T
+     */
+    private function requiredCatalogEntity(string $className, mixed $identifier): object
+    {
+        $entity = $this->catalogEntity($className, $identifier);
+        if ($entity === null) {
+            throw $this->createNotFoundException(sprintf('%s "%s" not found.', $className, (string) $identifier));
+        }
+
+        return $entity;
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $className
+     *
+     * @return T|null
+     */
+    private function catalogEntity(string $className, mixed $identifier): ?object
+    {
+        if (!is_string($identifier) || $identifier === '') {
+            return null;
+        }
+
+        $repository = $this->entityManager->getRepository($className);
+        if (Uuid::isValid($identifier)) {
+            return $repository->find(Uuid::fromString($identifier));
+        }
+
+        return $repository->findOneBy(['name' => $identifier]);
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $className
+     *
+     * @return list<T>
+     */
+    private function catalogEntities(string $className, mixed $identifiers): array
+    {
+        if (!is_array($identifiers)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            fn (mixed $identifier): ?object => $this->catalogEntity($className, $identifier),
+            $identifiers,
+        )));
+    }
+
+    /**
+     * @return list<Movement>
+     */
+    private function movementEntities(mixed $identifiers): array
+    {
+        if (!is_array($identifiers)) {
+            return [];
+        }
+
+        $repository = $this->entityManager->getRepository(Movement::class);
+
+        return array_values(array_filter(array_map(static function (mixed $identifier) use ($repository): ?Movement {
+            if (!is_string($identifier) || !Uuid::isValid($identifier)) {
+                return null;
+            }
+
+            return $repository->find(Uuid::fromString($identifier));
+        }, $identifiers)));
+    }
+
+    /**
+     * @param class-string<object> $className
+     *
+     * @return list<array{id: string, name: string}>
+     */
+    private function catalog(string $className): array
+    {
+        $entities = $this->entityManager->getRepository($className)->findBy([], ['name' => 'ASC']);
+
+        return array_map(static fn (object $entity): array => [
+            'id' => $entity->getId()->toString(),
+            'name' => $entity->getName(),
+        ], $entities);
+    }
+
+    private function serializeWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+    {
+        return [
+            'id' => $workoutGeneration->getId()?->toString(),
+            'name' => $workoutGeneration->getName(),
+            'timeCap' => $workoutGeneration->getTimeCap(),
+            'workoutType' => $this->serializeCatalogEntity($workoutGeneration->getWorkoutType()),
+            'movementGenerationType' => $this->serializeCatalogEntity($workoutGeneration->getMovementGenerationType()),
+            'movementDifficulty' => $this->serializeCatalogEntity($workoutGeneration->getMovementDifficulty()),
+            'movementTypes' => array_map($this->serializeCatalogEntity(...), $workoutGeneration->getMovementTypes()->toArray()),
+            'availableImplements' => array_map($this->serializeCatalogEntity(...), $workoutGeneration->getAvailableImplements()->toArray()),
+            'mandatoryBodyParts' => array_map($this->serializeCatalogEntity(...), $workoutGeneration->getMandatoryBodyParts()->toArray()),
+            'bannedMovements' => array_map($this->serializeMovement(...), $workoutGeneration->getBannedMovements()->toArray()),
+            'mandatoryMovements' => array_map($this->serializeMovement(...), $workoutGeneration->getMandatoryMovements()->toArray()),
+            'numberOfDifferentMovements' => $workoutGeneration->getNumberOfDifferentMovements(),
+            'isTeamWorkout' => $workoutGeneration->isTeamWorkout(),
+            'intervalsTime' => $workoutGeneration->getIntervalsTime(),
+            'intervalsRestTime' => $workoutGeneration->getIntervalsRestTime(),
+            'numberOfRounds' => $workoutGeneration->getNumberOfRounds(),
+        ];
+    }
+
+    private function serializeWorkout(Workout $workout): array
+    {
+        return [
+            'id' => $workout->getId()->toString(),
+            'name' => $workout->getName(),
+            'flow' => $workout->getFlow(),
+            'timeCap' => $workout->getTimeCap(),
+            'numberOfRounds' => $workout->getNumberOfRounds(),
+            'workoutType' => $workout->getWorkoutType() ? $this->serializeCatalogEntity($workout->getWorkoutType()) : null,
+            'movements' => array_map($this->serializeMovement(...), $workout->getMovements()->toArray()),
+            'implements' => array_map($this->serializeCatalogEntity(...), $workout->getImplements()->toArray()),
+        ];
+    }
+
+    private function serializeCatalogEntity(object $entity): array
+    {
+        return [
+            'id' => $entity->getId()->toString(),
+            'name' => $entity->getName(),
+        ];
+    }
+
+    private function serializeMovement(Movement $movement): array
+    {
+        return [
+            'id' => $movement->getId()->toString(),
+            'name' => $movement->getName(),
+        ];
+    }
+}
