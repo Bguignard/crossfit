@@ -13,12 +13,17 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
 {
     public function __construct(
         public string $chatGPTApiKey,
+        private string $openAiModel,
         private HttpClientInterface $client,
     ) {
     }
 
     public function getWorkoutFlowFromPrompt(string $prompt): string
     {
+        if (trim($this->chatGPTApiKey) === '') {
+            throw new \RuntimeException('CHAT_GPT_API_KEY is required to generate workouts.');
+        }
+
         //        $client = $this->client->withOptions([
         //            'base_uri' => 'https://api.openai.com/v1/',
         //            'headers' =>
@@ -40,7 +45,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
-                    'model' => 'gpt-3.5-turbo',
+                    'model' => $this->openAiModel,
                     'messages' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
@@ -56,9 +61,14 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
         RedirectionExceptionInterface|
         ServerExceptionInterface|
         TransportExceptionInterface $e) {
-            return 'Error: '.$e->getMessage();
+            throw new \RuntimeException('OpenAI workout generation failed: '.$e->getMessage(), 0, $e);
         }
 
-        return $data['choices'][0]['message']['content'] ?? '';
+        $content = trim((string) ($data['choices'][0]['message']['content'] ?? ''));
+        if ($content === '') {
+            throw new \RuntimeException('OpenAI workout generation returned an empty response.');
+        }
+
+        return $content;
     }
 }

@@ -98,7 +98,14 @@ class WorkoutGenerationFlowController extends AbstractController
             return $this->json(['error' => 'Workout generation not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+        try {
+            $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\RuntimeException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+        }
+
         $this->entityManager->persist($workout);
         $this->entityManager->flush();
 
