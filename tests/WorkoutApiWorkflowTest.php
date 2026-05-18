@@ -11,7 +11,19 @@ use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
+use App\Entity\Workout\BodyPart;
+use App\Entity\Workout\Enum\BodyPartEnum;
+use App\Entity\Workout\Enum\ImplementEnum;
+use App\Entity\Workout\Enum\MovementDifficultyEnum;
+use App\Entity\Workout\Enum\MovementTypeEnum;
+use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
+use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\MovementDifficulty;
+use App\Entity\Workout\MovementType;
 use App\Entity\Workout\Workout;
+use App\Entity\Workout\WorkoutMovementGenerationType;
+use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
@@ -426,5 +438,57 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertCount(1, $updatedDraft['mandatoryMovements']);
 
         self::assertNotNull($this->getRepository(WorkoutGeneration::class)->find($draft['id']));
+    }
+
+    public function testWorkoutGenerationMatchesCatalogFiltersByNameWhenCatalogRowsAreDuplicated(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $duplicateCardio = new MovementType(MovementTypeEnum::CARDIO);
+        $duplicateWeightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $duplicateGymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $duplicateElite = new MovementDifficulty(MovementDifficultyEnum::ELITE);
+        $duplicateBarbell = new Implement(ImplementEnum::BARBELL, null);
+        $duplicatePullUpBar = new Implement(ImplementEnum::PULL_UP_BAR, null);
+        $duplicateLegs = new BodyPart(BodyPartEnum::LEGS);
+        $duplicateUpperBack = new BodyPart(BodyPartEnum::UPPER_BACK);
+
+        foreach ([
+            $duplicateCardio,
+            $duplicateWeightlifting,
+            $duplicateGymnastic,
+            $duplicateElite,
+            $duplicateBarbell,
+            $duplicatePullUpBar,
+            $duplicateLegs,
+            $duplicateUpperBack,
+        ] as $entity) {
+            $entityManager->persist($entity);
+        }
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Duplicated catalog WOD')
+            ->setTimeCap(16)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($duplicateElite)
+            ->setMovementTypes([$duplicateCardio, $duplicateWeightlifting, $duplicateGymnastic])
+            ->setAvailableImplements([$duplicateBarbell, $duplicatePullUpBar])
+            ->setMandatoryBodyParts([$duplicateLegs, $duplicateUpperBack])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(true);
+
+        $entityManager->persist($workoutGeneration);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/workout-generation-flow/%s/possible-movements', $workoutGeneration->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $movementNames = array_column($payload['movements'], 'name');
+
+        self::assertContains('Deadlift', $movementNames);
     }
 }

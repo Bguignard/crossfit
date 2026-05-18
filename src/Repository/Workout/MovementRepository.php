@@ -53,31 +53,24 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         $query = $this->createQueryBuilder('m');
 
         if (count($movementTypes) > 0) {
-            $typeOrX = $query->expr()->orX();
-            foreach ($movementTypes as $idx => $movementType) {
-                $typeOrX->add('m.movementType = :movementType'.$idx);
-                $query->setParameter('movementType'.$idx, $movementType);
-            }
-            $query->andWhere($typeOrX);
+            $query
+                ->join('m.movementType', 'mt')
+                ->andWhere('mt.name IN (:movementTypeNames)')
+                ->setParameter('movementTypeNames', $this->entityNames($movementTypes));
         }
 
         if (count($difficulties) > 0) {
-            $diffOrX = $query->expr()->orX();
-            foreach ($difficulties as $idx => $difficulty) {
-                $diffOrX->add('m.difficulty = :difficulty'.$idx);
-                $query->setParameter('difficulty'.$idx, $difficulty);
-            }
-            $query->andWhere($diffOrX);
+            $query
+                ->join('m.difficulty', 'md')
+                ->andWhere('md.name IN (:difficultyNames)')
+                ->setParameter('difficultyNames', $this->entityNames($difficulties));
         }
 
         if (count($implements) > 0) {
-            $diffOrX = $query->expr()->orX();
-            $query->join('m.possibleImplements', 'pi');
-            foreach ($implements as $idx => $implement) {
-                $diffOrX->add(':implement'.$idx.' = pi');
-                $query->setParameter('implement'.$idx, $implement);
-            }
-            $query->andWhere($diffOrX);
+            $query
+                ->join('m.possibleImplements', 'pi')
+                ->andWhere('pi.name IN (:implementNames)')
+                ->setParameter('implementNames', $this->entityNames($implements));
         }
 
         if (count($movementsToExclude) > 0) {
@@ -109,42 +102,33 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         $query = $this->createQueryBuilder('m');
 
         if (count($movementTypes) > 0) {
-            $typeOrX = $query->expr()->orX();
-            foreach ($movementTypes as $idx => $movementType) {
-                $typeOrX->add('m.movementType = :movementType'.$idx);
-                $query->setParameter('movementType'.$idx, $movementType);
-            }
-            $query->andWhere($typeOrX);
+            $query
+                ->join('m.movementType', 'mt')
+                ->andWhere('mt.name IN (:movementTypeNames)')
+                ->setParameter('movementTypeNames', $this->entityNames($movementTypes));
         }
 
         if (count($difficulties) > 0) {
-            $diffOrX = $query->expr()->orX();
-            foreach ($difficulties as $idx => $difficulty) {
-                $diffOrX->add('m.difficulty = :difficulty'.$idx);
-                $query->setParameter('difficulty'.$idx, $difficulty);
-            }
-            $query->andWhere($diffOrX);
+            $query
+                ->join('m.difficulty', 'md')
+                ->andWhere('md.name IN (:difficultyNames)')
+                ->setParameter('difficultyNames', $this->entityNames($difficulties));
         }
 
         if (count($implements) > 0) {
-            $diffOrX = $query->expr()->orX();
-            foreach ($implements as $idx => $implement) {
-                $diffOrX->add(':implement'.$idx.' MEMBER OF m.possibleImplements');
-                $query->setParameter('implement'.$idx, $implement);
-            }
-            $query->andWhere($diffOrX);
+            $query
+                ->join('m.possibleImplements', 'pi')
+                ->andWhere('pi.name IN (:implementNames)')
+                ->setParameter('implementNames', $this->entityNames($implements));
         }
 
         if (count($bodyParts) > 0) {
             $query->join('m.muscles', 'mm')
                 ->join('mm.bodyPart', 'bp');
 
-            $bodyPartOrX = $query->expr()->orX();
-            foreach ($bodyParts as $idx => $bodyPart) {
-                $bodyPartOrX->add('bp = :bodyPart'.$idx);
-                $query->setParameter('bodyPart'.$idx, $bodyPart);
-            }
-            $query->andWhere($bodyPartOrX);
+            $query
+                ->andWhere('bp.name IN (:bodyPartNames)')
+                ->setParameter('bodyPartNames', $this->entityNames($bodyParts));
         }
 
         if (count($movementsToExclude) > 0) {
@@ -156,5 +140,13 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         return $query
             ->getQuery()
             ->getResult();
+    }
+
+    private function entityNames(array $entities): array
+    {
+        return array_values(array_unique(array_map(
+            static fn (object $entity): string => $entity->getName(),
+            $entities,
+        )));
     }
 }
