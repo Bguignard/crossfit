@@ -49,7 +49,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
                     'messages' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
-                    'max_tokens' => 512,
+                    'max_completion_tokens' => 512,
                 ],
             ]
         );
@@ -61,7 +61,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
         RedirectionExceptionInterface|
         ServerExceptionInterface|
         TransportExceptionInterface $e) {
-            throw new \RuntimeException('OpenAI workout generation failed: '.$e->getMessage(), 0, $e);
+            throw new \RuntimeException('OpenAI workout generation failed: '.$this->errorMessage($e), 0, $e);
         }
 
         $content = trim((string) ($data['choices'][0]['message']['content'] ?? ''));
@@ -70,5 +70,18 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
         }
 
         return $content;
+    }
+
+    private function errorMessage(\Throwable $exception): string
+    {
+        if (method_exists($exception, 'getResponse')) {
+            $response = $exception->getResponse();
+            $content = trim($response->getContent(false));
+            if ($content !== '') {
+                return $content;
+            }
+        }
+
+        return $exception->getMessage();
     }
 }
