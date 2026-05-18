@@ -262,11 +262,20 @@ class WorkoutGenerationFlowController extends AbstractController
     private function catalog(string $className): array
     {
         $entities = $this->entityManager->getRepository($className)->findBy([], ['name' => 'ASC']);
+        $seenNames = [];
 
-        return array_map(static fn (object $entity): array => [
-            'id' => $entity->getId()->toString(),
-            'name' => $entity->getName(),
-        ], $entities);
+        return array_values(array_filter(array_map(static function (object $entity) use (&$seenNames): ?array {
+            if (isset($seenNames[$entity->getName()])) {
+                return null;
+            }
+
+            $seenNames[$entity->getName()] = true;
+
+            return [
+                'id' => $entity->getId()->toString(),
+                'name' => $entity->getName(),
+            ];
+        }, $entities)));
     }
 
     private function serializeWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
