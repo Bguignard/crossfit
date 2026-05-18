@@ -103,7 +103,12 @@ readonly class MovementService implements MovementServiceInterface
 
         // once we filled with not used type of movements, we fill with any possible movement
         while (count($movementsInWorkout) < $workoutGeneration->getNumberOfDifferentMovements()) {
-            $movementsInWorkout[] = array_pop($possibleMovements);
+            $movement = array_pop($possibleMovements);
+            if (!$movement instanceof Movement) {
+                throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($movementsInWorkout), count($movementsInWorkout) > 1 ? 's' : ''));
+            }
+
+            $movementsInWorkout[] = $movement;
         }
 
         return $movementsInWorkout;
