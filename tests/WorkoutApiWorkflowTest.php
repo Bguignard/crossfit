@@ -12,6 +12,7 @@ use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
+use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 {
@@ -355,5 +356,75 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $this->browser()->request('GET', '/api/workout-generator/00000000-0000-0000-0000-000000000000');
 
         self::assertResponseStatusCodeSame(405);
+    }
+
+    public function testFrontendCanCreateAndUpdateWorkoutGenerationDraft(): void
+    {
+        $this->browser()->request('GET', '/api/workout-generation-flow/options');
+
+        self::assertResponseIsSuccessful();
+
+        $options = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertContains('AMRAP', array_column($options['workoutTypes'], 'name'));
+        self::assertContains('barbell', array_column($options['implements'], 'name'));
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'WOD API Draft',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => ['Weightlifting'],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell'],
+                'numberOfDifferentMovements' => 2,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseStatusCodeSame(201);
+
+        $draft = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('WOD API Draft', $draft['name']);
+        self::assertSame('AMRAP', $draft['workoutType']['name']);
+
+        $this->browser()->request('GET', sprintf('/api/workout-generation-flow/%s/possible-movements', $draft['id']));
+
+        self::assertResponseIsSuccessful();
+
+        $possibleMovements = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $movementNames = array_column($possibleMovements['movements'], 'name');
+        self::assertContains('Deadlift', $movementNames);
+
+        $this->browser()->request(
+            'PATCH',
+            sprintf('/api/workout-generation-flow/%s', $draft['id']),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'timeCap' => 18,
+                'mandatoryMovements' => [$possibleMovements['movements'][0]['id']],
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $updatedDraft = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(18, $updatedDraft['timeCap']);
+        self::assertCount(1, $updatedDraft['mandatoryMovements']);
+
+        self::assertNotNull($this->getRepository(WorkoutGeneration::class)->find($draft['id']));
     }
 }
