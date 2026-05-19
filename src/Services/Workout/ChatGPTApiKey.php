@@ -38,7 +38,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
 
         $response = $this->client->request(
             'POST',
-            'https://api.openai.com/v1/chat/completions',
+            'https://api.openai.com/v1/responses',
             [
                 'headers' => [
                     'Authorization' => 'Bearer '.$this->chatGPTApiKey,
@@ -46,10 +46,10 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
                 ],
                 'json' => [
                     'model' => $this->openAiModel,
-                    'messages' => [
+                    'input' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
-                    'max_completion_tokens' => 512,
+                    'max_output_tokens' => 1024,
                 ],
             ]
         );
@@ -64,7 +64,10 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
             throw new \RuntimeException('OpenAI workout generation failed: '.$this->errorMessage($e), 0, $e);
         }
 
-        $content = trim((string) ($data['choices'][0]['message']['content'] ?? ''));
+        $content = trim((string) ($data['output_text'] ?? ''));
+        if ($content === '') {
+            $content = $this->extractOutputText($data);
+        }
         if ($content === '') {
             throw new \RuntimeException('OpenAI workout generation returned an empty response.');
         }
@@ -76,12 +79,40 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
     {
         if (method_exists($exception, 'getResponse')) {
             $response = $exception->getResponse();
-            $content = trim($response->getContent(false));
-            if ($content !== '') {
-                return $content;
+            try {
+                $content = trim($response->getContent(false));
+                if ($content !== '') {
+                    return $content;
+                }
+            } catch (\Throwable) {
+                // Keep the original exception message if the error body cannot be read.
             }
         }
 
         return $exception->getMessage();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function extractOutputText(array $data): string
+    {
+        $parts = [];
+        foreach (($data['output'] ?? []) as $output) {
+            if (!is_array($output)) {
+                continue;
+            }
+            foreach (($output['content'] ?? []) as $content) {
+                if (!is_array($content)) {
+                    continue;
+                }
+                $text = $content['text'] ?? null;
+                if (is_string($text) && $text !== '') {
+                    $parts[] = $text;
+                }
+            }
+        }
+
+        return trim(implode("\n", $parts));
     }
 }
