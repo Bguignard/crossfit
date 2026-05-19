@@ -2,7 +2,10 @@
 
 namespace App\Command;
 
+use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
+use App\Services\Workout\Enrichment\WorkoutEnrichmentMatcher;
 use App\Services\Workout\Prescription\WorkoutLoadMention;
 use App\Services\Workout\Prescription\WorkoutPrescriptionPatternInferer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,6 +26,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly WorkoutPrescriptionPatternInferer $inferer,
+        private readonly WorkoutEnrichmentMatcher $enrichmentMatcher,
     ) {
         parent::__construct();
     }
@@ -33,7 +37,8 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Restrict the scan to one workout name.')
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Restrict the scan to one source name.')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum number of workouts to scan.', 50)
-            ->addOption('with-signal-only', null, InputOption::VALUE_NONE, 'Only display workouts with detected loads or level hints.');
+            ->addOption('with-signal-only', null, InputOption::VALUE_NONE, 'Only display workouts with detected loads or level hints.')
+            ->addOption('show-duplicates', null, InputOption::VALUE_NONE, 'Display every imported variant instead of one row per unique source/name/flow.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -43,16 +48,38 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         $name = $this->stringOption($input->getOption('name'));
         $source = $this->stringOption($input->getOption('source'));
         $withSignalOnly = (bool) $input->getOption('with-signal-only');
+        $dedupe = !(bool) $input->getOption('show-duplicates');
+        $movements = $this->entityManager->getRepository(Movement::class)->findAll();
+        $implements = $this->entityManager->getRepository(Implement::class)->findAll();
 
-        $workouts = $this->workouts($name, $source, $limit);
+        $workouts = $this->workouts($name, $source, $dedupe ? $limit * 10 : $limit);
         $rows = [];
+        $seenWorkoutKeys = [];
         $scanned = 0;
+        $displayed = 0;
+        $deduped = 0;
         $withLoads = 0;
         $withLevelHints = 0;
 
         foreach ($workouts as $workout) {
             ++$scanned;
+            if ($dedupe) {
+                $key = $this->workoutKey($workout);
+                if (isset($seenWorkoutKeys[$key])) {
+                    ++$deduped;
+                    continue;
+                }
+                $seenWorkoutKeys[$key] = true;
+            }
+
             $prescription = $this->inferer->infer($workout);
+            $enrichmentMatch = $this->enrichmentMatcher->match($workout, $movements, $implements);
+            $movementNames = $prescription->movementNames !== []
+                ? $prescription->movementNames
+                : $this->movementNames($enrichmentMatch->movements);
+            $implementNames = $prescription->implementNames !== []
+                ? $prescription->implementNames
+                : $this->implementNames($enrichmentMatch->implements);
 
             if ($prescription->loads !== []) {
                 ++$withLoads;
@@ -63,6 +90,10 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             if ($withSignalOnly && !$prescription->hasActionableSignal()) {
                 continue;
             }
+            if ($displayed >= $limit) {
+                break;
+            }
+            ++$displayed;
 
             $rows[] = [
                 $workout->getName() ?? '-',
@@ -70,7 +101,8 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
                 $workout->getExternalId() ?? '-',
                 $this->listLabel($prescription->levelHints),
                 $this->listLabel($prescription->divisionHints, 4),
-                $this->listLabel($prescription->movementNames, 4),
+                $this->listLabel($movementNames, 4),
+                $this->listLabel($implementNames, 3),
                 $this->listLabel(array_map(static fn (WorkoutLoadMention $load): string => $load->label(), $prescription->loads), 5),
                 $this->flowPreview($workout),
             ];
@@ -79,6 +111,8 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         $io->title('Workout prescription pattern report');
         $io->definitionList(
             ['scanned' => $scanned],
+            ['displayed' => $displayed],
+            ['deduped' => $deduped],
             ['with_loads' => $withLoads],
             ['with_level_hints' => $withLevelHints],
         );
@@ -86,7 +120,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         if ($rows !== []) {
             $table = new Table($output);
             $table
-                ->setHeaders(['Workout', 'Source', 'External ID', 'Levels', 'Divisions', 'Movements', 'Loads', 'Flow preview'])
+                ->setHeaders(['Workout', 'Source', 'External ID', 'Levels', 'Divisions', 'Movements', 'Implements', 'Loads', 'Flow preview'])
                 ->setRows($rows);
             $table->render();
         } else {
@@ -123,6 +157,15 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         return $queryBuilder->getQuery()->getResult();
     }
 
+    private function workoutKey(Workout $workout): string
+    {
+        return implode('|', [
+            $workout->getSourceName() ?? '',
+            mb_strtolower((string) $workout->getName()),
+            sha1(trim((string) preg_replace('/\s+/', ' ', $workout->getFlow()))),
+        ]);
+    }
+
     private function stringOption(mixed $value): ?string
     {
         if (!is_string($value) || trim($value) === '') {
@@ -145,6 +188,38 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         $extra = count($values) - count($shown);
 
         return implode(', ', $shown).($extra > 0 ? sprintf(' +%d', $extra) : '');
+    }
+
+    /**
+     * @param list<Movement> $movements
+     *
+     * @return list<string>
+     */
+    private function movementNames(array $movements): array
+    {
+        $names = array_filter(array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $movements,
+        ));
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return array_values($names);
+    }
+
+    /**
+     * @param list<Implement> $implements
+     *
+     * @return list<string>
+     */
+    private function implementNames(array $implements): array
+    {
+        $names = array_map(
+            static fn (Implement $implement): string => $implement->getName(),
+            $implements,
+        );
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return array_values($names);
     }
 
     private function flowPreview(Workout $workout): string
