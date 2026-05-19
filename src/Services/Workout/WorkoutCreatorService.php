@@ -69,12 +69,14 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         }
         $promptForChatGPT .= sprintf("Athlete level: %s\n", $workoutGeneration->getMovementDifficulty()->getName());
         $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
+        $promptForChatGPT .= $this->teamWorkoutGuidance($workoutGeneration);
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
 Add a short "Scaling options" section at the end of the flow with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
+The Scaling options section is mandatory. Also return it separately in the JSON "scalingOptions" field.
 
 EOD;
         if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::AMRAP) {
@@ -201,14 +203,15 @@ EOD;
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
 {
   "flow": "The complete workout text displayed to the athlete",
+  "scalingOptions": "A short Scaling options section with RX, Intermediate and Scaled adaptations",
   "movements": ["Exact movement name from the allowed lists"]
 }
-The movements array must contain the exact selected movement names used in the flow.
+The flow should include the scaling options at the end. The movements array must contain the exact selected movement names used in the flow.
 EOD;
 
         $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
         $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
-        $flow = $generatedWorkout['flow'];
+        $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
             $mandatoryMovements,
@@ -274,8 +277,20 @@ EOD;
         };
     }
 
+    private function teamWorkoutGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        if (!$workoutGeneration->isTeamWorkout()) {
+            return "Team workout guidance: this is an individual workout. Do not use partner relay, shared reps or synchronized work.\n";
+        }
+
+        return <<<TXT
+Team workout guidance: this must be explicitly written as a team workout. Use team-of-2 unless another team size is clearly better for the stimulus. Include a clear work-sharing pattern such as "you go, I go", shared reps, split anyhow, synchronized reps, relay stations or partner alternating rounds. The flow must make the team structure impossible to miss.
+
+TXT;
+    }
+
     /**
-     * @return array{flow: string, movements: list<string>}
+     * @return array{flow: string, scalingOptions: string, movements: list<string>}
      */
     private function parseGeneratedWorkout(string $rawResponse): array
     {
@@ -298,18 +313,29 @@ EOD;
         }
 
         $flow = trim((string) ($payload['flow'] ?? ''));
+        $scalingOptions = trim((string) ($payload['scalingOptions'] ?? ''));
         $movements = $payload['movements'] ?? [];
-        if ($flow === '' || !is_array($movements)) {
+        if ($flow === '' || $scalingOptions === '' || !is_array($movements)) {
             throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
         }
 
         return [
             'flow' => $flow,
+            'scalingOptions' => $scalingOptions,
             'movements' => array_values(array_filter(array_map(
                 static fn (mixed $movement): ?string => is_string($movement) && trim($movement) !== '' ? trim($movement) : null,
                 $movements
             ))),
         ];
+    }
+
+    private function flowWithScalingOptions(string $flow, string $scalingOptions): string
+    {
+        if (str_contains(strtolower($flow), 'scaling options')) {
+            return $flow;
+        }
+
+        return rtrim($flow)."\n\nScaling options:\n".trim($scalingOptions);
     }
 
     /**
