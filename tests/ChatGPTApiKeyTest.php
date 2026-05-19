@@ -20,7 +20,7 @@ final class ChatGPTApiKeyTest extends TestCase
             self::assertArrayHasKey('max_output_tokens', $payload);
             self::assertArrayNotHasKey('max_tokens', $payload);
             self::assertArrayNotHasKey('max_completion_tokens', $payload);
-            self::assertSame('Create a workout.', $payload['input'][0]['content']);
+            self::assertSame('Create a workout.', $payload['input']);
 
             return new MockResponse(json_encode([
                 'output_text' => 'AMRAP 12 minutes',

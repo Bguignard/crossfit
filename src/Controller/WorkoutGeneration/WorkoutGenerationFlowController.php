@@ -100,14 +100,17 @@ class WorkoutGenerationFlowController extends AbstractController
 
         try {
             $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+            $this->entityManager->persist($workout);
+            $this->entityManager->flush();
         } catch (\InvalidArgumentException $exception) {
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\RuntimeException $exception) {
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'error' => sprintf('Workout generation failed: %s: %s', $exception::class, $exception->getMessage()),
+            ], Response::HTTP_BAD_GATEWAY);
         }
-
-        $this->entityManager->persist($workout);
-        $this->entityManager->flush();
 
         return $this->json($this->serializeWorkout($workout), Response::HTTP_CREATED);
     }
