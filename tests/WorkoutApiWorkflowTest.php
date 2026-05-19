@@ -11,6 +11,7 @@ use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
+use App\Entity\Security\User;
 use App\Entity\Workout\BodyPart;
 use App\Entity\Workout\Enum\BodyPartEnum;
 use App\Entity\Workout\Enum\ImplementEnum;
@@ -504,11 +505,25 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame($firstWorkout['id'], $secondWorkout['id']);
         self::assertSame('Regenerated WOD', $secondWorkout['name']);
-        self::assertSame('Prompt sent to OpenAI', $secondWorkout['generationPrompt']);
+        self::assertArrayNotHasKey('generationPrompt', $secondWorkout);
         $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
         self::assertSame('Engine long', $workoutGeneration->getStimulus());
         self::assertSame('Volume soutenu, respiration stable, gestion du pacing.', $workoutGeneration->getStimulusIntent());
         self::assertSame(1, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
+
+        $admin = (new User('workout-admin@example.com'))
+            ->setPassword('test-password')
+            ->setRoles(['ROLE_ADMIN']);
+        $this->getEntityManager()->persist($admin);
+        $this->getEntityManager()->flush();
+
+        $this->browser()->loginUser($admin);
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+        self::assertResponseStatusCodeSame(201);
+        $adminWorkout = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame($firstWorkout['id'], $adminWorkout['id']);
+        self::assertSame('Prompt sent to OpenAI', $adminWorkout['generationPrompt']);
     }
 
     public function testWorkoutGenerationMatchesCatalogFiltersByNameWhenCatalogRowsAreDuplicated(): void

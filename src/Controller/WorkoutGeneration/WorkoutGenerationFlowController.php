@@ -370,17 +370,22 @@ class WorkoutGenerationFlowController extends AbstractController
 
     private function serializeWorkout(Workout $workout): array
     {
-        return [
+        $payload = [
             'id' => $workout->getId()?->toString(),
             'name' => $workout->getName(),
             'flow' => $workout->getFlow(),
             'timeCap' => $workout->getTimeCap(),
             'numberOfRounds' => $workout->getNumberOfRounds(),
-            'generationPrompt' => $workout->getGenerationPrompt(),
             'workoutType' => $workout->getWorkoutType() ? $this->serializeCatalogEntity($workout->getWorkoutType()) : null,
             'movements' => array_map($this->serializeMovement(...), $workout->getMovements()->toArray()),
             'implements' => array_map($this->serializeCatalogEntity(...), $workout->getImplements()->toArray()),
         ];
+
+        if ($this->isGranted('ROLE_ADMIN')) {
+            $payload['generationPrompt'] = $workout->getGenerationPrompt();
+        }
+
+        return $payload;
     }
 
     private function serializeCatalogEntity(object $entity): array
