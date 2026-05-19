@@ -70,6 +70,13 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= sprintf("Athlete level: %s\n", $workoutGeneration->getMovementDifficulty()->getName());
         $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
+        $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
+        $promptForChatGPT .= <<<EOD
+When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
+Add a short "Scaling options" section at the end of the flow with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
+For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
+
+EOD;
         if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::AMRAP) {
             $promptForChatGPT .= "This workout is an AMRAP, there is only one round to repeat as many rounds as possible in the time cap.\n";
         } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::FOR_TIME) {
@@ -254,6 +261,17 @@ EOD;
         }
 
         return $prompt;
+    }
+
+    private function levelPrescriptionGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        return match ($workoutGeneration->getMovementDifficulty()->getName()) {
+            'Elite' => "Level prescription guidance: create an Elite version with demanding loads, advanced gymnastics where appropriate, and competitive volume. Do not downscale the main workout for accessibility, but still include scaling options below it.\n",
+            'RX' => "Level prescription guidance: create an RX version with standard box competition loads and skills. Avoid Elite-only loading unless the stimulus explicitly calls for it.\n",
+            'Intermediate' => "Level prescription guidance: create an Intermediate version with moderate loads, manageable skill choices, and repeatable pacing while keeping the intended stimulus.\n",
+            'Beginner' => "Level prescription guidance: create a Scaled/Beginner version with accessible loads, simple movement patterns, and lower technical barriers while keeping the intended stimulus.\n",
+            default => sprintf("Level prescription guidance: adapt loads, skills and volume to the requested level \"%s\" while keeping the intended stimulus.\n", $workoutGeneration->getMovementDifficulty()->getName()),
+        };
     }
 
     /**
