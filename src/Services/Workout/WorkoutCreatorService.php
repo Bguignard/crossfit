@@ -5,6 +5,7 @@ namespace App\Services\Workout;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
@@ -21,24 +22,27 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
     {
         if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
             throw new \InvalidArgumentException('The number of mandatory movements cannot be greater than the number of different movements.');
-        } elseif (count($workoutGeneration->getMandatoryMovements()) === $workoutGeneration->getNumberOfDifferentMovements()) {
-            $WorkoutMovements =
-                $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
-                    $workoutGeneration->getAvailableImplements(), $workoutGeneration->getMandatoryMovements()->toArray()
-                );
-        } else {
-            if ($workoutGeneration->getMovementGenerationType()->getNameAsEnum() === WorkoutMovementGenerationTypeEnum::MOVEMENT) {
-                $WorkoutMovements = $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
-                    $workoutGeneration->getAvailableImplements(),
-                    $this->movementService->getWorkoutMovementsFromWorkoutGeneration($workoutGeneration)
-                );
-            } elseif ($workoutGeneration->getMovementGenerationType()->getNameAsEnum() === WorkoutMovementGenerationTypeEnum::BODY_PART) {
-                $WorkoutMovements =
-                    $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
-                        $workoutGeneration->getAvailableImplements(),
-                        $this->movementService->getMovementsFromMuscles($workoutGeneration)
-                    );
-            }
+        }
+
+        $possibleMovements = [];
+        if (count($workoutGeneration->getMandatoryMovements()) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            $possibleMovements = match ($workoutGeneration->getMovementGenerationType()->getNameAsEnum()) {
+                WorkoutMovementGenerationTypeEnum::MOVEMENT => $this->movementService->getPossibleWorkoutMovementsFromWorkoutGeneration($workoutGeneration),
+                WorkoutMovementGenerationTypeEnum::BODY_PART => $this->movementService->getPossibleMovementsFromMuscles($workoutGeneration),
+            };
+        }
+
+        $mandatoryMovements = $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
+            $workoutGeneration->getAvailableImplements(),
+            $workoutGeneration->getMandatoryMovements()->toArray()
+        );
+        $candidateMovements = $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
+            $workoutGeneration->getAvailableImplements(),
+            $possibleMovements
+        );
+
+        if (count($mandatoryMovements) + count($candidateMovements) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($mandatoryMovements) + count($candidateMovements), count($mandatoryMovements) + count($candidateMovements) > 1 ? 's' : ''));
         }
 
         // if no number of runds, we set a default value
@@ -49,7 +53,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 
         // création du prompt ChatGPT :
         $promptForChatGPT = "Create a crossfit workout with the following movements and possible implement for the movement. 
-        Take all following movements but just chose one implement per movement. The execution times are indicative average paces per unit of measure; use them as guidance, not as strict math.
+        Consider the complete movement pool below and choose only the movements that best match the requested workout. Choose one implement at most per movement. The execution times are indicative average paces per unit of measure; use them as guidance, not as strict math.
         Movement you have to use and implements are given following this pattern :\n";
         $promptForChatGPT .=
             "-Name of movement
@@ -78,18 +82,15 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 
         // - Durée de l'entrainement et nombre de tours
         $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
-        // - Mouvements du workout avec seulement les implements disponibles
-        $promptForChatGPT .= "Movements and possible implements :\n";
-        foreach ($WorkoutMovements as $movement) {
-            $promptForChatGPT .= '-'.$movement->getName()."\n";
-            foreach ($movement->getPossibleImplements() as $implement) {
-                $promptForChatGPT .= '- '.$implement->getName().' (';
-                foreach ($movement->getMovementExecutionTimeForMeasureUnits() as $executionTimeForMeasureUnit) {
-                    $promptForChatGPT .= $executionTimeForMeasureUnit->getMeasureUnit()->value.' : '.$executionTimeForMeasureUnit->getExecutionTimeInMilliseconds().' ms,';
-                }
-                $promptForChatGPT .= ")\n";
-            }
+        $promptForChatGPT .= sprintf("Choose exactly %d different movement%s for the final workout.\n", $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '');
+        $promptForChatGPT .= "Use only movement names from the mandatory movements and candidate movement pool below.\n";
+        if (count($mandatoryMovements) > 0) {
+            $promptForChatGPT .= "Mandatory movements that must appear in the workout:\n";
+            $promptForChatGPT .= $this->formatMovementPromptSection($mandatoryMovements);
         }
+        // - Mouvements possibles du workout avec seulement les implements disponibles
+        $promptForChatGPT .= "Candidate movement pool. Pick the best movements for the stimulus from this complete pool:\n";
+        $promptForChatGPT .= $this->formatMovementPromptSection($candidateMovements);
         // - Type d'entrainement (AMRAP, EMOM/Intervals, For time, etc.)
         $promptForChatGPT .= 'The workout must be in the following format :'.$workoutGeneration->getWorkoutType()->getName()."\n";
 
@@ -188,7 +189,25 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         // - Partie(s) du corps ciblée(s) + mouvements possibles pour cette/ces partie(s) du corps
 
         // Appel à l'API ChatGPT pour générer le nom et le flow de l'entrainement
-        $flow = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
+        $promptForChatGPT .= <<<EOD
+
+Return only valid JSON, with no markdown and no explanation, using this exact shape:
+{
+  "flow": "The complete workout text displayed to the athlete",
+  "movements": ["Exact movement name from the allowed lists"]
+}
+The movements array must contain the exact selected movement names used in the flow.
+EOD;
+
+        $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
+        $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
+        $flow = $generatedWorkout['flow'];
+        $WorkoutMovements = $this->resolveSelectedMovements(
+            $generatedWorkout['movements'],
+            $mandatoryMovements,
+            $candidateMovements,
+            $workoutGeneration->getNumberOfDifferentMovements()
+        );
 
         // Création de l'entité Workout avec les données reçues
         // todo : faire un service qui crée un workoutOrigin avec l'année courante si il n'existe pas
@@ -206,5 +225,114 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         )
             ->setWorkoutGeneration($workoutGeneration)
             ->setGenerationPrompt($promptForChatGPT);
+    }
+
+    /**
+     * @param Movement[] $movements
+     */
+    private function formatMovementPromptSection(array $movements): string
+    {
+        $prompt = '';
+        foreach ($movements as $movement) {
+            $prompt .= '- '.$movement->getName()."\n";
+            if (count($movement->getPossibleImplements()) === 0) {
+                $prompt .= '- no implement required (';
+            }
+            foreach ($movement->getPossibleImplements() as $implement) {
+                $prompt .= '- '.$implement->getName().' (';
+                foreach ($movement->getMovementExecutionTimeForMeasureUnits() as $executionTimeForMeasureUnit) {
+                    $prompt .= $executionTimeForMeasureUnit->getMeasureUnit()->value.' : '.$executionTimeForMeasureUnit->getExecutionTimeInMilliseconds().' ms,';
+                }
+                $prompt .= ")\n";
+            }
+            if (count($movement->getPossibleImplements()) === 0) {
+                foreach ($movement->getMovementExecutionTimeForMeasureUnits() as $executionTimeForMeasureUnit) {
+                    $prompt .= $executionTimeForMeasureUnit->getMeasureUnit()->value.' : '.$executionTimeForMeasureUnit->getExecutionTimeInMilliseconds().' ms,';
+                }
+                $prompt .= ")\n";
+            }
+        }
+
+        return $prompt;
+    }
+
+    /**
+     * @return array{flow: string, movements: list<string>}
+     */
+    private function parseGeneratedWorkout(string $rawResponse): array
+    {
+        $json = trim($rawResponse);
+        if (str_starts_with($json, '```')) {
+            $json = preg_replace('/^```(?:json)?\s*|\s*```$/', '', $json) ?? $json;
+        }
+        if (!str_starts_with($json, '{')) {
+            $start = strpos($json, '{');
+            $end = strrpos($json, '}');
+            if ($start !== false && $end !== false && $end > $start) {
+                $json = substr($json, $start, $end - $start + 1);
+            }
+        }
+
+        try {
+            $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \RuntimeException('OpenAI workout generation returned invalid JSON.', 0, $exception);
+        }
+
+        $flow = trim((string) ($payload['flow'] ?? ''));
+        $movements = $payload['movements'] ?? [];
+        if ($flow === '' || !is_array($movements)) {
+            throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
+        }
+
+        return [
+            'flow' => $flow,
+            'movements' => array_values(array_filter(array_map(
+                static fn (mixed $movement): ?string => is_string($movement) && trim($movement) !== '' ? trim($movement) : null,
+                $movements
+            ))),
+        ];
+    }
+
+    /**
+     * @param list<string> $selectedMovementNames
+     * @param Movement[]   $mandatoryMovements
+     * @param Movement[]   $candidateMovements
+     *
+     * @return Movement[]
+     */
+    private function resolveSelectedMovements(array $selectedMovementNames, array $mandatoryMovements, array $candidateMovements, int $targetCount): array
+    {
+        $allowedMovementsByName = [];
+        foreach (array_merge($mandatoryMovements, $candidateMovements) as $movement) {
+            $allowedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        $selectedMovementsByName = [];
+        foreach ($mandatoryMovements as $movement) {
+            $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        foreach ($selectedMovementNames as $selectedMovementName) {
+            $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
+            if (!$movement instanceof Movement) {
+                continue;
+            }
+            $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        foreach ($candidateMovements as $movement) {
+            if (count($selectedMovementsByName) >= $targetCount) {
+                break;
+            }
+            $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        return array_slice(array_values($selectedMovementsByName), 0, $targetCount);
+    }
+
+    private function normalizeMovementName(string $name): string
+    {
+        return strtolower(trim($name));
     }
 }

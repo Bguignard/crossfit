@@ -11,6 +11,11 @@ interface MovementServiceInterface
     public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array;
 
     /**
+     * @return Movement[]
+     */
+    public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array;
+
+    /**
      * @param Movement[] $movements
      *
      * @return Movement[]
@@ -21,6 +26,11 @@ interface MovementServiceInterface
      * @return Movement[]
      */
     public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array;
+
+    /**
+     * @return Movement[]
+     */
+    public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array;
 
     public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array;
 }
