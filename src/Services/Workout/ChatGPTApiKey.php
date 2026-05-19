@@ -46,9 +46,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
                 ],
                 'json' => [
                     'model' => $this->openAiModel,
-                    'input' => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
+                    'input' => $prompt,
                     'max_output_tokens' => 1024,
                 ],
             ]
