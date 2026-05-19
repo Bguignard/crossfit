@@ -73,6 +73,12 @@ class WorkoutGeneration
     #[ORM\Column(nullable: true)]
     private ?int $numberOfRounds;
 
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $stimulus = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $stimulusIntent = null;
+
     public function __construct(
     ) {
         $this->movementTypes = new ArrayCollection();
@@ -315,6 +321,30 @@ class WorkoutGeneration
     public function setMovementGenerationType(WorkoutMovementGenerationType $movementGenerationType): WorkoutGeneration
     {
         $this->movementGenerationType = $movementGenerationType;
+
+        return $this;
+    }
+
+    public function getStimulus(): ?string
+    {
+        return $this->stimulus;
+    }
+
+    public function setStimulus(?string $stimulus): WorkoutGeneration
+    {
+        $this->stimulus = $stimulus;
+
+        return $this;
+    }
+
+    public function getStimulusIntent(): ?string
+    {
+        return $this->stimulusIntent;
+    }
+
+    public function setStimulusIntent(?string $stimulusIntent): WorkoutGeneration
+    {
+        $this->stimulusIntent = $stimulusIntent;
 
         return $this;
     }

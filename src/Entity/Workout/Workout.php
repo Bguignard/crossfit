@@ -76,6 +76,8 @@ class Workout
     #[ORM\OneToMany(mappedBy: 'workout', targetEntity: CompetitionEvent::class)]
     private Collection $competitionEvents;
 
+    private ?string $generationPrompt = null;
+
     public function __construct(
         ?string $name,
         string $flow,
@@ -238,6 +240,18 @@ class Workout
     public function getWorkoutGeneration(): ?WorkoutGeneration
     {
         return $this->workoutGeneration;
+    }
+
+    public function getGenerationPrompt(): ?string
+    {
+        return $this->generationPrompt;
+    }
+
+    public function setGenerationPrompt(?string $generationPrompt): static
+    {
+        $this->generationPrompt = $generationPrompt;
+
+        return $this;
     }
 
     /**
