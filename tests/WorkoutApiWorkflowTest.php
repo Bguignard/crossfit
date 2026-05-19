@@ -561,5 +561,6 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $movementNames = array_column($payload['movements'], 'name');
 
         self::assertContains('Deadlift', $movementNames);
+        self::assertContains('Run', $movementNames);
     }
 }

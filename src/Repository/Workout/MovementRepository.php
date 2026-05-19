@@ -68,8 +68,8 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
 
         if (count($implements) > 0) {
             $query
-                ->join('m.possibleImplements', 'pi')
-                ->andWhere('pi.name IN (:implementNames)')
+                ->leftJoin('m.possibleImplements', 'pi')
+                ->andWhere('(pi.name IN (:implementNames) OR SIZE(m.possibleImplements) = 0)')
                 ->setParameter('implementNames', $this->entityNames($implements));
         }
 
@@ -80,6 +80,7 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         }
 
         return $query
+            ->distinct()
             ->getQuery()
             ->getResult();
     }
@@ -117,8 +118,8 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
 
         if (count($implements) > 0) {
             $query
-                ->join('m.possibleImplements', 'pi')
-                ->andWhere('pi.name IN (:implementNames)')
+                ->leftJoin('m.possibleImplements', 'pi')
+                ->andWhere('(pi.name IN (:implementNames) OR SIZE(m.possibleImplements) = 0)')
                 ->setParameter('implementNames', $this->entityNames($implements));
         }
 
@@ -138,6 +139,7 @@ class MovementRepository extends ServiceEntityRepository implements MovementRepo
         }
 
         return $query
+            ->distinct()
             ->getQuery()
             ->getResult();
     }
