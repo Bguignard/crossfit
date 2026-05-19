@@ -19,16 +19,24 @@ readonly class MovementService implements MovementServiceInterface
     public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
     {
         // todo : we should remove similar movements for example if we have 2 different types of push ups, jerk, clean, we should not have both in the workout
-        $possibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
+        $possibleMovements = $this->getPossibleWorkoutMovementsFromWorkoutGeneration($workoutGeneration);
+        shuffle($possibleMovements);
+
+        return $this->getWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
+    }
+
+    /**
+     * @return Movement[]
+     */
+    public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+    {
+        return $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
             $workoutGeneration->getMovementTypes()->toArray(),
             $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
             array_merge($workoutGeneration->getBannedMovements()->toArray(), $workoutGeneration->getMandatoryMovements()->toArray()),
             $workoutGeneration->getAvailableImplements()->toArray(),
             $workoutGeneration->getMandatoryBodyParts()->toArray()
         );
-        shuffle($possibleMovements);
-
-        return $this->getWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
     }
 
     /**
@@ -54,19 +62,26 @@ readonly class MovementService implements MovementServiceInterface
      */
     public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
     {
-        $muscles = $this->muscleService->getMusclesFromBodyParts($workoutGeneration->getMandatoryBodyParts()->toArray());
-
-        $possibleMovements = $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
-            $workoutGeneration->getMovementTypes()->toArray(),
-            $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
-            $workoutGeneration->getBannedMovements()->toArray(),
-            $workoutGeneration->getAvailableImplements()->toArray(),
-            $muscles
-        );
-
+        $possibleMovements = $this->getPossibleMovementsFromMuscles($workoutGeneration);
         shuffle($possibleMovements);
 
         return $this->getWorkoutMovementsFromPossibleMovements($possibleMovements, $workoutGeneration);
+    }
+
+    /**
+     * @return Movement[]
+     */
+    public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+    {
+        $muscles = $this->muscleService->getMusclesFromBodyParts($workoutGeneration->getMandatoryBodyParts()->toArray());
+
+        return $this->movementRepository->getMovementsByMovementTypesAndDifficultyAndImplementsAndMuscles(
+            $workoutGeneration->getMovementTypes()->toArray(),
+            $this->movementDifficultyService->getWorkoutDifficultiesFromOne($workoutGeneration->getMovementDifficulty()),
+            array_merge($workoutGeneration->getBannedMovements()->toArray(), $workoutGeneration->getMandatoryMovements()->toArray()),
+            $workoutGeneration->getAvailableImplements()->toArray(),
+            $muscles
+        );
     }
 
     public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
