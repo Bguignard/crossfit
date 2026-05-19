@@ -56,6 +56,16 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         \n possible implement1 (measure unit 1 : time of execution in milliseconds,measure unit 2 : time of execution in milliseconds,...,), 
         \n possible implement2 (measure unit 1 : time of execution in milliseconds,measure unit 2 : time of execution in milliseconds,...,), 
         \n ...)\n";
+        $promptForChatGPT .= sprintf("Workout name: %s\n", $workoutGeneration->getName());
+        if ($workoutGeneration->getStimulus() !== null) {
+            $promptForChatGPT .= sprintf("Workout stimulus identity: %s\n", $workoutGeneration->getStimulus());
+        }
+        if ($workoutGeneration->getStimulusIntent() !== null) {
+            $promptForChatGPT .= sprintf("Stimulus intent: %s\n", $workoutGeneration->getStimulusIntent());
+        }
+        $promptForChatGPT .= sprintf("Athlete level: %s\n", $workoutGeneration->getMovementDifficulty()->getName());
+        $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
+        $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::AMRAP) {
             $promptForChatGPT .= "This workout is an AMRAP, there is only one round to repeat as many rounds as possible in the time cap.\n";
         } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::FOR_TIME) {
@@ -193,6 +203,8 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
             $workoutOrigin,
             $workoutGeneration->getAvailableImplements()->toArray(),
             $WorkoutMovements,
-        )->setWorkoutGeneration($workoutGeneration);
+        )
+            ->setWorkoutGeneration($workoutGeneration)
+            ->setGenerationPrompt($promptForChatGPT);
     }
 }

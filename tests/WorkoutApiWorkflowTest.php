@@ -459,7 +459,9 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                     new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), 2026),
                     $workoutGeneration->getAvailableImplements()->toArray(),
                     $workoutGeneration->getMandatoryMovements()->toArray(),
-                ))->setWorkoutGeneration($workoutGeneration);
+                ))
+                    ->setWorkoutGeneration($workoutGeneration)
+                    ->setGenerationPrompt('Prompt sent to OpenAI');
             }
         });
 
@@ -471,6 +473,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'name' => 'Regenerated WOD',
+                'stimulus' => 'Engine long',
+                'stimulusIntent' => 'Volume soutenu, respiration stable, gestion du pacing.',
                 'timeCap' => 15,
                 'movementGenerationType' => 'selected movements',
                 'workoutType' => 'AMRAP',
@@ -500,7 +504,10 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame($firstWorkout['id'], $secondWorkout['id']);
         self::assertSame('Regenerated WOD', $secondWorkout['name']);
+        self::assertSame('Prompt sent to OpenAI', $secondWorkout['generationPrompt']);
         $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
+        self::assertSame('Engine long', $workoutGeneration->getStimulus());
+        self::assertSame('Volume soutenu, respiration stable, gestion du pacing.', $workoutGeneration->getStimulusIntent());
         self::assertSame(1, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
     }
 

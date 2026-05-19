@@ -132,7 +132,8 @@ class WorkoutGenerationFlowController extends AbstractController
             ->setNumberOfRounds($generatedWorkout->getNumberOfRounds())
             ->setTimeCap($generatedWorkout->getTimeCap())
             ->setWorkoutType($generatedWorkout->getWorkoutType())
-            ->setWorkoutOrigin($generatedWorkout->getWorkoutOrigin());
+            ->setWorkoutOrigin($generatedWorkout->getWorkoutOrigin())
+            ->setGenerationPrompt($generatedWorkout->getGenerationPrompt());
 
         foreach ($existingWorkout->getImplements()->toArray() as $implement) {
             $existingWorkout->removeImplement($implement);
@@ -154,6 +155,12 @@ class WorkoutGenerationFlowController extends AbstractController
     {
         if (array_key_exists('name', $payload)) {
             $workoutGeneration->setName((string) $payload['name']);
+        }
+        if (array_key_exists('stimulus', $payload)) {
+            $workoutGeneration->setStimulus($this->nullableString($payload['stimulus'] ?? null, 120));
+        }
+        if (array_key_exists('stimulusIntent', $payload)) {
+            $workoutGeneration->setStimulusIntent($this->nullableString($payload['stimulusIntent'] ?? null));
         }
         if (array_key_exists('timeCap', $payload)) {
             $workoutGeneration->setTimeCap((int) $payload['timeCap']);
@@ -299,6 +306,20 @@ class WorkoutGenerationFlowController extends AbstractController
         }, $identifiers)));
     }
 
+    private function nullableString(mixed $value, ?int $maxLength = null): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        return $maxLength === null ? $value : substr($value, 0, $maxLength);
+    }
+
     /**
      * @param class-string<object> $className
      *
@@ -328,6 +349,8 @@ class WorkoutGenerationFlowController extends AbstractController
         return [
             'id' => $workoutGeneration->getId()?->toString(),
             'name' => $workoutGeneration->getName(),
+            'stimulus' => $workoutGeneration->getStimulus(),
+            'stimulusIntent' => $workoutGeneration->getStimulusIntent(),
             'timeCap' => $workoutGeneration->getTimeCap(),
             'workoutType' => $this->serializeCatalogEntity($workoutGeneration->getWorkoutType()),
             'movementGenerationType' => $this->serializeCatalogEntity($workoutGeneration->getMovementGenerationType()),
@@ -353,6 +376,7 @@ class WorkoutGenerationFlowController extends AbstractController
             'flow' => $workout->getFlow(),
             'timeCap' => $workout->getTimeCap(),
             'numberOfRounds' => $workout->getNumberOfRounds(),
+            'generationPrompt' => $workout->getGenerationPrompt(),
             'workoutType' => $workout->getWorkoutType() ? $this->serializeCatalogEntity($workout->getWorkoutType()) : null,
             'movements' => array_map($this->serializeMovement(...), $workout->getMovements()->toArray()),
             'implements' => array_map($this->serializeCatalogEntity(...), $workout->getImplements()->toArray()),
