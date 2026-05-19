@@ -111,6 +111,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('- Run', $chatGpt->prompt);
         self::assertStringContainsString('- Row', $chatGpt->prompt);
         self::assertStringContainsString('- Burpee', $chatGpt->prompt);
+        self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
+        self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
+        self::assertStringContainsString('Scaling options', $chatGpt->prompt);
         self::assertSame(['Run', 'Burpee'], array_map(
             static fn (Movement $movement): ?string => $movement->getName(),
             $workout->getMovements()->toArray()
