@@ -17,14 +17,18 @@ use App\Entity\Workout\Enum\ImplementEnum;
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementType;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutMovementGenerationType;
+use App\Entity\Workout\WorkoutOrigin;
+use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Services\Workout\WorkoutCreatorServiceInterface;
 
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 {
@@ -438,6 +442,66 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertCount(1, $updatedDraft['mandatoryMovements']);
 
         self::assertNotNull($this->getRepository(WorkoutGeneration::class)->find($draft['id']));
+    }
+
+    public function testFrontendCanRegenerateWorkoutForTheSameDraft(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                return (new Workout(
+                    $workoutGeneration->getName(),
+                    'Generated flow',
+                    $workoutGeneration->getNumberOfRounds(),
+                    $workoutGeneration->getTimeCap(),
+                    $workoutGeneration->getWorkoutType(),
+                    new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), 2026),
+                    $workoutGeneration->getAvailableImplements()->toArray(),
+                    $workoutGeneration->getMandatoryMovements()->toArray(),
+                ))->setWorkoutGeneration($workoutGeneration);
+            }
+        });
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Regenerated WOD',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => ['Weightlifting'],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell'],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+        self::assertResponseStatusCodeSame(201);
+        $draft = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+        self::assertResponseStatusCodeSame(201);
+        $firstWorkout = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+        self::assertResponseStatusCodeSame(201);
+        $secondWorkout = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame($firstWorkout['id'], $secondWorkout['id']);
+        self::assertSame('Regenerated WOD', $secondWorkout['name']);
+        $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
+        self::assertSame(1, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
     }
 
     public function testWorkoutGenerationMatchesCatalogFiltersByNameWhenCatalogRowsAreDuplicated(): void

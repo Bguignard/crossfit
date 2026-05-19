@@ -100,6 +100,7 @@ class WorkoutGenerationFlowController extends AbstractController
 
         try {
             $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+            $workout = $this->upsertGeneratedWorkout($workoutGeneration, $workout);
             $this->entityManager->persist($workout);
             $this->entityManager->flush();
         } catch (\InvalidArgumentException $exception) {
@@ -113,6 +114,40 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return $this->json($this->serializeWorkout($workout), Response::HTTP_CREATED);
+    }
+
+    private function upsertGeneratedWorkout(WorkoutGeneration $workoutGeneration, Workout $generatedWorkout): Workout
+    {
+        $existingWorkout = $this->entityManager->getRepository(Workout::class)->findOneBy([
+            'workoutGeneration' => $workoutGeneration,
+        ]);
+
+        if (!$existingWorkout instanceof Workout) {
+            return $generatedWorkout;
+        }
+
+        $existingWorkout
+            ->setName($generatedWorkout->getName())
+            ->setFlow($generatedWorkout->getFlow())
+            ->setNumberOfRounds($generatedWorkout->getNumberOfRounds())
+            ->setTimeCap($generatedWorkout->getTimeCap())
+            ->setWorkoutType($generatedWorkout->getWorkoutType())
+            ->setWorkoutOrigin($generatedWorkout->getWorkoutOrigin());
+
+        foreach ($existingWorkout->getImplements()->toArray() as $implement) {
+            $existingWorkout->removeImplement($implement);
+        }
+        foreach ($generatedWorkout->getImplements() as $implement) {
+            $existingWorkout->addImplement($implement);
+        }
+        foreach ($existingWorkout->getMovements()->toArray() as $movement) {
+            $existingWorkout->removeMovement($movement);
+        }
+        foreach ($generatedWorkout->getMovements() as $movement) {
+            $existingWorkout->addMovement($movement);
+        }
+
+        return $existingWorkout;
     }
 
     private function hydrate(WorkoutGeneration $workoutGeneration, array $payload): void
@@ -313,7 +348,7 @@ class WorkoutGenerationFlowController extends AbstractController
     private function serializeWorkout(Workout $workout): array
     {
         return [
-            'id' => $workout->getId()->toString(),
+            'id' => $workout->getId()?->toString(),
             'name' => $workout->getName(),
             'flow' => $workout->getFlow(),
             'timeCap' => $workout->getTimeCap(),
