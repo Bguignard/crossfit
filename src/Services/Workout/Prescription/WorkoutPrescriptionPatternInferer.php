@@ -214,18 +214,22 @@ final class WorkoutPrescriptionPatternInferer
 
     private function equipmentHint(string $text, int $offset, int $length): string
     {
+        $explicitHint = $this->explicitEquipmentHint($text, $offset, $length);
+        if ($explicitHint !== null) {
+            return $explicitHint;
+        }
+
+        $movementHint = $this->movementHint($text, $offset, $length);
+        if ($movementHint === 'Wall Ball Shot') {
+            return 'medicine ball';
+        }
+
         $windowStart = max(0, $offset - 48);
         $window = strtolower(substr($text, $windowStart, $length + 96));
         $loadCenter = $offset - $windowStart + (int) floor($length / 2);
 
         $hints = [
-            'dumbbell' => ['dumbbell', 'dumbbells', 'db'],
-            'kettlebell' => ['kettlebell', 'kettlebells', 'kb'],
             'barbell' => ['barbell', 'clean', 'snatch', 'deadlift', 'thruster', 'squat', 'jerk'],
-            'medicine ball' => ['medicine ball', 'wall ball'],
-            'sandbag' => ['sandbag'],
-            'sled' => ['sled'],
-            'vest' => ['vest', 'ruck'],
         ];
         $closestHint = null;
         $closestDistance = PHP_INT_MAX;
@@ -248,14 +252,26 @@ final class WorkoutPrescriptionPatternInferer
             return $closestHint;
         }
 
-        return match ($this->movementHint($text, $offset, $length)) {
+        return match ($movementHint) {
             'Deadlift', 'Clean', 'Clean and Jerk', 'Front Squat', 'Overhead Squat', 'Snatch', 'Thruster' => 'barbell',
-            'Wall Ball Shot' => 'medicine ball',
             'Farmer Carry' => 'kettlebell',
             'Sled Push', 'Sled Pull' => 'sled',
             'Walking Lunge' => 'sandbag',
             default => 'unknown',
         };
+    }
+
+    private function explicitEquipmentHint(string $text, int $offset, int $length): ?string
+    {
+        return $this->closestPatternLabel($text, $offset, $length, [
+            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
+            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
+            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
+            'barbell' => '/\bbarbell\b/i',
+            'sandbag' => '/\bsand ?bag\b/i',
+            'sled' => '/\bsled\b/i',
+            'vest' => '/\b(?:vest|ruck)\b/i',
+        ], 72);
     }
 
     private function nearText(string $text, int $offset, int $length): string
@@ -268,14 +284,9 @@ final class WorkoutPrescriptionPatternInferer
 
     private function positionLabel(string $text, int $offset, int $length): ?string
     {
-        $weightPosition = $this->closestPatternLabel($text, $offset, $length, [
-            'weight_1' => '/\b(?:weight|load)\s*1\b/i',
-            'weight_2' => '/\b(?:weight|load)\s*2\b/i',
-            'weight_3' => '/\b(?:weight|load)\s*3\b/i',
-        ], 120);
-
-        if ($weightPosition !== null) {
-            return $weightPosition;
+        $weightPosition = $this->closestPatternMatch($text, $offset, $length, '/\b(?:weight|load)\s*(?P<number>\d+)\b/i', 120);
+        if ($weightPosition !== null && isset($weightPosition['number'])) {
+            return 'weight_'.$weightPosition['number'];
         }
 
         return $this->closestPatternLabel($text, $offset, $length, [
@@ -290,8 +301,8 @@ final class WorkoutPrescriptionPatternInferer
             'ff' => '/\bFF\b|\(FF\)/',
             'mm' => '/\bMM\b|\(MM\)/',
             'mixed' => '/\b(?:mixed|MF|FM)\b/',
-            'women' => '/\b(?:women|woman|female|girls?)\b/i',
-            'men' => '/\b(?:men|man|male|boys?)\b/i',
+            'women' => '/♀|\b(?:women|woman|female|girls?)\b/i',
+            'men' => '/♂|\b(?:men|man|male|boys?)\b/i',
             'team_pair' => '/\b(?:team|pairs?|partner|teammates?|synchronized)\b/i',
         ], 100);
     }
@@ -345,6 +356,40 @@ final class WorkoutPrescriptionPatternInferer
         }
 
         return $closestLabel;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function closestPatternMatch(string $text, int $offset, int $length, string $pattern, int $radius): ?array
+    {
+        $windowStart = max(0, $offset - $radius);
+        $window = substr($text, $windowStart, $length + ($radius * 2));
+        $loadCenter = $offset - $windowStart + (int) floor($length / 2);
+        $closestMatch = null;
+        $closestDistance = PHP_INT_MAX;
+
+        if (preg_match_all($pattern, $window, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE) < 1) {
+            return null;
+        }
+
+        foreach ($matches as $match) {
+            $position = (int) $match[0][1];
+            $distance = abs(($position + (int) floor(strlen($match[0][0]) / 2)) - $loadCenter);
+            if ($distance >= $closestDistance) {
+                continue;
+            }
+
+            $closestDistance = $distance;
+            $closestMatch = [];
+            foreach ($match as $key => $value) {
+                if (is_string($key)) {
+                    $closestMatch[$key] = $value[0];
+                }
+            }
+        }
+
+        return $closestMatch;
     }
 
     /**

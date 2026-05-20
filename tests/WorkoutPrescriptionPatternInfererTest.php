@@ -94,6 +94,57 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame(['mm'], $prescription->loadCandidates[1]->contextHints()['audiences']);
     }
 
+    public function testInfersGenderSymbolsAndGenericWeightPositions(): void
+    {
+        $workout = $this->workout(
+            'Workout 4',
+            'Max-reps clean and jerks in time remaining, weight 4. ♀ 165 lb (75 kg) ♂ 245 lb (111 kg).'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(4, $prescription->loads);
+        self::assertSame('weight_4', $prescription->loads[0]->positionLabel);
+        self::assertSame('women', $prescription->loads[0]->audienceHint);
+        self::assertSame('men', $prescription->loads[2]->audienceHint);
+        self::assertSame('Clean and Jerk', $prescription->loads[2]->movementHint);
+        self::assertSame('barbell', $prescription->loads[3]->equipmentHint);
+    }
+
+    public function testPrefersExplicitImplementOverGenericBarbellMovementHint(): void
+    {
+        $workout = $this->workout(
+            'Team Workout 2 Team Rx',
+            'Alternating dumbbell snatches (all teammates synchronized). ♀ 50 lb ♀ 22.5 kg dumbbell. ♂ 70 lb ♂ 32.5 kg dumbbell.'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(4, $prescription->loads);
+        foreach ($prescription->loads as $load) {
+            self::assertSame('dumbbell', $load->equipmentHint);
+            self::assertSame('Snatch', $load->movementHint);
+        }
+        self::assertSame('women', $prescription->loads[0]->audienceHint);
+        self::assertSame('men', $prescription->loads[2]->audienceHint);
+    }
+
+    public function testInfersMedicineBallFromBallTargetContext(): void
+    {
+        $workout = $this->workout(
+            'Team Workout 3 Team Rx',
+            '50 synchro wall-ball shots. ♀ 14-lb ball, 9-foot target. ♂ 20-lb ball, 10-foot target.'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(2, $prescription->loads);
+        self::assertSame('medicine ball', $prescription->loads[0]->equipmentHint);
+        self::assertSame('Wall Ball Shot', $prescription->loads[0]->movementHint);
+        self::assertSame('women', $prescription->loads[0]->audienceHint);
+        self::assertSame('men', $prescription->loads[1]->audienceHint);
+    }
+
     private function workout(string $name, string $flow): Workout
     {
         return new Workout(
