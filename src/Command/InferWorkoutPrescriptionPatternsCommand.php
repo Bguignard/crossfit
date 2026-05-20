@@ -38,6 +38,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Restrict the scan to one workout name.')
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Restrict the scan to one source name.')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum number of workouts to scan.', 50)
+            ->addOption('format', null, InputOption::VALUE_REQUIRED, 'Output format: table or json.', 'table')
             ->addOption('with-signal-only', null, InputOption::VALUE_NONE, 'Only display workouts with detected loads or level hints.')
             ->addOption('show-duplicates', null, InputOption::VALUE_NONE, 'Display every imported variant instead of one row per unique source/name/flow.');
     }
@@ -48,13 +49,22 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $name = $this->stringOption($input->getOption('name'));
         $source = $this->stringOption($input->getOption('source'));
+        $format = $this->stringOption($input->getOption('format')) ?? 'table';
         $withSignalOnly = (bool) $input->getOption('with-signal-only');
         $dedupe = !(bool) $input->getOption('show-duplicates');
+
+        if (!in_array($format, ['table', 'json'], true)) {
+            $io->error('Invalid format. Use "table" or "json".');
+
+            return Command::INVALID;
+        }
+
         $movements = $this->entityManager->getRepository(Movement::class)->findAll();
         $implements = $this->entityManager->getRepository(Implement::class)->findAll();
 
         $workouts = $this->workouts($name, $source, $dedupe ? $limit * 10 : $limit);
         $rows = [];
+        $jsonRows = [];
         $seenWorkoutKeys = [];
         $scanned = 0;
         $displayed = 0;
@@ -108,15 +118,44 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
                 $this->listLabel(array_map(static fn (WorkoutLoadCandidate $candidate): string => $candidate->label(), $prescription->loadCandidates), 5),
                 $this->flowPreview($workout),
             ];
+            $jsonRows[] = [
+                'name' => $workout->getName(),
+                'sourceName' => $workout->getSourceName(),
+                'externalId' => $workout->getExternalId(),
+                'levels' => $prescription->levelHints,
+                'divisions' => $prescription->divisionHints,
+                'movements' => $movementNames,
+                'implements' => $implementNames,
+                'loads' => array_map($this->loadPayload(...), $prescription->loads),
+                'loadCandidates' => array_map($this->loadCandidatePayload(...), $prescription->loadCandidates),
+                'flowPreview' => $this->flowPreview($workout),
+            ];
+        }
+
+        $stats = [
+            'scanned' => $scanned,
+            'displayed' => $displayed,
+            'deduped' => $deduped,
+            'withLoads' => $withLoads,
+            'withLevelHints' => $withLevelHints,
+        ];
+
+        if ($format === 'json') {
+            $output->writeln(json_encode([
+                'stats' => $stats,
+                'workouts' => $jsonRows,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            return Command::SUCCESS;
         }
 
         $io->title('Workout prescription pattern report');
         $io->definitionList(
-            ['scanned' => $scanned],
-            ['displayed' => $displayed],
-            ['deduped' => $deduped],
-            ['with_loads' => $withLoads],
-            ['with_level_hints' => $withLevelHints],
+            ['scanned' => $stats['scanned']],
+            ['displayed' => $stats['displayed']],
+            ['deduped' => $stats['deduped']],
+            ['with_loads' => $stats['withLoads']],
+            ['with_level_hints' => $stats['withLevelHints']],
         );
 
         if ($rows !== []) {
@@ -190,6 +229,50 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         $extra = count($values) - count($shown);
 
         return implode(', ', $shown).($extra > 0 ? sprintf(' +%d', $extra) : '');
+    }
+
+    /**
+     * @return array{
+     *     raw: string,
+     *     values: list<float>,
+     *     unit: string,
+     *     equipmentHint: string,
+     *     label: string
+     * }
+     */
+    private function loadPayload(WorkoutLoadMention $load): array
+    {
+        return [
+            'raw' => $load->raw,
+            'values' => $load->values,
+            'unit' => $load->unit,
+            'equipmentHint' => $load->equipmentHint,
+            'label' => $load->label(),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     kind: string,
+     *     equipmentHint: string,
+     *     label: string,
+     *     mentions: list<array{
+     *         raw: string,
+     *         values: list<float>,
+     *         unit: string,
+     *         equipmentHint: string,
+     *         label: string
+     *     }>
+     * }
+     */
+    private function loadCandidatePayload(WorkoutLoadCandidate $candidate): array
+    {
+        return [
+            'kind' => $candidate->kind,
+            'equipmentHint' => $candidate->equipmentHint,
+            'label' => $candidate->label(),
+            'mentions' => array_map($this->loadPayload(...), $candidate->mentions),
+        ];
     }
 
     /**
