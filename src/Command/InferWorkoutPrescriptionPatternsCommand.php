@@ -141,10 +141,10 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         ];
 
         if ($format === 'json') {
-            $output->writeln(json_encode([
+            $output->writeln(json_encode($this->jsonSafePayload([
                 'stats' => $stats,
                 'workouts' => $jsonRows,
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            ]), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE));
 
             return Command::SUCCESS;
         }
@@ -273,6 +273,24 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             'label' => $candidate->label(),
             'mentions' => array_map($this->loadPayload(...), $candidate->mentions),
         ];
+    }
+
+    private function jsonSafePayload(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+        }
+
+        if (!is_array($value)) {
+            return $value;
+        }
+
+        $safe = [];
+        foreach ($value as $key => $childValue) {
+            $safe[is_string($key) ? mb_convert_encoding($key, 'UTF-8', 'UTF-8') : $key] = $this->jsonSafePayload($childValue);
+        }
+
+        return $safe;
     }
 
     /**
