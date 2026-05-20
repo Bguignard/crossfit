@@ -12,6 +12,11 @@ final readonly class WorkoutLoadMention
         public array $values,
         public string $unit,
         public string $equipmentHint,
+        public int $offset,
+        public string $nearText,
+        public ?string $positionLabel,
+        public ?string $audienceHint,
+        public ?string $movementHint,
     ) {
     }
 

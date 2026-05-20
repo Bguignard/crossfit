@@ -237,6 +237,11 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
      *     values: list<float>,
      *     unit: string,
      *     equipmentHint: string,
+     *     offset: int,
+     *     nearText: string,
+     *     positionLabel: string|null,
+     *     audienceHint: string|null,
+     *     movementHint: string|null,
      *     label: string
      * }
      */
@@ -247,6 +252,11 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             'values' => $load->values,
             'unit' => $load->unit,
             'equipmentHint' => $load->equipmentHint,
+            'offset' => $load->offset,
+            'nearText' => $load->nearText,
+            'positionLabel' => $load->positionLabel,
+            'audienceHint' => $load->audienceHint,
+            'movementHint' => $load->movementHint,
             'label' => $load->label(),
         ];
     }
@@ -256,11 +266,17 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
      *     kind: string,
      *     equipmentHint: string,
      *     label: string,
+     *     contextHints: array<string, list<string>>,
      *     mentions: list<array{
      *         raw: string,
      *         values: list<float>,
      *         unit: string,
      *         equipmentHint: string,
+     *         offset: int,
+     *         nearText: string,
+     *         positionLabel: string|null,
+     *         audienceHint: string|null,
+     *         movementHint: string|null,
      *         label: string
      *     }>
      * }
@@ -271,6 +287,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
             'kind' => $candidate->kind,
             'equipmentHint' => $candidate->equipmentHint,
             'label' => $candidate->label(),
+            'contextHints' => $candidate->contextHints(),
             'mentions' => array_map($this->loadPayload(...), $candidate->mentions),
         ];
     }
