@@ -15,6 +15,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         public MovementServiceInterface $movementService,
         public ChatGPTApiKeyInterface $chatGPTApiKey,
         public WorkoutOriginServiceInterface $workoutOriginService,
+        private ?WorkoutPrescriptionStandardPromptBuilder $prescriptionStandardPromptBuilder = null,
     ) {
     }
 
@@ -72,6 +73,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->teamWorkoutGuidance($workoutGeneration);
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
 Add a short "Scaling options" section at the end of the flow with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
@@ -287,6 +289,18 @@ EOD;
 Team workout guidance: this must be explicitly written as a team workout. Use team-of-2 unless another team size is clearly better for the stimulus. Include a clear work-sharing pattern such as "you go, I go", shared reps, split anyhow, synchronized reps, relay stations or partner alternating rounds. The flow must make the team structure impossible to miss.
 
 TXT;
+    }
+
+    /**
+     * @param Movement[] $movements
+     */
+    private function prescriptionStandardGuidance(WorkoutGeneration $workoutGeneration, array $movements): string
+    {
+        if (!$this->prescriptionStandardPromptBuilder instanceof WorkoutPrescriptionStandardPromptBuilder) {
+            return '';
+        }
+
+        return $this->prescriptionStandardPromptBuilder->build($workoutGeneration, $movements);
     }
 
     /**

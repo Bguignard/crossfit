@@ -13,12 +13,15 @@ use App\Entity\Workout\MovementType;
 use App\Entity\Workout\WorkoutMovementGenerationType;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
+use App\Entity\Workout\WorkoutPrescriptionStandard;
 use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\WorkoutPrescriptionStandardRepository;
 use App\Services\Workout\ChatGPTApiKeyInterface;
 use App\Services\Workout\MovementServiceInterface;
 use App\Services\Workout\WorkoutCreatorService;
 use App\Services\Workout\WorkoutOriginServiceInterface;
+use App\Services\Workout\WorkoutPrescriptionStandardPromptBuilder;
 use Doctrine\Common\Collections\Collection;
 use PHPUnit\Framework\TestCase;
 
@@ -209,5 +212,39 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('this must be explicitly written as a team workout', $chatGpt->prompt);
         self::assertStringContainsString('team-of-2', $chatGpt->prompt);
         self::assertStringContainsString('you go, I go', $chatGpt->prompt);
+    }
+
+    public function testPrescriptionStandardPromptBuilderAddsRelevantHyroxAndCrossfitLoads(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $repository = $this->createMock(WorkoutPrescriptionStandardRepository::class);
+        $repository
+            ->expects(self::once())
+            ->method('findForPrompt')
+            ->with('RX', ['Deadlift'], [], true)
+            ->willReturn([
+                new WorkoutPrescriptionStandard('hyrox_official_25_26', 'hyrox', 'RX', 'men', 'Sled Push', 'sled', '152.00', 'kg', 1, 'Open men / mixed', 'Includes sled', 10),
+                new WorkoutPrescriptionStandard('crossfit_common', 'crossfit', 'RX', 'women', 'Deadlift', 'barbell', '70.00', 'kg', 1, '155 lb-style RX deadlift', null, 30),
+            ]);
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Hyrox strength')
+            ->setStimulus('Wod axé Hyrox')
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setNumberOfDifferentMovements(1)
+            ->setIsTeamWorkout(false);
+
+        $prompt = (new WorkoutPrescriptionStandardPromptBuilder($repository))->build($workoutGeneration, [$deadlift]);
+
+        self::assertStringContainsString('Known load prescription standards', $prompt);
+        self::assertStringContainsString('hyrox / RX / hyrox_official_25_26', $prompt);
+        self::assertStringContainsString('Men Sled Push: 152 kg (Open men / mixed) - Includes sled', $prompt);
+        self::assertStringContainsString('Women Deadlift: 70 kg (155 lb-style RX deadlift)', $prompt);
+        self::assertStringContainsString('Use these as anchors', $prompt);
     }
 }
