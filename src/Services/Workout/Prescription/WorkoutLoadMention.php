@@ -17,12 +17,17 @@ final readonly class WorkoutLoadMention
 
     public function label(): string
     {
+        $equipment = $this->equipmentHint === 'unknown' ? '' : ' '.$this->equipmentHint;
+
+        return $this->loadLabel().$equipment;
+    }
+
+    public function loadLabel(): string
+    {
         $values = implode('/', array_map(static function (float $value): string {
             return rtrim(rtrim(sprintf('%.2F', $value), '0'), '.');
         }, $this->values));
 
-        $equipment = $this->equipmentHint === 'unknown' ? '' : ' '.$this->equipmentHint;
-
-        return sprintf('%s %s%s', $values, $this->unit, $equipment);
+        return sprintf('%s %s', $values, $this->unit);
     }
 }

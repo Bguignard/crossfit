@@ -25,6 +25,7 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame([135.0, 95.0], $prescription->loads[0]->values);
         self::assertSame('lb', $prescription->loads[0]->unit);
         self::assertSame('barbell', $prescription->loads[0]->equipmentHint);
+        self::assertSame('135/95 lb barbell paired', $prescription->loadCandidates[0]->label());
     }
 
     public function testInfersSingleDumbbellAndRepeatedKettlebellLoads(): void
@@ -40,6 +41,21 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertCount(2, $prescription->loads);
         self::assertSame('50 lb dumbbell', $prescription->loads[0]->label());
         self::assertSame('24/24 kg kettlebell', $prescription->loads[1]->label());
+    }
+
+    public function testGroupsLbAndKgConversionsAsOneCandidate(): void
+    {
+        $workout = $this->workout(
+            'Age-Group Quarterfinals Workout 1 Men (35-39) Rx',
+            'For time: 20 overhead squats, weight 1: 80 lb / 36 kg. Then 30 overhead squats, weight 2: 115 lb / 52 kg.'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(4, $prescription->loads);
+        self::assertCount(2, $prescription->loadCandidates);
+        self::assertSame('80 lb ~= 36 kg barbell conversion', $prescription->loadCandidates[0]->label());
+        self::assertSame('115 lb ~= 52 kg barbell conversion', $prescription->loadCandidates[1]->label());
     }
 
     private function workout(string $name, string $flow): Workout

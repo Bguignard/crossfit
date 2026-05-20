@@ -5,11 +5,12 @@ namespace App\Services\Workout\Prescription;
 final readonly class InferredWorkoutPrescription
 {
     /**
-     * @param list<string>             $divisionHints
-     * @param list<string>             $levelHints
-     * @param list<string>             $movementNames
-     * @param list<string>             $implementNames
-     * @param list<WorkoutLoadMention> $loads
+     * @param list<string>               $divisionHints
+     * @param list<string>               $levelHints
+     * @param list<string>               $movementNames
+     * @param list<string>               $implementNames
+     * @param list<WorkoutLoadMention>   $loads
+     * @param list<WorkoutLoadCandidate> $loadCandidates
      */
     public function __construct(
         public array $divisionHints,
@@ -17,6 +18,7 @@ final readonly class InferredWorkoutPrescription
         public array $movementNames,
         public array $implementNames,
         public array $loads,
+        public array $loadCandidates,
     ) {
     }
 
