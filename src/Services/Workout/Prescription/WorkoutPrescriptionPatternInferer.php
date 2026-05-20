@@ -218,6 +218,9 @@ final class WorkoutPrescriptionPatternInferer
         $explicitHint = $segment === null
             ? $this->explicitEquipmentHint($text, $offset, $length)
             : $this->explicitEquipmentHint($segment['text'], $segment['offset'], $length);
+        if ($explicitHint === null && $segment !== null) {
+            $explicitHint = $this->explicitEquipmentHint($text, $offset, $length);
+        }
         if ($explicitHint !== null) {
             return $explicitHint;
         }
@@ -225,6 +228,10 @@ final class WorkoutPrescriptionPatternInferer
         $movementHint = $this->movementHint($text, $offset, $length);
         if ($movementHint === 'Wall Ball Shot') {
             return 'medicine ball';
+        }
+        $movementContext = substr($text, max(0, $offset - 140), $length + 180);
+        if ($movementHint === 'Snatch' && preg_match('/\bdumbbells?\b/i', $movementContext) === 1) {
+            return 'dumbbell';
         }
 
         $windowStart = max(0, $offset - 48);
@@ -266,34 +273,21 @@ final class WorkoutPrescriptionPatternInferer
 
     private function explicitEquipmentHint(string $text, int $offset, int $length): ?string
     {
-        $after = substr($text, $offset, 56);
-        foreach ([
-            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
-            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
-            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
-            'barbell' => '/\bbarbell\b/i',
-            'sandbag' => '/\bsand ?bag\b/i',
-            'sled' => '/\bsled\b/i',
-            'vest' => '/\b(?:vest|ruck)\b/i',
-        ] as $hint => $pattern) {
-            if (preg_match($pattern, $after) === 1) {
-                return $hint;
-            }
+        $afterClause = $this->afterLoadClause($text, $offset);
+        $afterHint = $this->equipmentHintInText($afterClause);
+        if ($afterHint !== null) {
+            return $afterHint;
         }
 
         $clause = $this->loadClause($text, $offset);
-        foreach ([
-            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
-            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
-            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
-            'barbell' => '/\bbarbell\b/i',
-            'sandbag' => '/\bsand ?bag\b/i',
-            'sled' => '/\bsled\b/i',
-            'vest' => '/\b(?:vest|ruck)\b/i',
-        ] as $hint => $pattern) {
-            if (preg_match($pattern, $clause) === 1) {
-                return $hint;
-            }
+        $clauseHint = $this->equipmentHintInText($clause);
+        if ($clauseHint !== null) {
+            return $clauseHint;
+        }
+
+        $beforeHint = $this->equipmentHintInText($this->beforeLoadClause($text, $offset));
+        if ($beforeHint !== null) {
+            return $beforeHint;
         }
 
         return $this->closestPatternLabel($text, $offset, $length, [
@@ -307,24 +301,108 @@ final class WorkoutPrescriptionPatternInferer
         ], 72);
     }
 
+    private function afterLoadClause(string $text, int $offset): string
+    {
+        $end = $this->nextSeparatorOffset($text, $offset);
+
+        return substr($text, $offset, $end - $offset);
+    }
+
+    private function beforeLoadClause(string $text, int $offset): string
+    {
+        $start = max(
+            $this->previousSeparatorOffset($text, $offset, ','),
+            $this->previousSentenceSeparatorOffset($text, $offset),
+            $this->previousSeparatorOffset($text, $offset, "\n"),
+            $this->previousSeparatorOffset($text, $offset, '♀'),
+            $this->previousSeparatorOffset($text, $offset, '♂'),
+        );
+        $start = $start < 0 ? 0 : $start + 1;
+
+        return substr($text, $start, $offset - $start);
+    }
+
+    private function equipmentHintInText(string $text): ?string
+    {
+        foreach ([
+            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
+            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
+            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
+            'barbell' => '/\bbarbell\b/i',
+            'sandbag' => '/\bsand ?bag\b/i',
+            'sled' => '/\bsled\b/i',
+            'vest' => '/\b(?:vest|ruck)\b/i',
+        ] as $hint => $pattern) {
+            if (preg_match($pattern, $text) === 1) {
+                return $hint;
+            }
+        }
+
+        return null;
+    }
+
     private function loadClause(string $text, int $offset): string
     {
         $start = max(
-            (int) strrpos(substr($text, 0, $offset), ','),
-            (int) strrpos(substr($text, 0, $offset), "\n"),
-            (int) strrpos(substr($text, 0, $offset), '.'),
+            $this->previousSeparatorOffset($text, $offset, ','),
+            $this->previousSeparatorOffset($text, $offset, '.'),
+            $this->previousSeparatorOffset($text, $offset, "\n"),
+            $this->previousSeparatorOffset($text, $offset, '♀'),
+            $this->previousSeparatorOffset($text, $offset, '♂'),
         );
-        $start = $start === 0 ? 0 : $start + 1;
-        $commaEnd = strpos($text, ',', $offset);
-        $lineEnd = strpos($text, "\n", $offset);
-        $dotEnd = strpos($text, '.', $offset);
+        $start = $start < 0 ? 0 : $start + 1;
+
+        return substr($text, $start, $this->nextSeparatorOffset($text, $offset) - $start);
+    }
+
+    private function nextSeparatorOffset(string $text, int $offset): int
+    {
         $ends = array_filter(
-            [$commaEnd, $lineEnd, $dotEnd],
+            [
+                strpos($text, ',', $offset),
+                $this->nextSentenceSeparatorOffset($text, $offset),
+                strpos($text, "\n", $offset),
+                strpos($text, '♀', $offset),
+                strpos($text, '♂', $offset),
+            ],
             static fn (int|false $position): bool => $position !== false,
         );
-        $end = $ends === [] ? strlen($text) : min($ends);
 
-        return substr($text, $start, $end - $start);
+        return $ends === [] ? strlen($text) : min($ends);
+    }
+
+    private function previousSeparatorOffset(string $text, int $offset, string $separator): int
+    {
+        $position = strrpos(substr($text, 0, $offset), $separator);
+
+        return $position === false ? -1 : $position;
+    }
+
+    private function nextSentenceSeparatorOffset(string $text, int $offset): int|false
+    {
+        $position = strpos($text, '.', $offset);
+        while ($position !== false && $this->isDecimalPoint($text, $position)) {
+            $position = strpos($text, '.', $position + 1);
+        }
+
+        return $position;
+    }
+
+    private function previousSentenceSeparatorOffset(string $text, int $offset): int
+    {
+        $position = strrpos(substr($text, 0, $offset), '.');
+        while ($position !== false && $this->isDecimalPoint($text, $position)) {
+            $position = strrpos(substr($text, 0, $position), '.');
+        }
+
+        return $position === false ? -1 : $position;
+    }
+
+    private function isDecimalPoint(string $text, int $position): bool
+    {
+        return isset($text[$position - 1], $text[$position + 1])
+            && ctype_digit($text[$position - 1])
+            && ctype_digit($text[$position + 1]);
     }
 
     private function nearText(string $text, int $offset, int $length): string
