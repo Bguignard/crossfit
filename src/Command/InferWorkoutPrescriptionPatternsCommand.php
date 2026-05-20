@@ -6,6 +6,7 @@ use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
 use App\Services\Workout\Enrichment\WorkoutEnrichmentMatcher;
+use App\Services\Workout\Prescription\WorkoutLoadCandidate;
 use App\Services\Workout\Prescription\WorkoutLoadMention;
 use App\Services\Workout\Prescription\WorkoutPrescriptionPatternInferer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -104,6 +105,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
                 $this->listLabel($movementNames, 4),
                 $this->listLabel($implementNames, 3),
                 $this->listLabel(array_map(static fn (WorkoutLoadMention $load): string => $load->label(), $prescription->loads), 5),
+                $this->listLabel(array_map(static fn (WorkoutLoadCandidate $candidate): string => $candidate->label(), $prescription->loadCandidates), 5),
                 $this->flowPreview($workout),
             ];
         }
@@ -120,7 +122,7 @@ final class InferWorkoutPrescriptionPatternsCommand extends Command
         if ($rows !== []) {
             $table = new Table($output);
             $table
-                ->setHeaders(['Workout', 'Source', 'External ID', 'Levels', 'Divisions', 'Movements', 'Implements', 'Loads', 'Flow preview'])
+                ->setHeaders(['Workout', 'Source', 'External ID', 'Levels', 'Divisions', 'Movements', 'Implements', 'Loads', 'Candidates', 'Flow preview'])
                 ->setRows($rows);
             $table->render();
         } else {

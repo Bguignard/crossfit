@@ -20,13 +20,116 @@ final class WorkoutPrescriptionPatternInferer
             implode("\n", $divisionHints),
         ]));
 
+        $loads = $this->loads($text);
+
         return new InferredWorkoutPrescription(
             $divisionHints,
             $this->levelHints($text),
             $this->movementNames($workout),
             $this->implementNames($workout),
-            $this->loads($text),
+            $loads,
+            $this->loadCandidates($loads),
         );
+    }
+
+    /**
+     * @param list<WorkoutLoadMention> $loads
+     *
+     * @return list<WorkoutLoadCandidate>
+     */
+    private function loadCandidates(array $loads): array
+    {
+        $candidates = [];
+        $used = [];
+
+        foreach ($loads as $index => $load) {
+            if (isset($used[$index])) {
+                continue;
+            }
+
+            $conversionIndex = $this->matchingConversionLoadIndex($load, $loads, $used, $index);
+            if ($conversionIndex !== null) {
+                $candidates[] = new WorkoutLoadCandidate(
+                    'conversion',
+                    $this->candidateEquipmentHint($load, $loads[$conversionIndex]),
+                    [$load, $loads[$conversionIndex]],
+                );
+                $used[$index] = true;
+                $used[$conversionIndex] = true;
+                continue;
+            }
+
+            $candidates[] = new WorkoutLoadCandidate(
+                count($load->values) > 1 ? 'paired_load' : 'single_load',
+                $load->equipmentHint,
+                [$load],
+            );
+            $used[$index] = true;
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * @param list<WorkoutLoadMention> $loads
+     * @param array<int, true>         $used
+     */
+    private function matchingConversionLoadIndex(
+        WorkoutLoadMention $load,
+        array $loads,
+        array $used,
+        int $currentIndex,
+    ): ?int {
+        foreach ($loads as $candidateIndex => $candidate) {
+            if ($candidateIndex === $currentIndex || isset($used[$candidateIndex])) {
+                continue;
+            }
+            if (!$this->sameOrUnknownEquipment($load, $candidate)) {
+                continue;
+            }
+            if ($load->unit === $candidate->unit || count($load->values) !== count($candidate->values)) {
+                continue;
+            }
+            if ($this->areLoadValuesConversions($load, $candidate)) {
+                return $candidateIndex;
+            }
+        }
+
+        return null;
+    }
+
+    private function areLoadValuesConversions(WorkoutLoadMention $left, WorkoutLoadMention $right): bool
+    {
+        $lbValues = $left->unit === 'lb' ? $left->values : $right->values;
+        $kgValues = $left->unit === 'kg' ? $left->values : $right->values;
+
+        foreach ($lbValues as $index => $lbValue) {
+            $expectedKg = $lbValue * 0.45359237;
+            $actualKg = $kgValues[$index];
+            $tolerance = max(1.0, $expectedKg * 0.025);
+
+            if (abs($actualKg - $expectedKg) > $tolerance) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function candidateEquipmentHint(WorkoutLoadMention $left, WorkoutLoadMention $right): string
+    {
+        if ($left->equipmentHint !== 'unknown') {
+            return $left->equipmentHint;
+        }
+
+        return $right->equipmentHint;
+    }
+
+    private function sameOrUnknownEquipment(WorkoutLoadMention $left, WorkoutLoadMention $right): bool
+    {
+        return $left->equipmentHint === $right->equipmentHint
+            || $left->equipmentHint === 'unknown'
+            || $right->equipmentHint === 'unknown';
     }
 
     /**
@@ -94,10 +197,9 @@ final class WorkoutPrescriptionPatternInferer
 
     private function isPartOfPairedLoad(string $text, int $offset, int $length): bool
     {
-        $before = substr($text, max(0, $offset - 8), 8);
-        $after = substr($text, $offset + $length, 8);
+        $before = substr($text, max(0, $offset - 16), 16);
 
-        return str_contains($before, '/') || str_contains($after, '/');
+        return str_contains($before, '/') && preg_match('/(?:kg|kgs|lb|lbs)\s*\/\s*$/i', $before) !== 1;
     }
 
     private function equipmentHint(string $text, int $offset, int $length): string
