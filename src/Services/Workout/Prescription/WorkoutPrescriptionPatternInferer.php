@@ -214,7 +214,10 @@ final class WorkoutPrescriptionPatternInferer
 
     private function equipmentHint(string $text, int $offset, int $length): string
     {
-        $explicitHint = $this->explicitEquipmentHint($text, $offset, $length);
+        $segment = $this->divisionSegment($text, $offset);
+        $explicitHint = $segment === null
+            ? $this->explicitEquipmentHint($text, $offset, $length)
+            : $this->explicitEquipmentHint($segment['text'], $segment['offset'], $length);
         if ($explicitHint !== null) {
             return $explicitHint;
         }
@@ -263,6 +266,36 @@ final class WorkoutPrescriptionPatternInferer
 
     private function explicitEquipmentHint(string $text, int $offset, int $length): ?string
     {
+        $after = substr($text, $offset, 56);
+        foreach ([
+            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
+            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
+            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
+            'barbell' => '/\bbarbell\b/i',
+            'sandbag' => '/\bsand ?bag\b/i',
+            'sled' => '/\bsled\b/i',
+            'vest' => '/\b(?:vest|ruck)\b/i',
+        ] as $hint => $pattern) {
+            if (preg_match($pattern, $after) === 1) {
+                return $hint;
+            }
+        }
+
+        $clause = $this->loadClause($text, $offset);
+        foreach ([
+            'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
+            'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
+            'kettlebell' => '/\b(?:kettlebells?|kbs?)\b/i',
+            'barbell' => '/\bbarbell\b/i',
+            'sandbag' => '/\bsand ?bag\b/i',
+            'sled' => '/\bsled\b/i',
+            'vest' => '/\b(?:vest|ruck)\b/i',
+        ] as $hint => $pattern) {
+            if (preg_match($pattern, $clause) === 1) {
+                return $hint;
+            }
+        }
+
         return $this->closestPatternLabel($text, $offset, $length, [
             'medicine ball' => '/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i',
             'dumbbell' => '/\b(?:dumbbells?|dbs?)\b/i',
@@ -272,6 +305,26 @@ final class WorkoutPrescriptionPatternInferer
             'sled' => '/\bsled\b/i',
             'vest' => '/\b(?:vest|ruck)\b/i',
         ], 72);
+    }
+
+    private function loadClause(string $text, int $offset): string
+    {
+        $start = max(
+            (int) strrpos(substr($text, 0, $offset), ','),
+            (int) strrpos(substr($text, 0, $offset), "\n"),
+            (int) strrpos(substr($text, 0, $offset), '.'),
+        );
+        $start = $start === 0 ? 0 : $start + 1;
+        $commaEnd = strpos($text, ',', $offset);
+        $lineEnd = strpos($text, "\n", $offset);
+        $dotEnd = strpos($text, '.', $offset);
+        $ends = array_filter(
+            [$commaEnd, $lineEnd, $dotEnd],
+            static fn (int|false $position): bool => $position !== false,
+        );
+        $end = $ends === [] ? strlen($text) : min($ends);
+
+        return substr($text, $start, $end - $start);
     }
 
     private function nearText(string $text, int $offset, int $length): string
@@ -297,6 +350,11 @@ final class WorkoutPrescriptionPatternInferer
 
     private function audienceHint(string $text, int $offset, int $length): ?string
     {
+        $segment = $this->divisionSegment($text, $offset);
+        if ($segment !== null) {
+            return $segment['audience'];
+        }
+
         return $this->closestPatternLabel($text, $offset, $length, [
             'ff' => '/\bFF\b|\(FF\)/',
             'mm' => '/\bMM\b|\(MM\)/',
@@ -309,6 +367,22 @@ final class WorkoutPrescriptionPatternInferer
 
     private function movementHint(string $text, int $offset, int $length): ?string
     {
+        $nearText = $this->nearText($text, $offset, $length);
+        $explicitEquipmentHint = $this->explicitEquipmentHint($text, $offset, $length);
+        if (
+            ($explicitEquipmentHint === 'medicine ball' || preg_match('/\bball\b/i', $nearText) === 1)
+            && preg_match('/\bwall[- ]ball(?: shots?)?\b/i', $nearText) === 1
+        ) {
+            return 'Wall Ball Shot';
+        }
+
+        if (
+            $explicitEquipmentHint === 'dumbbell'
+            && preg_match('/\bsnatch(?:es)?\b/i', $nearText) === 1
+        ) {
+            return 'Snatch';
+        }
+
         return $this->closestPatternLabel($text, $offset, $length, [
             'Clean and Jerk' => '/\bclean(?:s)? and jerk(?:s)?\b/i',
             'Hang Power Clean' => '/\bhang power clean(?:s)?\b/i',
@@ -390,6 +464,31 @@ final class WorkoutPrescriptionPatternInferer
         }
 
         return $closestMatch;
+    }
+
+    /**
+     * @return array{text: string, offset: int, audience: 'women'|'men'}|null
+     */
+    private function divisionSegment(string $text, int $offset): ?array
+    {
+        $before = substr($text, 0, $offset + 1);
+        $womenPosition = strrpos($before, '♀');
+        $menPosition = strrpos($before, '♂');
+        if ($womenPosition === false && $menPosition === false) {
+            return null;
+        }
+
+        $start = max($womenPosition === false ? -1 : $womenPosition, $menPosition === false ? -1 : $menPosition);
+        $audience = $womenPosition === $start ? 'women' : 'men';
+        $nextOppositePosition = strpos($text, $audience === 'women' ? '♂' : '♀', $start + 1);
+        $end = $nextOppositePosition === false ? strlen($text) : $nextOppositePosition;
+        $segmentText = substr($text, $start, $end - $start);
+
+        return [
+            'text' => $segmentText,
+            'offset' => $offset - $start,
+            'audience' => $audience,
+        ];
     }
 
     /**
