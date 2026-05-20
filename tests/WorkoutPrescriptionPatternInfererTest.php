@@ -165,6 +165,42 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame('dumbbell', $prescription->loads[7]->equipmentHint);
     }
 
+    public function testDoesNotLetLaterDumbbellTextOverrideImmediateBarbellClause(): void
+    {
+        $workout = $this->workout(
+            'Workout 1',
+            '♀ 85-lb (38 kg) barbell, 35-lb (15 kg) dumbbells ♂ 135-lb (61kg) barbell, 50-lb (22.5 kg) dumbbells'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(8, $prescription->loads);
+        self::assertSame('barbell', $prescription->loads[0]->equipmentHint);
+        self::assertSame('barbell', $prescription->loads[1]->equipmentHint);
+        self::assertSame('dumbbell', $prescription->loads[2]->equipmentHint);
+        self::assertSame('dumbbell', $prescription->loads[3]->equipmentHint);
+        self::assertSame('barbell', $prescription->loads[4]->equipmentHint);
+        self::assertSame('barbell', $prescription->loads[5]->equipmentHint);
+        self::assertSame('dumbbell', $prescription->loads[6]->equipmentHint);
+        self::assertSame('dumbbell', $prescription->loads[7]->equipmentHint);
+    }
+
+    public function testInfersImplementFromMovementTextBeforeDivisionLoad(): void
+    {
+        $workout = $this->workout(
+            'Team Workout 2 Team Rx',
+            'Alternating dumbbell snatches (all teammates synchronized) Toes-to-bars (pairs synchronized) ♀ 50 lb ♂ 70 lb Time cap: 20 minutes'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(2, $prescription->loads);
+        self::assertSame('dumbbell', $prescription->loads[0]->equipmentHint);
+        self::assertSame('women', $prescription->loads[0]->audienceHint);
+        self::assertSame('dumbbell', $prescription->loads[1]->equipmentHint);
+        self::assertSame('men', $prescription->loads[1]->audienceHint);
+    }
+
     private function workout(string $name, string $flow): Workout
     {
         return new Workout(
