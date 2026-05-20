@@ -29,4 +29,34 @@ final readonly class WorkoutLoadCandidate
 
         return $mentions.$equipment.$suffix;
     }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    public function contextHints(): array
+    {
+        return [
+            'positions' => $this->uniqueMentionValues(static fn (WorkoutLoadMention $mention): ?string => $mention->positionLabel),
+            'audiences' => $this->uniqueMentionValues(static fn (WorkoutLoadMention $mention): ?string => $mention->audienceHint),
+            'movements' => $this->uniqueMentionValues(static fn (WorkoutLoadMention $mention): ?string => $mention->movementHint),
+        ];
+    }
+
+    /**
+     * @param callable(WorkoutLoadMention): ?string $value
+     *
+     * @return list<string>
+     */
+    private function uniqueMentionValues(callable $value): array
+    {
+        $values = [];
+        foreach ($this->mentions as $mention) {
+            $hint = $value($mention);
+            if ($hint !== null) {
+                $values[$hint] = true;
+            }
+        }
+
+        return array_keys($values);
+    }
 }
