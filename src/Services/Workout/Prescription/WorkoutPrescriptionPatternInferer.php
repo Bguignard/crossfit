@@ -455,6 +455,13 @@ final class WorkoutPrescriptionPatternInferer
         }
 
         if (
+            $explicitEquipmentHint === 'medicine ball'
+            && $this->looksLikeWallBallLoadContext($text, $offset, $length)
+        ) {
+            return 'Wall Ball Shot';
+        }
+
+        if (
             $explicitEquipmentHint === 'dumbbell'
             && preg_match('/\bsnatch(?:es)?\b/i', $nearText) === 1
         ) {
@@ -479,6 +486,20 @@ final class WorkoutPrescriptionPatternInferer
             'Handstand Push Up' => '/\bhandstand push[- ]ups?\b/i',
             'Clean' => '/\bclean(?:s)?\b/i',
         ], 120);
+    }
+
+    private function looksLikeWallBallLoadContext(string $text, int $offset, int $length): bool
+    {
+        $loadContext = $this->loadClause($text, $offset).' '.$this->afterLoadClause($text, $offset);
+        if (preg_match('/\b(?:medicine ball|med ball|wall[- ]ball|ball)\b/i', $loadContext) !== 1) {
+            return false;
+        }
+
+        if (preg_match('/\b(?:target|wall[- ]ball)\b/i', $this->nearText($text, $offset, $length)) === 1) {
+            return true;
+        }
+
+        return preg_match('/\bwall[- ]ball(?: shots?)?\b/i', substr($text, max(0, $offset - 220), $length + 260)) === 1;
     }
 
     /**
