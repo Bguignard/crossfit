@@ -145,6 +145,26 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame('men', $prescription->loads[1]->audienceHint);
     }
 
+    public function testKeepsCompactGenderSegmentsForMultipleImplements(): void
+    {
+        $workout = $this->workout(
+            'Workout 1',
+            '1 minute of snatches, 1 minute of dumbbell box step-ups. ♀ 85-lb (38 kg) barbell, 35-lb (15 kg) dumbbells, 20-inch box ♂ 135-lb (61kg) barbell, 50-lb (22.5 kg) dumbbells, 20-inch box'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(8, $prescription->loads);
+        self::assertSame('women', $prescription->loads[2]->audienceHint);
+        self::assertSame('dumbbell', $prescription->loads[2]->equipmentHint);
+        self::assertSame('women', $prescription->loads[3]->audienceHint);
+        self::assertSame('dumbbell', $prescription->loads[3]->equipmentHint);
+        self::assertSame('men', $prescription->loads[6]->audienceHint);
+        self::assertSame('dumbbell', $prescription->loads[6]->equipmentHint);
+        self::assertSame('men', $prescription->loads[7]->audienceHint);
+        self::assertSame('dumbbell', $prescription->loads[7]->equipmentHint);
+    }
+
     private function workout(string $name, string $flow): Workout
     {
         return new Workout(
