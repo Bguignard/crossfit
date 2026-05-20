@@ -202,6 +202,10 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
      */
     private function standardPayload(Workout $workout, WorkoutLoadCandidate $candidate, array $levelHints): ?array
     {
+        if ($candidate->kind !== 'conversion') {
+            return null;
+        }
+
         if ($candidate->equipmentHint === 'unknown') {
             return null;
         }
@@ -216,6 +220,10 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
         }
 
         $movementName = count($contextHints['movements'] ?? []) === 1 ? $contextHints['movements'][0] : null;
+        if ($movementName === null || !$this->isCompatibleMovement($candidate->equipmentHint, $movementName)) {
+            return null;
+        }
+
         $mention = $this->preferredMention($candidate);
         if (!$mention instanceof WorkoutLoadMention || $mention->values === []) {
             return null;
@@ -269,6 +277,45 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
         }
 
         return null;
+    }
+
+    private function isCompatibleMovement(string $equipmentHint, string $movementName): bool
+    {
+        $compatibleMovements = [
+            'barbell' => [
+                'Clean',
+                'Clean and Jerk',
+                'Deadlift',
+                'Front Squat',
+                'Hang Power Clean',
+                'Overhead Squat',
+                'Snatch',
+                'Squat Clean',
+                'Thruster',
+            ],
+            'dumbbell' => [
+                'Clean',
+                'Farmer Carry',
+                'Snatch',
+                'Walking Lunge',
+            ],
+            'kettlebell' => [
+                'Farmer Carry',
+                'Walking Lunge',
+            ],
+            'medicine ball' => [
+                'Wall Ball Shot',
+            ],
+            'sled' => [
+                'Sled Pull',
+                'Sled Push',
+            ],
+            'sandbag' => [
+                'Walking Lunge',
+            ],
+        ];
+
+        return in_array($movementName, $compatibleMovements[$equipmentHint] ?? [], true);
     }
 
     private function normalizedAudience(string $audience): ?string
