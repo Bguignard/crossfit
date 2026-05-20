@@ -145,6 +145,25 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame('men', $prescription->loads[1]->audienceHint);
     }
 
+    public function testKeepsMedicineBallLoadsOnWallBallMovementWhenBoxTargetsFollow(): void
+    {
+        $workout = $this->workout(
+            'Workout 2',
+            '3 rounds for time of: 50 wall-ball shots 50 lateral burpee box jump-overs. Time cap: 20 minutes ♀ 14-lb (6-kg) medicine ball, 9-foot target, 20-inch box ♂ 20-lb (9-kg) medicine ball, 10-foot target, 24-inch box'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertCount(4, $prescription->loads);
+        self::assertSame('Wall Ball Shot', $prescription->loads[0]->movementHint);
+        self::assertSame('Wall Ball Shot', $prescription->loads[1]->movementHint);
+        self::assertSame('Wall Ball Shot', $prescription->loads[2]->movementHint);
+        self::assertSame('Wall Ball Shot', $prescription->loads[3]->movementHint);
+        self::assertSame('medicine ball', $prescription->loads[2]->equipmentHint);
+        self::assertSame('men', $prescription->loads[2]->audienceHint);
+        self::assertSame('20 lb ~= 9 kg medicine ball conversion', $prescription->loadCandidates[1]->label());
+    }
+
     public function testKeepsCompactGenderSegmentsForMultipleImplements(): void
     {
         $workout = $this->workout(
