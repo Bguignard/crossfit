@@ -133,6 +133,30 @@ final class InferWorkoutPrescriptionPatternsCommandTest extends AbstractIntegrat
         self::assertSame('Snatch', $payload['standards'][0]['movementName']);
     }
 
+    public function testObservedStandardsPromotionExpandsLoadLadderConversions(): void
+    {
+        $this->persistObservedWorkout(
+            'Observed deadlift ladder',
+            'observed-deadlift-ladder',
+            'For time: 3 rounds of 50 double-unders and 10 deadlifts, weight 3 (heaviest). Time cap: 12 minutes ♀ 155, 185, 225 lb (70, 83, 102 kg) ♂ 225, 275, 315 lb (102, 125, 143 kg)',
+        );
+
+        $tester = new CommandTester($this->getService(PromoteObservedWorkoutPrescriptionStandardsCommand::class));
+        $exitCode = $tester->execute([
+            '--name' => 'Observed deadlift ladder',
+            '--limit' => 1,
+            '--format' => 'json',
+        ]);
+
+        self::assertSame(0, $exitCode);
+        $payload = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(6, $payload['stats']['promotable']);
+        self::assertSame(['70.00', '83.00', '102.00', '102.00', '125.00', '143.00'], array_column($payload['standards'], 'quantity'));
+        self::assertSame(['women', 'women', 'women', 'men', 'men', 'men'], array_column($payload['standards'], 'division'));
+        self::assertSame(['Deadlift'], array_values(array_unique(array_column($payload['standards'], 'movementName'))));
+        self::assertSame(['weight_3'], array_values(array_unique(array_column($payload['standards'], 'contextLabel'))));
+    }
+
     private function persistObservedWorkout(
         string $name = 'Observed 24.1',
         string $externalId = 'observed-24-1',
