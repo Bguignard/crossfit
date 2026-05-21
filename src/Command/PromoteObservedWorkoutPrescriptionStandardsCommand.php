@@ -75,8 +75,8 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
             ++$stats['scanned'];
             $prescription = $this->inferer->infer($workout);
             foreach ($prescription->loadCandidates as $candidate) {
-                $standardPayload = $this->standardPayload($workout, $candidate, $prescription->levelHints);
-                if ($standardPayload === null) {
+                $standardPayloads = $this->standardPayloads($workout, $candidate, $prescription->levelHints);
+                if ($standardPayloads === []) {
                     ++$stats['skipped'];
                     if ($showSkipped) {
                         $rows[] = $this->row($workout, $candidate, 'skipped', null);
@@ -84,32 +84,34 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
                     continue;
                 }
 
-                ++$stats['promotable'];
-                $payloadKey = $this->payloadKey($standardPayload);
-                if (isset($seenPayloadKeys[$payloadKey])) {
-                    ++$stats['duplicates'];
-                    if ($showDuplicates) {
-                        $rows[] = $this->row($workout, $candidate, 'duplicate', $standardPayload);
+                foreach ($standardPayloads as $standardPayload) {
+                    ++$stats['promotable'];
+                    $payloadKey = $this->payloadKey($standardPayload);
+                    if (isset($seenPayloadKeys[$payloadKey])) {
+                        ++$stats['duplicates'];
+                        if ($showDuplicates) {
+                            $rows[] = $this->row($workout, $candidate, 'duplicate', $standardPayload);
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                $seenPayloadKeys[$payloadKey] = true;
+                    $seenPayloadKeys[$payloadKey] = true;
 
-                $existing = $this->existingStandard($standardPayload);
-                if ($existing instanceof WorkoutPrescriptionStandard) {
-                    ++$stats['existing'];
-                    $rows[] = $this->row($workout, $candidate, 'existing', $standardPayload);
-                    continue;
-                }
+                    $existing = $this->existingStandard($standardPayload);
+                    if ($existing instanceof WorkoutPrescriptionStandard) {
+                        ++$stats['existing'];
+                        $rows[] = $this->row($workout, $candidate, 'existing', $standardPayload);
+                        continue;
+                    }
 
-                if ($write) {
-                    $this->entityManager->persist(new WorkoutPrescriptionStandard(...$standardPayload));
-                    ++$stats['created'];
-                    $rows[] = $this->row($workout, $candidate, 'created', $standardPayload);
-                    continue;
-                }
+                    if ($write) {
+                        $this->entityManager->persist(new WorkoutPrescriptionStandard(...$standardPayload));
+                        ++$stats['created'];
+                        $rows[] = $this->row($workout, $candidate, 'created', $standardPayload);
+                        continue;
+                    }
 
-                $rows[] = $this->row($workout, $candidate, 'would_create', $standardPayload);
+                    $rows[] = $this->row($workout, $candidate, 'would_create', $standardPayload);
+                }
             }
         }
 
@@ -189,7 +191,7 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
     /**
      * @param list<string> $levelHints
      *
-     * @return array{
+     * @return list<array{
      *     sourceName: string,
      *     sport: string,
      *     levelName: string|null,
@@ -202,16 +204,16 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
      *     contextLabel: string|null,
      *     notes: string|null,
      *     priority: int
-     * }|null
+     * }>
      */
-    private function standardPayload(Workout $workout, WorkoutLoadCandidate $candidate, array $levelHints): ?array
+    private function standardPayloads(Workout $workout, WorkoutLoadCandidate $candidate, array $levelHints): array
     {
         if ($candidate->kind !== 'conversion') {
-            return null;
+            return [];
         }
 
         if ($candidate->equipmentHint === 'unknown') {
-            return null;
+            return [];
         }
 
         $contextHints = $candidate->contextHints();
@@ -220,40 +222,41 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
             $contextHints['audiences'] ?? [],
         ))));
         if (count($audiences) !== 1) {
-            return null;
+            return [];
         }
 
         $movementName = count($contextHints['movements'] ?? []) === 1 ? $contextHints['movements'][0] : null;
         if ($movementName === null || !$this->isCompatibleMovement($candidate->equipmentHint, $movementName)) {
-            return null;
+            return [];
         }
 
         $mention = $this->preferredMention($candidate);
         if (!$mention instanceof WorkoutLoadMention || $mention->values === []) {
-            return null;
+            return [];
         }
 
         $values = array_values(array_unique($mention->values));
-        if (count($values) !== 1) {
-            return null;
+        $positionLabel = count($contextHints['positions'] ?? []) === 1 ? $contextHints['positions'][0] : null;
+        $payloads = [];
+
+        foreach ($values as $value) {
+            $payloads[] = [
+                'sourceName' => self::OBSERVED_SOURCE_NAME,
+                'sport' => 'crossfit',
+                'levelName' => $this->levelName($levelHints),
+                'division' => $audiences[0],
+                'movementName' => $movementName,
+                'implementName' => $candidate->equipmentHint,
+                'quantity' => $this->quantityString($value),
+                'unit' => $mention->unit,
+                'quantityMultiplier' => 1,
+                'contextLabel' => $positionLabel,
+                'notes' => $this->notes($workout, $candidate),
+                'priority' => 80,
+            ];
         }
 
-        $positionLabel = count($contextHints['positions'] ?? []) === 1 ? $contextHints['positions'][0] : null;
-
-        return [
-            'sourceName' => self::OBSERVED_SOURCE_NAME,
-            'sport' => 'crossfit',
-            'levelName' => $this->levelName($levelHints),
-            'division' => $audiences[0],
-            'movementName' => $movementName,
-            'implementName' => $candidate->equipmentHint,
-            'quantity' => $this->quantityString($values[0]),
-            'unit' => $mention->unit,
-            'quantityMultiplier' => count($mention->values),
-            'contextLabel' => $positionLabel,
-            'notes' => $this->notes($workout, $candidate),
-            'priority' => 80,
-        ];
+        return $payloads;
     }
 
     private function preferredMention(WorkoutLoadCandidate $candidate): ?WorkoutLoadMention
