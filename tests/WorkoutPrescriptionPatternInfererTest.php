@@ -176,12 +176,16 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertCount(8, $prescription->loads);
         self::assertSame('women', $prescription->loads[2]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[2]->equipmentHint);
+        self::assertNull($prescription->loads[2]->movementHint);
         self::assertSame('women', $prescription->loads[3]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[3]->equipmentHint);
+        self::assertNull($prescription->loads[3]->movementHint);
         self::assertSame('men', $prescription->loads[6]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[6]->equipmentHint);
+        self::assertNull($prescription->loads[6]->movementHint);
         self::assertSame('men', $prescription->loads[7]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[7]->equipmentHint);
+        self::assertNull($prescription->loads[7]->movementHint);
     }
 
     public function testDoesNotLetLaterDumbbellTextOverrideImmediateBarbellClause(): void

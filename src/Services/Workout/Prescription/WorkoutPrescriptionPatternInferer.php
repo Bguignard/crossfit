@@ -465,6 +465,10 @@ final class WorkoutPrescriptionPatternInferer
             $explicitEquipmentHint === 'dumbbell'
             && preg_match('/\bsnatch(?:es)?\b/i', $nearText) === 1
         ) {
+            if ($this->looksLikeDumbbellBoxStepUpLoadContext($text, $offset, $length)) {
+                return null;
+            }
+
             return 'Snatch';
         }
 
@@ -500,6 +504,13 @@ final class WorkoutPrescriptionPatternInferer
         }
 
         return preg_match('/\bwall[- ]ball(?: shots?)?\b/i', substr($text, max(0, $offset - 220), $length + 260)) === 1;
+    }
+
+    private function looksLikeDumbbellBoxStepUpLoadContext(string $text, int $offset, int $length): bool
+    {
+        $loadContext = substr($text, max(0, $offset - 220), $length + 300);
+
+        return preg_match('/\b(?:dumbbell\s+)?box\s+step[- ]ups?\b/i', $loadContext) === 1;
     }
 
     /**
