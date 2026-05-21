@@ -9,6 +9,7 @@ use App\Entity\Workout\Workout;
 final class WorkoutPrescriptionPatternInferer
 {
     private const LOAD_PATTERN = '/(?<![a-z0-9])(?P<first>\d+(?:[\.,]\d+)?)\s*(?:\/|and|or|&)\s*(?P<second>\d+(?:[\.,]\d+)?)\s*(?P<unit>kg|kgs|kilograms?|lb|lbs|pounds?)(?![a-z])/i';
+    private const LOAD_LIST_PATTERN = '/(?<![a-z0-9])(?P<values>\d+(?:[\.,]\d+)?(?:\s*,\s*\d+(?:[\.,]\d+)?){2,})\s*(?P<unit>kg|kgs|kilograms?|lb|lbs|pounds?)(?![a-z])/i';
     private const SINGLE_LOAD_PATTERN = '/(?<![a-z0-9])(?:(?P<count>\d+)\s*x\s*)?(?P<value>\d+(?:[\.,]\d+)?)\s*-?\s*(?P<unit>kg|kgs|kilograms?|lb|lbs|pounds?)(?![a-z])/i';
 
     public function infer(Workout $workout): InferredWorkoutPrescription
@@ -139,6 +140,27 @@ final class WorkoutPrescriptionPatternInferer
     {
         $loads = [];
         $seen = [];
+        $skipSingleLoadRanges = [];
+
+        if (preg_match_all(self::LOAD_LIST_PATTERN, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            foreach ($matches as $match) {
+                $raw = $match[0][0];
+                $offset = (int) $match[0][1];
+                $load = new WorkoutLoadMention(
+                    $raw,
+                    array_map($this->floatValue(...), preg_split('/\s*,\s*/', $match['values'][0]) ?: []),
+                    $this->unit($match['unit'][0]),
+                    $this->equipmentHint($text, $offset, strlen($raw)),
+                    $offset,
+                    $this->nearText($text, $offset, strlen($raw)),
+                    $this->positionLabel($text, $offset, strlen($raw)),
+                    $this->audienceHint($text, $offset, strlen($raw)),
+                    $this->movementHint($text, $offset, strlen($raw)),
+                );
+                $this->addLoad($loads, $seen, $load);
+                $skipSingleLoadRanges[] = [$offset, $offset + strlen($raw)];
+            }
+        }
 
         if (preg_match_all(self::LOAD_PATTERN, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($matches as $match) {
@@ -162,6 +184,10 @@ final class WorkoutPrescriptionPatternInferer
             foreach ($matches as $match) {
                 $raw = $match[0][0];
                 $offset = (int) $match[0][1];
+
+                if ($this->isInsideAnyRange($offset, $skipSingleLoadRanges)) {
+                    continue;
+                }
 
                 if ($this->isPartOfPairedLoad($text, $offset, strlen($raw))) {
                     continue;
@@ -188,6 +214,20 @@ final class WorkoutPrescriptionPatternInferer
         }
 
         return $loads;
+    }
+
+    /**
+     * @param list<array{0: int, 1: int}> $ranges
+     */
+    private function isInsideAnyRange(int $offset, array $ranges): bool
+    {
+        foreach ($ranges as [$start, $end]) {
+            if ($offset >= $start && $offset < $end) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
