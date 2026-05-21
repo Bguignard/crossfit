@@ -39,6 +39,7 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum number of workouts to scan.', 200)
             ->addOption('format', null, InputOption::VALUE_REQUIRED, 'Output format: table or json.', 'table')
             ->addOption('write', null, InputOption::VALUE_NONE, 'Persist promoted standards. Without this flag the command is a dry run.')
+            ->addOption('show-duplicates', null, InputOption::VALUE_NONE, 'Include duplicate candidates in the report.')
             ->addOption('show-skipped', null, InputOption::VALUE_NONE, 'Include skipped candidates in the report.');
     }
 
@@ -50,6 +51,7 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $format = $this->stringOption($input->getOption('format')) ?? 'table';
         $write = (bool) $input->getOption('write');
+        $showDuplicates = (bool) $input->getOption('show-duplicates');
         $showSkipped = (bool) $input->getOption('show-skipped');
 
         if (!in_array($format, ['table', 'json'], true)) {
@@ -86,7 +88,9 @@ final class PromoteObservedWorkoutPrescriptionStandardsCommand extends Command
                 $payloadKey = $this->payloadKey($standardPayload);
                 if (isset($seenPayloadKeys[$payloadKey])) {
                     ++$stats['duplicates'];
-                    $rows[] = $this->row($workout, $candidate, 'duplicate', $standardPayload);
+                    if ($showDuplicates) {
+                        $rows[] = $this->row($workout, $candidate, 'duplicate', $standardPayload);
+                    }
                     continue;
                 }
                 $seenPayloadKeys[$payloadKey] = true;
