@@ -177,6 +177,8 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame('women', $prescription->loads[2]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[2]->equipmentHint);
         self::assertNull($prescription->loads[2]->movementHint);
+        self::assertSame('35 lb ~= 15 kg dumbbell conversion', $prescription->loadCandidates[1]->label());
+        self::assertSame([], $prescription->loadCandidates[1]->contextHints()['movements']);
         self::assertSame('women', $prescription->loads[3]->audienceHint);
         self::assertSame('dumbbell', $prescription->loads[3]->equipmentHint);
         self::assertNull($prescription->loads[3]->movementHint);
