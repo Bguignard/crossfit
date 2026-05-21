@@ -58,6 +58,24 @@ final class WorkoutPrescriptionPatternInfererTest extends TestCase
         self::assertSame('115 lb ~= 52 kg barbell conversion', $prescription->loadCandidates[1]->label());
     }
 
+    public function testInfersCommaSeparatedLoadLaddersAsOneConversionCandidate(): void
+    {
+        $workout = $this->workout(
+            'Age-Group Quarterfinals Workout 3 Men (35-39) Rx',
+            'For time: 3 rounds of 50 double-unders and 10 deadlifts, weight 3 (heaviest). Time cap: 12 minutes ♀ 155, 185, 225 lb (70, 83, 102 kg) ♂ 225, 275, 315 lb (102, 125, 143 kg)'
+        );
+
+        $prescription = (new WorkoutPrescriptionPatternInferer())->infer($workout);
+
+        self::assertSame([155.0, 185.0, 225.0], $prescription->loads[0]->values);
+        self::assertSame([70.0, 83.0, 102.0], $prescription->loads[1]->values);
+        self::assertSame('155/185/225 lb ~= 70/83/102 kg barbell conversion', $prescription->loadCandidates[0]->label());
+        self::assertSame(['weight_3'], $prescription->loadCandidates[0]->contextHints()['positions']);
+        self::assertSame(['women'], $prescription->loadCandidates[0]->contextHints()['audiences']);
+        self::assertSame(['Deadlift'], $prescription->loadCandidates[0]->contextHints()['movements']);
+        self::assertSame('225/275/315 lb ~= 102/125/143 kg barbell conversion', $prescription->loadCandidates[1]->label());
+    }
+
     public function testAddsContextHintsToWeightPositionLoads(): void
     {
         $workout = $this->workout(
