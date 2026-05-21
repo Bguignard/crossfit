@@ -109,11 +109,38 @@ final class InferWorkoutPrescriptionPatternsCommandTest extends AbstractIntegrat
         self::assertSame(['would_create', 'would_create', 'duplicate', 'duplicate'], array_column($payload['standards'], 'status'));
     }
 
-    private function persistObservedWorkout(string $name = 'Observed 24.1', string $externalId = 'observed-24-1'): void
+    public function testObservedStandardsPromotionSkipsConversionWhenMovementHintsAreIncomplete(): void
     {
+        $this->persistObservedWorkout(
+            'Observed box step-ups',
+            'observed-box-step-ups',
+            '4 rounds for max reps of: 1 minute of snatches, 1 minute of rowing for calories, 1 minute of dumbbell box step-ups, 1 minute of rest. ♀ 85-lb (38 kg) barbell, 35-lb (15 kg) dumbbells, 20-inch box ♂ 135-lb (61kg) barbell, 50-lb (22.5 kg) dumbbells, 20-inch box',
+        );
+
+        $tester = new CommandTester($this->getService(PromoteObservedWorkoutPrescriptionStandardsCommand::class));
+        $exitCode = $tester->execute([
+            '--name' => 'Observed box step-ups',
+            '--limit' => 1,
+            '--format' => 'json',
+        ]);
+
+        self::assertSame(0, $exitCode);
+        $payload = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(1, $payload['stats']['promotable']);
+        self::assertSame(3, $payload['stats']['skipped']);
+        self::assertSame(['would_create'], array_column($payload['standards'], 'status'));
+        self::assertSame('barbell', $payload['standards'][0]['implementName']);
+        self::assertSame('Snatch', $payload['standards'][0]['movementName']);
+    }
+
+    private function persistObservedWorkout(
+        string $name = 'Observed 24.1',
+        string $externalId = 'observed-24-1',
+        string $flow = 'For time: 21 dumbbell snatches, arm 1. Time cap: 15 minutes ♀ 35-lb (15-kg) dumbbell ♂ 50-lb (22.5-kg) dumbbell',
+    ): void {
         $workout = (new Workout(
             $name,
-            'For time: 21 dumbbell snatches, arm 1. Time cap: 15 minutes ♀ 35-lb (15-kg) dumbbell ♂ 50-lb (22.5-kg) dumbbell',
+            $flow,
             1,
             15,
             null,

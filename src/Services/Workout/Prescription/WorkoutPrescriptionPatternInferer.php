@@ -472,6 +472,13 @@ final class WorkoutPrescriptionPatternInferer
             return 'Snatch';
         }
 
+        if (
+            $this->loadContextLooksLikeDumbbell($text, $offset)
+            && $this->looksLikeDumbbellBoxStepUpLoadContext($text, $offset, $length)
+        ) {
+            return null;
+        }
+
         return $this->closestPatternLabel($text, $offset, $length, [
             'Clean and Jerk' => '/\bclean(?:s)? and jerk(?:s)?\b/i',
             'Hang Power Clean' => '/\bhang power clean(?:s)?\b/i',
@@ -511,6 +518,14 @@ final class WorkoutPrescriptionPatternInferer
         $loadContext = substr($text, max(0, $offset - 220), $length + 300);
 
         return preg_match('/\b(?:dumbbell\s+)?box\s+step[- ]ups?\b/i', $loadContext) === 1;
+    }
+
+    private function loadContextLooksLikeDumbbell(string $text, int $offset): bool
+    {
+        return preg_match(
+            '/\b(?:dumbbells?|dbs?)\b/i',
+            $this->loadClause($text, $offset).' '.$this->afterLoadClause($text, $offset),
+        ) === 1;
     }
 
     /**
