@@ -78,10 +78,41 @@ final class InferWorkoutPrescriptionPatternsCommandTest extends AbstractIntegrat
         self::assertCount(2, $standards);
     }
 
-    private function persistObservedWorkout(): void
+    public function testObservedStandardsPromotionHidesDuplicateRowsUnlessRequested(): void
+    {
+        $this->persistObservedWorkout();
+        $this->persistObservedWorkout('Observed 24.1 Repeat', 'observed-24-1-repeat');
+
+        $tester = new CommandTester($this->getService(PromoteObservedWorkoutPrescriptionStandardsCommand::class));
+        $exitCode = $tester->execute([
+            '--name' => 'Observed 24.1',
+            '--limit' => 2,
+            '--format' => 'json',
+        ]);
+
+        self::assertSame(0, $exitCode);
+        $payload = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(4, $payload['stats']['promotable']);
+        self::assertSame(2, $payload['stats']['duplicates']);
+        self::assertSame(['would_create', 'would_create'], array_column($payload['standards'], 'status'));
+
+        $tester = new CommandTester($this->getService(PromoteObservedWorkoutPrescriptionStandardsCommand::class));
+        $exitCode = $tester->execute([
+            '--name' => 'Observed 24.1',
+            '--limit' => 2,
+            '--format' => 'json',
+            '--show-duplicates' => true,
+        ]);
+
+        self::assertSame(0, $exitCode);
+        $payload = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['would_create', 'would_create', 'duplicate', 'duplicate'], array_column($payload['standards'], 'status'));
+    }
+
+    private function persistObservedWorkout(string $name = 'Observed 24.1', string $externalId = 'observed-24-1'): void
     {
         $workout = (new Workout(
-            'Observed 24.1',
+            $name,
             'For time: 21 dumbbell snatches, arm 1. Time cap: 15 minutes ♀ 35-lb (15-kg) dumbbell ♂ 50-lb (22.5-kg) dumbbell',
             1,
             15,
@@ -89,7 +120,7 @@ final class InferWorkoutPrescriptionPatternsCommandTest extends AbstractIntegrat
             new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CROSSFIT_OPEN_WORKOUT), 2024),
         ))
             ->setSourceName('crossfit_games')
-            ->setExternalId('observed-24-1');
+            ->setExternalId($externalId);
 
         $this->getEntityManager()->persist($workout);
         $this->getEntityManager()->flush();
