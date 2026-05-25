@@ -493,7 +493,7 @@ TXT;
             }
 
             $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
-            if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+            if (!$this->normalizedFlowContainsMovement($normalizedFlow, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
             }
         }
@@ -512,10 +512,7 @@ TXT;
 
         $mainFlow = $this->flowWithoutScalingOptions($flow);
         $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
-        $normalizedSelectedMovementSearchTexts = array_map(
-            fn (Movement $movement): string => $this->normalizeMovementSearchText($movement->getName()),
-            $selectedMovements
-        );
+        $normalizedSelectedMovementSearchTexts = $this->movementSearchTexts($selectedMovements);
         usort($normalizedSelectedMovementSearchTexts, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
         $flowWithoutSelectedMovements = str_replace($normalizedSelectedMovementSearchTexts, '', $normalizedFlow);
 
@@ -524,7 +521,7 @@ TXT;
                 continue;
             }
 
-            if (str_contains($flowWithoutSelectedMovements, $this->normalizeMovementSearchText($movement->getName()))) {
+            if ($this->normalizedFlowContainsMovement($flowWithoutSelectedMovements, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation included movement "%s" in the flow but did not list it in movements.', $movement->getName()));
             }
         }
@@ -540,7 +537,7 @@ TXT;
 
         foreach ($mandatoryMovements as $movement) {
             $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
-            if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+            if (!$this->normalizedFlowContainsMovement($normalizedFlow, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation did not include mandatory movement "%s" in the workout flow.', $movement->getName()));
             }
         }
@@ -565,7 +562,7 @@ TXT;
         $normalizedFlow = $this->normalizedFlowWithMovementsRemoved($mainFlow, $allowedNonBannedMovements);
 
         foreach ($bannedMovements as $movement) {
-            if (str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+            if ($this->normalizedFlowContainsMovement($normalizedFlow, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation included banned movement "%s" in the workout flow.', $movement->getName()));
             }
         }
@@ -583,6 +580,48 @@ TXT;
         return preg_replace('/[^a-z0-9]+/', '', strtolower($text)) ?? '';
     }
 
+    private function normalizedFlowContainsMovement(string $normalizedFlow, Movement $movement): bool
+    {
+        foreach ($this->movementSearchTexts([$movement]) as $movementSearchText) {
+            if (str_contains($normalizedFlow, $movementSearchText)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param Movement[] $movements
+     *
+     * @return list<string>
+     */
+    private function movementSearchTexts(array $movements): array
+    {
+        $searchTexts = [];
+        foreach ($movements as $movement) {
+            $movementName = $movement->getName();
+            $searchTexts[] = $this->normalizeMovementSearchText($movementName);
+
+            foreach ($this->movementSearchAliases($movementName) as $alias) {
+                $searchTexts[] = $this->normalizeMovementSearchText($alias);
+            }
+        }
+
+        return array_values(array_unique(array_filter($searchTexts)));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementSearchAliases(string $movementName): array
+    {
+        return match ($this->normalizeMovementName($movementName)) {
+            'chest to bar pull up' => ['C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
+            default => [],
+        };
+    }
+
     /**
      * @param Movement[] $movements
      */
@@ -593,20 +632,26 @@ TXT;
             $movements,
             fn (Movement $movement): bool => $this->normalizeMovementName($movement->getName()) !== $movementToKeepName
         ));
+        $movementToKeepSearchTexts = $this->movementSearchTexts([$movementToKeep]);
 
-        return $this->normalizedFlowWithMovementsRemoved($flow, $movementsToRemove);
+        return $this->normalizedFlowWithMovementsRemoved($flow, $movementsToRemove, $movementToKeepSearchTexts);
     }
 
     /**
-     * @param Movement[] $movements
+     * @param Movement[]   $movements
+     * @param list<string> $protectedSearchTexts
      */
-    private function normalizedFlowWithMovementsRemoved(string $flow, array $movements): string
+    private function normalizedFlowWithMovementsRemoved(string $flow, array $movements, array $protectedSearchTexts = []): string
     {
         $normalizedFlow = $this->normalizeMovementSearchText($flow);
-        $movementSearchTexts = array_values(array_unique(array_filter(array_map(
-            fn (Movement $movement): string => $this->normalizeMovementSearchText($movement->getName()),
-            $movements
-        ))));
+        $movementSearchTexts = array_filter(
+            $this->movementSearchTexts($movements),
+            static fn (string $movementSearchText): bool => !array_any(
+                $protectedSearchTexts,
+                static fn (string $protectedSearchText): bool => $movementSearchText !== $protectedSearchText
+                    && str_contains($protectedSearchText, $movementSearchText)
+            )
+        );
         usort($movementSearchTexts, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
 
         return str_replace($movementSearchTexts, '', $normalizedFlow);
