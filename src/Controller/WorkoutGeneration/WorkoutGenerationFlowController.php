@@ -165,22 +165,22 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setStimulusIntent($this->nullableString($payload['stimulusIntent'] ?? null));
         }
         if (array_key_exists('timeCap', $payload)) {
-            $workoutGeneration->setTimeCap((int) $payload['timeCap']);
+            $workoutGeneration->setTimeCap($this->positiveInt($payload['timeCap'], 'timeCap'));
         }
         if (array_key_exists('numberOfDifferentMovements', $payload)) {
-            $workoutGeneration->setNumberOfDifferentMovements((int) $payload['numberOfDifferentMovements']);
+            $workoutGeneration->setNumberOfDifferentMovements($this->positiveInt($payload['numberOfDifferentMovements'], 'numberOfDifferentMovements'));
         }
         if (array_key_exists('isTeamWorkout', $payload)) {
             $workoutGeneration->setIsTeamWorkout((bool) $payload['isTeamWorkout']);
         }
         if (array_key_exists('intervalsTime', $payload)) {
-            $workoutGeneration->setIntervalsTime($payload['intervalsTime'] === null ? null : (int) $payload['intervalsTime']);
+            $workoutGeneration->setIntervalsTime($payload['intervalsTime'] === null ? null : $this->positiveInt($payload['intervalsTime'], 'intervalsTime'));
         }
         if (array_key_exists('intervalsRestTime', $payload)) {
-            $workoutGeneration->setIntervalsRestTime($payload['intervalsRestTime'] === null ? null : (int) $payload['intervalsRestTime']);
+            $workoutGeneration->setIntervalsRestTime($payload['intervalsRestTime'] === null ? null : $this->positiveInt($payload['intervalsRestTime'], 'intervalsRestTime'));
         }
         if (array_key_exists('numberOfRounds', $payload)) {
-            $workoutGeneration->setNumberOfRounds($payload['numberOfRounds'] === null ? null : (int) $payload['numberOfRounds']);
+            $workoutGeneration->setNumberOfRounds($payload['numberOfRounds'] === null ? null : $this->positiveInt($payload['numberOfRounds'], 'numberOfRounds'));
         }
         if (array_key_exists('workoutType', $payload)) {
             $workoutGeneration->setWorkoutType($this->requiredCatalogEntity(WorkoutType::class, $payload['workoutType']));
@@ -259,6 +259,20 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return get_debug_type($identifier);
+    }
+
+    private function positiveInt(mixed $value, string $fieldName): int
+    {
+        if (!is_int($value) && !(is_string($value) && preg_match('/^\d+$/', $value) === 1)) {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a positive integer.', $fieldName));
+        }
+
+        $integer = (int) $value;
+        if ($integer < 1) {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a positive integer.', $fieldName));
+        }
+
+        return $integer;
     }
 
     /**
