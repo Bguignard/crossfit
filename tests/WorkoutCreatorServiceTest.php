@@ -1404,6 +1404,92 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testWorkoutGenerationRecognizesCommonMovementAbbreviationsInFlow(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $pushUp = new Movement('Push Up', $difficulty, $gymnastics);
+        $handstandPushUp = new Movement('Handstand Push Up', $difficulty, $gymnastics);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastics);
+        $doubleUnder = new Movement('Double Under', $difficulty, $cardio);
+
+        $movementService = new class([$pushUp, $handstandPushUp, $toesToBar, $doubleUnder]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 12 minutes\n8 HSPU\n12 T2B\n40 DUs",
+                    'scalingOptions' => "RX: as written\nIntermediate: 6 HSPU, 10 T2B, 30 DUs\nScaled: pike push-ups, knee raises, single-unders",
+                    'movements' => ['Handstand Push Up', 'Toes to Bar', 'Double Under'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Common movement aliases test')
+            ->setTimeCap(12)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics, $cardio])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Handstand Push Up', 'Toes to Bar', 'Double Under'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testWorkoutGenerationRejectsIncompleteGeneratedMovementList(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
