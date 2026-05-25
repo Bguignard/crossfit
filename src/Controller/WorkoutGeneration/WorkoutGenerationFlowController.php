@@ -53,8 +53,13 @@ class WorkoutGenerationFlowController extends AbstractController
     #[Route('', name: 'workout_generation_flow_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
+        $payload = $this->payload($request);
+        if (!array_key_exists('name', $payload)) {
+            throw new UnprocessableEntityHttpException('"name" is required.');
+        }
+
         $workoutGeneration = new WorkoutGeneration();
-        $this->hydrate($workoutGeneration, $this->payload($request));
+        $this->hydrate($workoutGeneration, $payload);
         $this->entityManager->persist($workoutGeneration);
         $this->entityManager->flush();
 
@@ -156,7 +161,7 @@ class WorkoutGenerationFlowController extends AbstractController
     private function hydrate(WorkoutGeneration $workoutGeneration, array $payload): void
     {
         if (array_key_exists('name', $payload)) {
-            $workoutGeneration->setName((string) $payload['name']);
+            $workoutGeneration->setName($this->requiredString($payload['name'], 'name'));
         }
         if (array_key_exists('stimulus', $payload)) {
             $workoutGeneration->setStimulus($this->nullableString($payload['stimulus'] ?? null, 120));
@@ -273,6 +278,20 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return $integer;
+    }
+
+    private function requiredString(mixed $value, string $fieldName): string
+    {
+        if (!is_scalar($value) && !$value instanceof \Stringable) {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a non-empty string.', $fieldName));
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a non-empty string.', $fieldName));
+        }
+
+        return $value;
     }
 
     /**
