@@ -247,4 +247,37 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Women Deadlift: 70 kg (155 lb-style RX deadlift)', $prompt);
         self::assertStringContainsString('Use these as anchors', $prompt);
     }
+
+    public function testPrescriptionStandardPromptBuilderGroupsObservedLoadProgressions(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $repository = $this->createMock(WorkoutPrescriptionStandardRepository::class);
+        $repository
+            ->expects(self::once())
+            ->method('findForPrompt')
+            ->with('RX', ['Deadlift'], [], false)
+            ->willReturn([
+                new WorkoutPrescriptionStandard('crossfit_games_observed', 'crossfit', 'RX', 'women', 'Deadlift', 'barbell', '102.00', 'kg', 1, null, 'Age-Group Quarterfinals Workout 3 | 155/185/225 lb ~= 70/83/102 kg barbell conversion', 80),
+                new WorkoutPrescriptionStandard('crossfit_games_observed', 'crossfit', 'RX', 'women', 'Deadlift', 'barbell', '70.00', 'kg', 1, null, 'Age-Group Quarterfinals Workout 3 | 155/185/225 lb ~= 70/83/102 kg barbell conversion', 80),
+                new WorkoutPrescriptionStandard('crossfit_games_observed', 'crossfit', 'RX', 'women', 'Deadlift', 'barbell', '83.00', 'kg', 1, null, 'Age-Group Quarterfinals Workout 3 | 155/185/225 lb ~= 70/83/102 kg barbell conversion', 80),
+            ]);
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Deadlift ladder')
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setNumberOfDifferentMovements(1)
+            ->setIsTeamWorkout(false);
+
+        $prompt = (new WorkoutPrescriptionStandardPromptBuilder($repository))->build($workoutGeneration, [$deadlift]);
+
+        self::assertStringContainsString('Women Deadlift progression: 70 kg / 83 kg / 102 kg', $prompt);
+        self::assertStringNotContainsString('Women Deadlift: 70 kg', $prompt);
+        self::assertStringNotContainsString('Women Deadlift: 83 kg', $prompt);
+        self::assertStringNotContainsString('Women Deadlift: 102 kg', $prompt);
+    }
 }
