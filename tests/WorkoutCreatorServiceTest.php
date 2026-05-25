@@ -459,6 +459,92 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testWorkoutGenerationAcceptsSelectedMovementsAsObjectList(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
+
+        $movementService = new class([$row, $burpee]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 10 minutes\n250 m Row\n10 Burpees",
+                    'scalingOptions' => "RX: as written\nIntermediate: 200 m Row and 8 Burpees\nScaled: 150 m Row and 6 Burpees",
+                    'movements' => [
+                        ['name' => 'Row'],
+                        ['name' => 'Burpee'],
+                    ],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Object movement list test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(2)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Row', 'Burpee'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testPrescriptionStandardPromptBuilderAddsRelevantHyroxAndCrossfitLoads(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

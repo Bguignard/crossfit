@@ -357,9 +357,18 @@ TXT;
         }
 
         return array_values(array_filter(array_map(
-            static fn (mixed $movement): ?string => is_string($movement) && trim($movement) !== '' ? trim($movement) : null,
+            static fn (mixed $movement): ?string => self::movementNameFromPayloadItem($movement),
             $movements
         )));
+    }
+
+    private static function movementNameFromPayloadItem(mixed $movement): ?string
+    {
+        if (is_array($movement) && array_key_exists('name', $movement)) {
+            $movement = $movement['name'];
+        }
+
+        return is_string($movement) && trim($movement) !== '' ? trim($movement) : null;
     }
 
     private function scalingOptionsFromFlow(string $flow): string
