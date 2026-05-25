@@ -213,6 +213,11 @@ EOD;
 
         $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
         $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
+        $this->assertSelectedMovementNamesAppearInFlow(
+            $generatedWorkout['movements'],
+            array_merge($mandatoryMovements, $candidateMovements),
+            $generatedWorkout['flow']
+        );
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
@@ -434,6 +439,44 @@ TXT;
         }
 
         return rtrim($flow)."\n\nScaling options:\n".trim($scalingOptions);
+    }
+
+    /**
+     * @param list<string> $selectedMovementNames
+     * @param Movement[]   $allowedMovements
+     */
+    private function assertSelectedMovementNamesAppearInFlow(array $selectedMovementNames, array $allowedMovements, string $flow): void
+    {
+        $allowedMovementsByName = [];
+        foreach ($allowedMovements as $movement) {
+            $allowedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
+
+        foreach ($selectedMovementNames as $selectedMovementName) {
+            $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
+            if (!$movement instanceof Movement) {
+                continue;
+            }
+
+            if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
+            }
+        }
+    }
+
+    private function flowWithoutScalingOptions(string $flow): string
+    {
+        $parts = preg_split('/^\s*scaling(?: options)?\s*:/mi', $flow, 2);
+
+        return is_array($parts) ? $parts[0] : $flow;
+    }
+
+    private function normalizeMovementSearchText(string $text): string
+    {
+        return preg_replace('/[^a-z0-9]+/', '', strtolower($text)) ?? '';
     }
 
     /**
