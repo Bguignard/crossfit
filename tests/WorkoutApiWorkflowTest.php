@@ -364,7 +364,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertResponseStatusCodeSame(405);
     }
 
-    public function testWorkoutGenerationIsNotPubliclyListedOrTriggeredByGet(): void
+    public function testWorkoutGenerationIsNotPubliclyListedOrTriggeredByLegacyRoutes(): void
     {
         $this->browser()->request('GET', '/api/workout_generations');
 
@@ -372,7 +372,15 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         $this->browser()->request('GET', '/api/workout-generator/00000000-0000-0000-0000-000000000000');
 
-        self::assertResponseStatusCodeSame(405);
+        self::assertResponseStatusCodeSame(404);
+
+        $this->browser()->request('POST', '/api/workout-generator/00000000-0000-0000-0000-000000000000');
+
+        self::assertResponseStatusCodeSame(404);
+
+        $this->browser()->request('POST', '/api/simple-workout-generator/00000000-0000-0000-0000-000000000000');
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testFrontendCanCreateAndUpdateWorkoutGenerationDraft(): void
