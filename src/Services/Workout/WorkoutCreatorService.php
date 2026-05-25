@@ -373,7 +373,7 @@ TXT;
 
     private function scalingOptionsFromFlow(string $flow): string
     {
-        if (preg_match('/^\s*scaling(?: options)?\s*:\s*(?<scaling>.*)$/mis', $flow, $matches) !== 1) {
+        if (preg_match('/^\s*scaling(?: options)?\s*:\s*(?<scaling>.*?)(?:\n{2,}\S[^\n]*:|\z)/mis', $flow, $matches) !== 1) {
             return '';
         }
 
