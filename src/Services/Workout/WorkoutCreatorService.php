@@ -368,10 +368,17 @@ TXT;
             return null;
         }
 
-        return array_values(array_filter(array_map(
-            static fn (mixed $movement): ?string => self::movementNameFromPayloadItem($movement),
-            $movements
-        )));
+        $movementNames = [];
+        foreach ($movements as $movement) {
+            $movementName = self::movementNameFromPayloadItem($movement);
+            if ($movementName === null) {
+                return null;
+            }
+
+            $movementNames[] = $movementName;
+        }
+
+        return $movementNames;
     }
 
     private static function movementNameFromPayloadItem(mixed $movement): ?string
