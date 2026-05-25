@@ -218,6 +218,7 @@ EOD;
             array_merge($mandatoryMovements, $candidateMovements),
             $generatedWorkout['flow']
         );
+        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $generatedWorkout['flow']);
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
@@ -463,6 +464,21 @@ TXT;
 
             if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
+            }
+        }
+    }
+
+    /**
+     * @param Movement[] $mandatoryMovements
+     */
+    private function assertMandatoryMovementsAppearInFlow(array $mandatoryMovements, string $flow): void
+    {
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
+
+        foreach ($mandatoryMovements as $movement) {
+            if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation did not include mandatory movement "%s" in the workout flow.', $movement->getName()));
             }
         }
     }
