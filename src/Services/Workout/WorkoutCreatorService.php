@@ -479,15 +479,12 @@ TXT;
      */
     private function assertSelectedMovementNamesAppearInFlow(array $selectedMovementNames, array $allowedMovements, string $flow): void
     {
-        $allowedMovementsByName = [];
-        foreach ($allowedMovements as $movement) {
-            $allowedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
-        }
+        $allowedMovementsByName = $this->movementsBySearchText($allowedMovements);
 
         $mainFlow = $this->flowWithoutScalingOptions($flow);
 
         foreach ($selectedMovementNames as $selectedMovementName) {
-            $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
+            $movement = $allowedMovementsByName[$this->normalizeMovementSearchText($selectedMovementName)] ?? null;
             if (!$movement instanceof Movement) {
                 continue;
             }
@@ -630,6 +627,36 @@ TXT;
 
     /**
      * @param Movement[] $movements
+     *
+     * @return array<string, Movement>
+     */
+    private function movementsBySearchText(array $movements): array
+    {
+        $movementsBySearchText = [];
+        $ambiguousSearchTexts = [];
+
+        foreach ($movements as $movement) {
+            foreach ($this->movementSearchTexts([$movement]) as $movementSearchText) {
+                if (isset($ambiguousSearchTexts[$movementSearchText])) {
+                    continue;
+                }
+
+                $existingMovement = $movementsBySearchText[$movementSearchText] ?? null;
+                if ($existingMovement instanceof Movement && $existingMovement !== $movement) {
+                    unset($movementsBySearchText[$movementSearchText]);
+                    $ambiguousSearchTexts[$movementSearchText] = true;
+                    continue;
+                }
+
+                $movementsBySearchText[$movementSearchText] = $movement;
+            }
+        }
+
+        return $movementsBySearchText;
+    }
+
+    /**
+     * @param Movement[] $movements
      */
     private function normalizedFlowWithoutOtherMovementNames(string $flow, array $movements, Movement $movementToKeep): string
     {
@@ -672,10 +699,7 @@ TXT;
      */
     private function resolveSelectedMovements(array $selectedMovementNames, array $mandatoryMovements, array $candidateMovements, int $targetCount): array
     {
-        $allowedMovementsByName = [];
-        foreach (array_merge($mandatoryMovements, $candidateMovements) as $movement) {
-            $allowedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
-        }
+        $allowedMovementsByName = $this->movementsBySearchText(array_merge($mandatoryMovements, $candidateMovements));
 
         $selectedMovementsByName = [];
         foreach ($mandatoryMovements as $movement) {
@@ -684,8 +708,9 @@ TXT;
 
         $matchedSelectedMovementCount = 0;
         $seenSelectedMovementNames = [];
+        $seenSelectedCanonicalMovementNames = [];
         foreach ($selectedMovementNames as $selectedMovementName) {
-            $normalizedSelectedMovementName = $this->normalizeMovementName($selectedMovementName);
+            $normalizedSelectedMovementName = $this->normalizeMovementSearchText($selectedMovementName);
             if (isset($seenSelectedMovementNames[$normalizedSelectedMovementName])) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation returned duplicate movement "%s".', $selectedMovementName));
             }
@@ -695,8 +720,14 @@ TXT;
             if (!$movement instanceof Movement) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation returned unrecognized movement "%s".', $selectedMovementName));
             }
+            $canonicalMovementName = $this->normalizeMovementName($movement->getName());
+            if (isset($seenSelectedCanonicalMovementNames[$canonicalMovementName])) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation returned duplicate movement "%s".', $selectedMovementName));
+            }
+            $seenSelectedCanonicalMovementNames[$canonicalMovementName] = true;
+
             ++$matchedSelectedMovementCount;
-            $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+            $selectedMovementsByName[$canonicalMovementName] = $movement;
         }
 
         if ($matchedSelectedMovementCount === 0) {

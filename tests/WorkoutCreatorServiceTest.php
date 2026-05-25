@@ -1659,6 +1659,171 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testWorkoutGenerationResolvesMovementAliasesReturnedByOpenAI(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $chestToBarPullUp = new Movement('Chest to Bar Pull Up', $difficulty, $gymnastics);
+        $muscleUp = new Movement('Muscle Up', $difficulty, $gymnastics);
+        $wallBallShot = new Movement('Wall Ball Shot', $difficulty, $weightlifting);
+
+        $movementService = new class([$chestToBarPullUp, $muscleUp, $wallBallShot]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 15 minutes\n10 C2B\n5 BMU\n20 wall balls",
+                    'scalingOptions' => "RX: as written\nIntermediate: 8 C2B, 3 BMU, 16 wall balls\nScaled: jumping pull-ups, transitions and light wall balls",
+                    'movements' => ['C2B', 'BMU', 'Wall Balls'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Generated movement aliases test')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics, $weightlifting])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Chest to Bar Pull Up', 'Muscle Up', 'Wall Ball Shot'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
+    public function testWorkoutGenerationRejectsDuplicateMovementAliasesReturnedByOpenAI(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $muscleUp = new Movement('Muscle Up', $difficulty, $gymnastics);
+
+        $movementService = new class([$muscleUp]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 10 minutes\n5 BMU",
+                    'scalingOptions' => "RX: as written\nIntermediate: 3 BMU\nScaled: transitions",
+                    'movements' => ['Muscle Up', 'BMU'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Duplicate generated movement aliases test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation returned duplicate movement "BMU".');
+
+        (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+    }
+
     public function testWorkoutGenerationRejectsIncompleteGeneratedMovementList(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
