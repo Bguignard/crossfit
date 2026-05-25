@@ -24,6 +24,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
             throw new \InvalidArgumentException('The number of mandatory movements cannot be greater than the number of different movements.');
         }
+        $this->assertMandatoryMovementsAreNotBanned($workoutGeneration);
 
         $possibleMovements = [];
         if (count($workoutGeneration->getMandatoryMovements()) < $workoutGeneration->getNumberOfDifferentMovements()) {
@@ -281,6 +282,20 @@ EOD;
         }
 
         return $prompt;
+    }
+
+    private function assertMandatoryMovementsAreNotBanned(WorkoutGeneration $workoutGeneration): void
+    {
+        $bannedMovementNames = [];
+        foreach ($workoutGeneration->getBannedMovements() as $movement) {
+            $bannedMovementNames[$this->normalizeMovementName($movement->getName())] = true;
+        }
+
+        foreach ($workoutGeneration->getMandatoryMovements() as $movement) {
+            if (isset($bannedMovementNames[$this->normalizeMovementName($movement->getName())])) {
+                throw new \InvalidArgumentException(sprintf('Movement "%s" cannot be both mandatory and banned.', $movement->getName()));
+            }
+        }
     }
 
     private function levelPrescriptionGuidance(WorkoutGeneration $workoutGeneration): string

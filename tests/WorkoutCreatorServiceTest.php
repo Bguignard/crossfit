@@ -27,6 +27,37 @@ use PHPUnit\Framework\TestCase;
 
 class WorkoutCreatorServiceTest extends TestCase
 {
+    public function testWorkoutGenerationRejectsMovementThatIsBothMandatoryAndBanned(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+
+        $movementService = $this->createMock(MovementServiceInterface::class);
+        $chatGpt = $this->createMock(ChatGPTApiKeyInterface::class);
+        $chatGpt->expects(self::never())->method('getWorkoutFlowFromPrompt');
+        $workoutOriginService = $this->createMock(WorkoutOriginServiceInterface::class);
+        $workoutOriginService->expects(self::never())->method('getExistingOrInsertNewWorkoutOrigin');
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Contradictory movement filter test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setMandatoryMovements([$row])
+            ->setBannedMovements([$row])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Movement "Row" cannot be both mandatory and banned.');
+
+        (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+    }
+
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
