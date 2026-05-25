@@ -176,7 +176,7 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setNumberOfDifferentMovements($this->positiveInt($payload['numberOfDifferentMovements'], 'numberOfDifferentMovements'));
         }
         if (array_key_exists('isTeamWorkout', $payload)) {
-            $workoutGeneration->setIsTeamWorkout((bool) $payload['isTeamWorkout']);
+            $workoutGeneration->setIsTeamWorkout($this->requiredBool($payload['isTeamWorkout'], 'isTeamWorkout'));
         }
         if (array_key_exists('intervalsTime', $payload)) {
             $workoutGeneration->setIntervalsTime($payload['intervalsTime'] === null ? null : $this->positiveInt($payload['intervalsTime'], 'intervalsTime'));
@@ -289,6 +289,15 @@ class WorkoutGenerationFlowController extends AbstractController
         $value = trim((string) $value);
         if ($value === '') {
             throw new UnprocessableEntityHttpException(sprintf('"%s" must be a non-empty string.', $fieldName));
+        }
+
+        return $value;
+    }
+
+    private function requiredBool(mixed $value, string $fieldName): bool
+    {
+        if (!is_bool($value)) {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a boolean.', $fieldName));
         }
 
         return $value;
