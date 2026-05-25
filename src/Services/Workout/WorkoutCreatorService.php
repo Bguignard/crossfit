@@ -226,13 +226,14 @@ EOD;
         );
         $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $generatedWorkout['flow']);
         $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $generatedWorkout['flow']);
-        $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
             $mandatoryMovements,
             $candidateMovements,
             $workoutGeneration->getNumberOfDifferentMovements()
         );
+        $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, array_merge($mandatoryMovements, $candidateMovements), $generatedWorkout['flow']);
+        $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
 
         // Création de l'entité Workout avec les données reçues
         // todo : faire un service qui crée un workoutOrigin avec l'année courante si il n'existe pas
@@ -478,6 +479,37 @@ TXT;
 
             if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
+            }
+        }
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     * @param Movement[] $allowedMovements
+     */
+    private function assertNoUnlistedAllowedMovementsAppearInFlow(array $selectedMovements, array $allowedMovements, string $flow): void
+    {
+        $selectedMovementNames = [];
+        foreach ($selectedMovements as $movement) {
+            $selectedMovementNames[$this->normalizeMovementName($movement->getName())] = true;
+        }
+
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
+        $normalizedSelectedMovementSearchTexts = array_map(
+            fn (Movement $movement): string => $this->normalizeMovementSearchText($movement->getName()),
+            $selectedMovements
+        );
+        usort($normalizedSelectedMovementSearchTexts, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+        $flowWithoutSelectedMovements = str_replace($normalizedSelectedMovementSearchTexts, '', $normalizedFlow);
+
+        foreach ($allowedMovements as $movement) {
+            if (isset($selectedMovementNames[$this->normalizeMovementName($movement->getName())])) {
+                continue;
+            }
+
+            if (str_contains($flowWithoutSelectedMovements, $this->normalizeMovementSearchText($movement->getName()))) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation included movement "%s" in the flow but did not list it in movements.', $movement->getName()));
             }
         }
     }
