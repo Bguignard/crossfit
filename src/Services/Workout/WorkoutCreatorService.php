@@ -618,6 +618,10 @@ TXT;
     {
         return match ($this->normalizeMovementName($movementName)) {
             'chest to bar pull up' => ['C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
+            'double under' => ['DUs', 'Double Unders'],
+            'handstand push up' => ['HSPU', 'HSPUs', 'Handstand Push Ups'],
+            'strict handstand push up' => ['Strict HSPU', 'Strict HSPUs', 'SHSPU', 'SHSPUs', 'Strict Handstand Push Ups'],
+            'toes to bar' => ['T2B', 'TTB', 'Toes to Bars'],
             default => [],
         };
     }
