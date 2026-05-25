@@ -211,10 +211,10 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setMandatoryBodyParts($this->catalogEntities(BodyPart::class, $payload['mandatoryBodyParts']));
         }
         if (array_key_exists('bannedMovements', $payload)) {
-            $workoutGeneration->setBannedMovements($this->movementEntities($payload['bannedMovements']));
+            $workoutGeneration->setBannedMovements($this->movementEntities($payload['bannedMovements'], 'bannedMovements'));
         }
         if (array_key_exists('mandatoryMovements', $payload)) {
-            $workoutGeneration->setMandatoryMovements($this->movementEntities($payload['mandatoryMovements']));
+            $workoutGeneration->setMandatoryMovements($this->movementEntities($payload['mandatoryMovements'], 'mandatoryMovements'));
         }
 
         $this->assertMandatoryMovementCountFitsRequestedCount($workoutGeneration);
@@ -391,18 +391,25 @@ class WorkoutGenerationFlowController extends AbstractController
     /**
      * @return list<Movement>
      */
-    private function movementEntities(mixed $identifiers): array
+    private function movementEntities(mixed $identifiers, string $fieldName): array
     {
         if (!is_array($identifiers)) {
             throw new UnprocessableEntityHttpException('Movement references must be an array.');
         }
 
         $repository = $this->entityManager->getRepository(Movement::class);
+        $seenIdentifiers = [];
 
-        return array_values(array_map(function (mixed $identifier) use ($repository): Movement {
+        return array_values(array_map(function (mixed $identifier) use ($repository, $fieldName, &$seenIdentifiers): Movement {
             if (!is_string($identifier) || !Uuid::isValid($identifier)) {
                 throw new UnprocessableEntityHttpException(sprintf('Invalid movement reference "%s".', $this->catalogReferenceLabel($identifier)));
             }
+
+            $normalizedIdentifier = strtolower($identifier);
+            if (isset($seenIdentifiers[$normalizedIdentifier])) {
+                throw new UnprocessableEntityHttpException(sprintf('Duplicate movement reference "%s" in %s.', $identifier, $fieldName));
+            }
+            $seenIdentifiers[$normalizedIdentifier] = true;
 
             $movement = $repository->find(Uuid::fromString($identifier));
             if (!$movement instanceof Movement) {
