@@ -327,7 +327,7 @@ TXT;
         }
 
         $flow = trim((string) ($payload['flow'] ?? ''));
-        $scalingOptions = trim((string) ($payload['scalingOptions'] ?? ''));
+        $scalingOptions = $this->scalingOptionsFromPayload($payload['scalingOptions'] ?? '');
         if ($scalingOptions === '') {
             $scalingOptions = $this->scalingOptionsFromFlow($flow);
         }
@@ -369,6 +369,53 @@ TXT;
         }
 
         return is_string($movement) && trim($movement) !== '' ? trim($movement) : null;
+    }
+
+    private function scalingOptionsFromPayload(mixed $scalingOptions): string
+    {
+        if (is_string($scalingOptions)) {
+            return trim($scalingOptions);
+        }
+
+        if (!is_array($scalingOptions)) {
+            return '';
+        }
+
+        $lines = [];
+        foreach ($scalingOptions as $key => $option) {
+            $line = $this->scalingOptionLineFromPayloadItem($option, is_string($key) ? $key : null);
+            if ($line !== null) {
+                $lines[] = $line;
+            }
+        }
+
+        return trim(implode("\n", $lines));
+    }
+
+    private function scalingOptionLineFromPayloadItem(mixed $option, ?string $fallbackLevel): ?string
+    {
+        if (is_string($option)) {
+            $option = trim($option);
+
+            return $option !== '' ? $option : null;
+        }
+
+        if (!is_array($option)) {
+            return null;
+        }
+
+        $level = $option['level'] ?? $option['name'] ?? $option['title'] ?? $fallbackLevel;
+        $text = $option['description'] ?? $option['option'] ?? $option['adaptation'] ?? $option['text'] ?? null;
+
+        if (!is_string($text) || trim($text) === '') {
+            return null;
+        }
+
+        if (is_string($level) && trim($level) !== '') {
+            return trim($level).': '.trim($text);
+        }
+
+        return trim($text);
     }
 
     private function scalingOptionsFromFlow(string $flow): string
