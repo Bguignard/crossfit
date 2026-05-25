@@ -224,15 +224,16 @@ EOD;
             array_merge($mandatoryMovements, $candidateMovements),
             $generatedWorkout['flow']
         );
-        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $generatedWorkout['flow']);
-        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $generatedWorkout['flow']);
+        $allowedMovements = array_merge($mandatoryMovements, $candidateMovements);
+        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
+        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
             $mandatoryMovements,
             $candidateMovements,
             $workoutGeneration->getNumberOfDifferentMovements()
         );
-        $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, array_merge($mandatoryMovements, $candidateMovements), $generatedWorkout['flow']);
+        $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
 
         // Création de l'entité Workout avec les données reçues
@@ -469,7 +470,6 @@ TXT;
         }
 
         $mainFlow = $this->flowWithoutScalingOptions($flow);
-        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
 
         foreach ($selectedMovementNames as $selectedMovementName) {
             $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
@@ -477,6 +477,7 @@ TXT;
                 continue;
             }
 
+            $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
             if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
             }
@@ -516,13 +517,14 @@ TXT;
 
     /**
      * @param Movement[] $mandatoryMovements
+     * @param Movement[] $allowedMovements
      */
-    private function assertMandatoryMovementsAppearInFlow(array $mandatoryMovements, string $flow): void
+    private function assertMandatoryMovementsAppearInFlow(array $mandatoryMovements, array $allowedMovements, string $flow): void
     {
         $mainFlow = $this->flowWithoutScalingOptions($flow);
-        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
 
         foreach ($mandatoryMovements as $movement) {
+            $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
             if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation did not include mandatory movement "%s" in the workout flow.', $movement->getName()));
             }
@@ -531,11 +533,21 @@ TXT;
 
     /**
      * @param Movement[] $bannedMovements
+     * @param Movement[] $allowedMovements
      */
-    private function assertBannedMovementsDoNotAppearInFlow(array $bannedMovements, string $flow): void
+    private function assertBannedMovementsDoNotAppearInFlow(array $bannedMovements, array $allowedMovements, string $flow): void
     {
+        $bannedMovementNames = [];
+        foreach ($bannedMovements as $movement) {
+            $bannedMovementNames[$this->normalizeMovementName($movement->getName())] = true;
+        }
+
+        $allowedNonBannedMovements = array_values(array_filter(
+            $allowedMovements,
+            fn (Movement $movement): bool => !isset($bannedMovementNames[$this->normalizeMovementName($movement->getName())])
+        ));
         $mainFlow = $this->flowWithoutScalingOptions($flow);
-        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
+        $normalizedFlow = $this->normalizedFlowWithMovementsRemoved($mainFlow, $allowedNonBannedMovements);
 
         foreach ($bannedMovements as $movement) {
             if (str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
@@ -554,6 +566,35 @@ TXT;
     private function normalizeMovementSearchText(string $text): string
     {
         return preg_replace('/[^a-z0-9]+/', '', strtolower($text)) ?? '';
+    }
+
+    /**
+     * @param Movement[] $movements
+     */
+    private function normalizedFlowWithoutOtherMovementNames(string $flow, array $movements, Movement $movementToKeep): string
+    {
+        $movementToKeepName = $this->normalizeMovementName($movementToKeep->getName());
+        $movementsToRemove = array_values(array_filter(
+            $movements,
+            fn (Movement $movement): bool => $this->normalizeMovementName($movement->getName()) !== $movementToKeepName
+        ));
+
+        return $this->normalizedFlowWithMovementsRemoved($flow, $movementsToRemove);
+    }
+
+    /**
+     * @param Movement[] $movements
+     */
+    private function normalizedFlowWithMovementsRemoved(string $flow, array $movements): string
+    {
+        $normalizedFlow = $this->normalizeMovementSearchText($flow);
+        $movementSearchTexts = array_values(array_unique(array_filter(array_map(
+            fn (Movement $movement): string => $this->normalizeMovementSearchText($movement->getName()),
+            $movements
+        ))));
+        usort($movementSearchTexts, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+
+        return str_replace($movementSearchTexts, '', $normalizedFlow);
     }
 
     /**
