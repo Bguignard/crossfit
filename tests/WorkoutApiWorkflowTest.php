@@ -445,6 +445,21 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotNull($this->getRepository(WorkoutGeneration::class)->find($draft['id']));
     }
 
+    public function testWorkoutGenerationDraftRejectsInvalidJsonPayload(): void
+    {
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            '{"name": "Broken draft",'
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
+    }
+
     public function testFrontendCanRegenerateWorkoutForTheSameDraft(): void
     {
         $this->browser()->disableReboot();
