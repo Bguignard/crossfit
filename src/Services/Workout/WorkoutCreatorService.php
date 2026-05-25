@@ -539,7 +539,7 @@ TXT;
         foreach ($selectedMovementNames as $selectedMovementName) {
             $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
             if (!$movement instanceof Movement) {
-                continue;
+                throw new \RuntimeException(sprintf('OpenAI workout generation returned unrecognized movement "%s".', $selectedMovementName));
             }
             ++$matchedSelectedMovementCount;
             $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
