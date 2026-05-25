@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
 
@@ -245,10 +246,19 @@ class WorkoutGenerationFlowController extends AbstractController
     {
         $entity = $this->catalogEntity($className, $identifier);
         if ($entity === null) {
-            throw $this->createNotFoundException(sprintf('%s "%s" not found.', $className, (string) $identifier));
+            throw new UnprocessableEntityHttpException(sprintf('Invalid workout generation catalog reference "%s".', $this->catalogReferenceLabel($identifier)));
         }
 
         return $entity;
+    }
+
+    private function catalogReferenceLabel(mixed $identifier): string
+    {
+        if (is_scalar($identifier) || $identifier instanceof \Stringable) {
+            return (string) $identifier;
+        }
+
+        return get_debug_type($identifier);
     }
 
     /**
