@@ -54,9 +54,14 @@ class WorkoutGenerationFlowController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         $payload = $this->payload($request);
-        if (!array_key_exists('name', $payload)) {
-            throw new UnprocessableEntityHttpException('"name" is required.');
-        }
+        $this->requirePayloadFields($payload, [
+            'name',
+            'timeCap',
+            'movementGenerationType',
+            'workoutType',
+            'movementDifficulty',
+            'numberOfDifferentMovements',
+        ]);
 
         $workoutGeneration = new WorkoutGeneration();
         $this->hydrate($workoutGeneration, $payload);
@@ -238,6 +243,18 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @param list<string> $fieldNames
+     */
+    private function requirePayloadFields(array $payload, array $fieldNames): void
+    {
+        foreach ($fieldNames as $fieldName) {
+            if (!array_key_exists($fieldName, $payload)) {
+                throw new UnprocessableEntityHttpException(sprintf('"%s" is required.', $fieldName));
+            }
+        }
     }
 
     /**
