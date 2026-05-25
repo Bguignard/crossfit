@@ -216,6 +216,22 @@ class WorkoutGenerationFlowController extends AbstractController
         if (array_key_exists('mandatoryMovements', $payload)) {
             $workoutGeneration->setMandatoryMovements($this->movementEntities($payload['mandatoryMovements']));
         }
+
+        $this->assertNoConflictingMovementFilters($workoutGeneration);
+    }
+
+    private function assertNoConflictingMovementFilters(WorkoutGeneration $workoutGeneration): void
+    {
+        $bannedMovementNames = [];
+        foreach ($workoutGeneration->getBannedMovements() as $movement) {
+            $bannedMovementNames[$this->normalizeMovementName($movement->getName())] = true;
+        }
+
+        foreach ($workoutGeneration->getMandatoryMovements() as $movement) {
+            if (isset($bannedMovementNames[$this->normalizeMovementName($movement->getName())])) {
+                throw new UnprocessableEntityHttpException(sprintf('Movement "%s" cannot be both mandatory and banned.', $movement->getName()));
+            }
+        }
     }
 
     private function getPossibleMovements(WorkoutGeneration $workoutGeneration): array
@@ -485,5 +501,10 @@ class WorkoutGenerationFlowController extends AbstractController
             'id' => $movement->getId()->toString(),
             'name' => $movement->getName(),
         ];
+    }
+
+    private function normalizeMovementName(string $name): string
+    {
+        return strtolower(trim($name));
     }
 }

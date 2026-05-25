@@ -2,6 +2,7 @@
 
 namespace App\Tests;
 
+use App\DataFixtures\MovementData;
 use App\DataFixtures\WorkoutData;
 use App\Entity\Competition\Athlete;
 use App\Entity\Competition\AthletePublicAnalysis;
@@ -21,6 +22,7 @@ use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Implement;
+use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementType;
 use App\Entity\Workout\Workout;
@@ -644,6 +646,40 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                 'numberOfDifferentMovements' => 1,
                 'bannedMovements' => [],
                 'mandatoryMovements' => ['not-a-uuid'],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
+    }
+
+    public function testWorkoutGenerationDraftRejectsMovementThatIsBothMandatoryAndBanned(): void
+    {
+        $row = $this->getReference(MovementData::MOVEMENT_ROW, Movement::class);
+        $rowId = $row->getId()->toString();
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Conflicting movement filters draft',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => [],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => [],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [$rowId],
+                'mandatoryMovements' => [$rowId],
                 'intervalsTime' => null,
                 'intervalsRestTime' => null,
             ], JSON_THROW_ON_ERROR)
