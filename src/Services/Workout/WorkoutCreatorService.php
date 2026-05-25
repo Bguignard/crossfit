@@ -99,6 +99,11 @@ EOD;
             $promptForChatGPT .= "Mandatory movements that must appear in the workout:\n";
             $promptForChatGPT .= $this->formatMovementPromptSection($mandatoryMovements);
         }
+        $bannedMovements = $workoutGeneration->getBannedMovements()->toArray();
+        if (count($bannedMovements) > 0) {
+            $promptForChatGPT .= "Banned movements that must not appear in the workout flow:\n";
+            $promptForChatGPT .= $this->formatMovementPromptSection($bannedMovements);
+        }
         // - Mouvements possibles du workout avec seulement les implements disponibles
         $promptForChatGPT .= "Candidate movement pool. Pick the best movements for the stimulus from this complete pool:\n";
         $promptForChatGPT .= $this->formatMovementPromptSection($candidateMovements);

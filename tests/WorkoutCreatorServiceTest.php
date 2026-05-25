@@ -34,6 +34,7 @@ class WorkoutCreatorServiceTest extends TestCase
         $run = new Movement('Run', $difficulty, $cardio);
         $row = new Movement('Row', $difficulty, $cardio);
         $burpee = new Movement('Burpee', $difficulty, $cardio);
+        $boxJump = new Movement('Box Jump', $difficulty, $cardio);
 
         $movementService = new class([$run, $row, $burpee]) implements MovementServiceInterface {
             /**
@@ -105,6 +106,7 @@ class WorkoutCreatorServiceTest extends TestCase
             ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
             ->setMovementDifficulty($difficulty)
             ->setMovementTypes([$cardio])
+            ->setBannedMovements([$boxJump])
             ->setNumberOfDifferentMovements(2)
             ->setNumberOfRounds(1)
             ->setIsTeamWorkout(false);
@@ -115,6 +117,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('- Run', $chatGpt->prompt);
         self::assertStringContainsString('- Row', $chatGpt->prompt);
         self::assertStringContainsString('- Burpee', $chatGpt->prompt);
+        self::assertStringContainsString('Banned movements that must not appear in the workout flow', $chatGpt->prompt);
+        self::assertStringContainsString('- Box Jump', $chatGpt->prompt);
         self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
         self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
