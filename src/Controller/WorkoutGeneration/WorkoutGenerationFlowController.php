@@ -266,7 +266,11 @@ class WorkoutGenerationFlowController extends AbstractController
             throw new BadRequestHttpException('Invalid JSON request body.', $exception);
         }
 
-        return is_array($payload) ? $payload : [];
+        if (!is_array($payload)) {
+            throw new BadRequestHttpException('JSON request body must be an object.');
+        }
+
+        return $payload;
     }
 
     /**

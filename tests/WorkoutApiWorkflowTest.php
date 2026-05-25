@@ -470,6 +470,35 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
     }
 
+    public function testWorkoutGenerationDraftRejectsNonObjectJsonPayload(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Existing draft')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty(new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE))
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $entityManager->persist($workoutGeneration);
+        $entityManager->flush();
+
+        $this->browser()->request(
+            'PATCH',
+            sprintf('/api/workout-generation-flow/%s', $workoutGeneration->getId()),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            '"noop"'
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame('Existing draft', $this->getRepository(WorkoutGeneration::class)->find($workoutGeneration->getId())?->getName());
+    }
+
     public function testWorkoutGenerationDraftRejectsBlankName(): void
     {
         $this->browser()->request(
