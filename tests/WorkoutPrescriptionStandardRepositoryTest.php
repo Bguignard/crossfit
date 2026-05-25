@@ -30,4 +30,19 @@ final class WorkoutPrescriptionStandardRepositoryTest extends AbstractIntegratio
         self::assertContains('global', $contextLabels);
         self::assertNotContains('wrong movement', $contextLabels);
     }
+
+    public function testFindForPromptPrioritizesExactMovementStandardsBeforeGenericImplementStandards(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist(new WorkoutPrescriptionStandard('repository_test', 'crossfit', 'Repository Relevance', 'women', null, 'barbell', '30.00', 'kg', 1, 'generic barbell', null, 1));
+        $entityManager->persist(new WorkoutPrescriptionStandard('repository_test', 'crossfit', 'Repository Relevance', 'women', 'Deadlift', 'barbell', '102.00', 'kg', 1, 'exact deadlift', null, 80));
+        $entityManager->flush();
+
+        /** @var WorkoutPrescriptionStandardRepository $repository */
+        $repository = $this->getRepository(WorkoutPrescriptionStandard::class);
+        $standards = $repository->findForPrompt('Repository Relevance', ['Deadlift'], ['barbell'], false, 1);
+
+        self::assertCount(1, $standards);
+        self::assertSame('exact deadlift', $standards[0]->getContextLabel());
+    }
 }

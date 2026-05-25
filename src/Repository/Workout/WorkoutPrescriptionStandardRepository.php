@@ -53,6 +53,15 @@ class WorkoutPrescriptionStandardRepository extends ServiceEntityRepository
 
         $orExpressions = ['standard.movementName IS NULL AND standard.implementName IS NULL'];
         if ($movementNames !== []) {
+            $query
+                ->addSelect($this->relevanceExpression($implementNames).' AS HIDDEN relevance')
+                ->orderBy('relevance', 'ASC')
+                ->addOrderBy('standard.priority', 'ASC')
+                ->addOrderBy('standard.sport', 'ASC')
+                ->addOrderBy('standard.implementName', 'ASC')
+                ->addOrderBy('standard.movementName', 'ASC')
+                ->addOrderBy('standard.division', 'ASC');
+
             $movementExpression = 'standard.movementName IN (:movementNames)';
             if ($implementNames !== []) {
                 $movementExpression = sprintf('(%s AND (standard.implementName IS NULL OR standard.implementName IN (:implementNames)))', $movementExpression);
@@ -73,5 +82,24 @@ class WorkoutPrescriptionStandardRepository extends ServiceEntityRepository
             ->andWhere('('.implode(' OR ', $orExpressions).')')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param list<string> $implementNames
+     */
+    private function relevanceExpression(array $implementNames): string
+    {
+        if ($implementNames === []) {
+            return 'CASE WHEN standard.movementName IN (:movementNames) THEN 0 ELSE 2 END';
+        }
+
+        return <<<'DQL'
+            CASE
+                WHEN standard.movementName IN (:movementNames) AND standard.implementName IN (:implementNames) THEN 0
+                WHEN standard.movementName IN (:movementNames) AND standard.implementName IS NULL THEN 1
+                WHEN standard.movementName IS NULL AND standard.implementName IN (:implementNames) THEN 2
+                ELSE 3
+            END
+        DQL;
     }
 }
