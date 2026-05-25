@@ -1125,6 +1125,171 @@ class WorkoutCreatorServiceTest extends TestCase
         (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
     }
 
+    public function testWorkoutGenerationDoesNotMatchShortMovementInsideLongerMovementName(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $pushUp = new Movement('Push Up', $difficulty, $gymnastics);
+        $handstandPushUp = new Movement('Handstand Push Up', $difficulty, $gymnastics);
+
+        $movementService = new class([$pushUp, $handstandPushUp]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 10 minutes\n10 Handstand Push Ups",
+                    'scalingOptions' => "RX: as written\nIntermediate: 8 Handstand Push Ups\nScaled: 10 Pike Push Ups",
+                    'movements' => ['Push Up'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Short movement inside longer movement name test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation listed movement "Push Up" but did not include it in the workout flow.');
+
+        (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+    }
+
+    public function testWorkoutGenerationAllowsLongerMovementWhenShorterMovementIsBanned(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $pushUp = new Movement('Push Up', $difficulty, $gymnastics);
+        $handstandPushUp = new Movement('Handstand Push Up', $difficulty, $gymnastics);
+
+        $movementService = new class([$handstandPushUp]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 10 minutes\n10 Handstand Push Ups",
+                    'scalingOptions' => "RX: as written\nIntermediate: 8 Handstand Push Ups\nScaled: 10 Pike Push Ups",
+                    'movements' => ['Handstand Push Up'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Longer movement with shorter banned movement test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics])
+            ->setBannedMovements([$pushUp])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Handstand Push Up'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testWorkoutGenerationRejectsIncompleteGeneratedMovementList(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
