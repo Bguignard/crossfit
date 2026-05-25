@@ -617,11 +617,13 @@ TXT;
     private function movementSearchAliases(string $movementName): array
     {
         return match ($this->normalizeMovementName($movementName)) {
-            'chest to bar pull up' => ['C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
+            'chest to bar pull up' => ['C2B', 'C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
             'double under' => ['DU', 'DUs', 'Double Unders'],
             'handstand push up' => ['HSPU', 'HSPUs', 'Handstand Push Ups'],
+            'muscle up' => ['BMU', 'BMUs', 'Bar Muscle Up', 'Bar Muscle Ups', 'RMU', 'RMUs', 'Ring Muscle Up', 'Ring Muscle Ups'],
             'strict handstand push up' => ['Strict HSPU', 'Strict HSPUs', 'SHSPU', 'SHSPUs', 'Strict Handstand Push Ups'],
             'toes to bar' => ['T2B', 'TTB', 'Toes to Bars'],
+            'wall ball shot' => ['Wall Ball', 'Wall Balls', 'Wall Ball Shots'],
             default => [],
         };
     }
