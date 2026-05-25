@@ -689,6 +689,43 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
     }
 
+    public function testWorkoutGenerationDraftRejectsTooManyMandatoryMovements(): void
+    {
+        $row = $this->getReference(MovementData::MOVEMENT_ROW, Movement::class);
+        $run = $this->getReference(MovementData::MOVEMENT_RUN, Movement::class);
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Too many mandatory movements draft',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => [],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => [],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [
+                    $row->getId()->toString(),
+                    $run->getId()->toString(),
+                ],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
+    }
+
     public function testWorkoutGenerationDraftRejectsInvalidCatalogListReference(): void
     {
         $this->browser()->request(

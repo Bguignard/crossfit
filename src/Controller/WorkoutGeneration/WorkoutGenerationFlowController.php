@@ -217,7 +217,15 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setMandatoryMovements($this->movementEntities($payload['mandatoryMovements']));
         }
 
+        $this->assertMandatoryMovementCountFitsRequestedCount($workoutGeneration);
         $this->assertNoConflictingMovementFilters($workoutGeneration);
+    }
+
+    private function assertMandatoryMovementCountFitsRequestedCount(WorkoutGeneration $workoutGeneration): void
+    {
+        if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new UnprocessableEntityHttpException('The number of mandatory movements cannot be greater than the number of different movements.');
+        }
     }
 
     private function assertNoConflictingMovementFilters(WorkoutGeneration $workoutGeneration): void
