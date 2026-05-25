@@ -345,7 +345,7 @@ TXT;
 
     private function flowWithScalingOptions(string $flow, string $scalingOptions): string
     {
-        if (str_contains(strtolower($flow), 'scaling options')) {
+        if (preg_match('/^\s*scaling(?: options)?\s*:/mi', $flow) === 1) {
             return $flow;
         }
 
