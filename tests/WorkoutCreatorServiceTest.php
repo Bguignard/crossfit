@@ -1457,8 +1457,8 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "AMRAP 12 minutes\n8 HSPU\n12 T2B\n40 DUs",
-                    'scalingOptions' => "RX: as written\nIntermediate: 6 HSPU, 10 T2B, 30 DUs\nScaled: pike push-ups, knee raises, single-unders",
+                    'flow' => "AMRAP 12 minutes\n8 HSPU\n12 T2B\n40 DU",
+                    'scalingOptions' => "RX: as written\nIntermediate: 6 HSPU, 10 T2B, 30 DU\nScaled: pike push-ups, knee raises, single-unders",
                     'movements' => ['Handstand Push Up', 'Toes to Bar', 'Double Under'],
                 ], JSON_THROW_ON_ERROR);
             }
@@ -1485,6 +1485,90 @@ class WorkoutCreatorServiceTest extends TestCase
         $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
 
         self::assertSame(['Handstand Push Up', 'Toes to Bar', 'Double Under'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
+    public function testWorkoutGenerationDoesNotMatchShortAliasesInsideLongerWords(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $clean = new Movement('Clean', $difficulty, $weightlifting);
+        $doubleUnder = new Movement('Double Under', $difficulty, $cardio);
+
+        $movementService = new class([$clean, $doubleUnder]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 10 minutes\n10 dumbbell cleans",
+                    'scalingOptions' => "RX: as written\nIntermediate: 8 dumbbell cleans\nScaled: lighter dumbbell cleans",
+                    'movements' => ['Clean'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Short movement alias false positive test')
+            ->setTimeCap(10)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$weightlifting, $cardio])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Clean'], array_map(
             static fn (Movement $movement): ?string => $movement->getName(),
             $workout->getMovements()->toArray()
         ));

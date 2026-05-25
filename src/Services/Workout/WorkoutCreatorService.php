@@ -577,13 +577,13 @@ TXT;
 
     private function normalizeMovementSearchText(string $text): string
     {
-        return preg_replace('/[^a-z0-9]+/', '', strtolower($text)) ?? '';
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower($text)) ?? '');
     }
 
     private function normalizedFlowContainsMovement(string $normalizedFlow, Movement $movement): bool
     {
         foreach ($this->movementSearchTexts([$movement]) as $movementSearchText) {
-            if (str_contains($normalizedFlow, $movementSearchText)) {
+            if (preg_match('/(?:^| )'.preg_quote($movementSearchText, '/').'s?(?: |$)/', $normalizedFlow) === 1) {
                 return true;
             }
         }
@@ -618,7 +618,7 @@ TXT;
     {
         return match ($this->normalizeMovementName($movementName)) {
             'chest to bar pull up' => ['C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
-            'double under' => ['DUs', 'Double Unders'],
+            'double under' => ['DU', 'DUs', 'Double Unders'],
             'handstand push up' => ['HSPU', 'HSPUs', 'Handstand Push Ups'],
             'strict handstand push up' => ['Strict HSPU', 'Strict HSPUs', 'SHSPU', 'SHSPUs', 'Strict Handstand Push Ups'],
             'toes to bar' => ['T2B', 'TTB', 'Toes to Bars'],
