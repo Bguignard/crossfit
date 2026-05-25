@@ -757,6 +757,52 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('Prompt sent to OpenAI', $adminWorkout['generationPrompt']);
     }
 
+    public function testWorkoutGenerationReturnsBadGatewayWhenCreatorRejectsPayload(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                throw new \RuntimeException('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.');
+            }
+        });
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Rejected generated WOD',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => ['Weightlifting'],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell'],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+        self::assertResponseStatusCodeSame(201);
+        $draft = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(502);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.', $payload['error']);
+        $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
+        self::assertSame(0, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
+    }
+
     public function testWorkoutGenerationMatchesCatalogFiltersByNameWhenCatalogRowsAreDuplicated(): void
     {
         $entityManager = $this->getEntityManager();
