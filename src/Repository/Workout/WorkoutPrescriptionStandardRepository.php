@@ -53,11 +53,15 @@ class WorkoutPrescriptionStandardRepository extends ServiceEntityRepository
 
         $orExpressions = ['standard.movementName IS NULL AND standard.implementName IS NULL'];
         if ($movementNames !== []) {
-            $orExpressions[] = 'standard.movementName IN (:movementNames)';
+            $movementExpression = 'standard.movementName IN (:movementNames)';
+            if ($implementNames !== []) {
+                $movementExpression = sprintf('(%s AND (standard.implementName IS NULL OR standard.implementName IN (:implementNames)))', $movementExpression);
+            }
             $query->setParameter('movementNames', $movementNames);
+            $orExpressions[] = $movementExpression;
         }
         if ($implementNames !== []) {
-            $orExpressions[] = 'standard.implementName IN (:implementNames)';
+            $orExpressions[] = 'standard.movementName IS NULL AND standard.implementName IN (:implementNames)';
             $query->setParameter('implementNames', $implementNames);
         }
         if ($includeHyrox) {
