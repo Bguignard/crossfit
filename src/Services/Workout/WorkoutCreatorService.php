@@ -95,6 +95,7 @@ EOD;
         $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
         $promptForChatGPT .= sprintf("Choose exactly %d different movement%s for the final workout.\n", $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '');
         $promptForChatGPT .= "Use only movement names from the mandatory movements and candidate movement pool below.\n";
+        $promptForChatGPT .= "The workout examples are format references only: do not copy their movement names unless those names are listed below.\n";
         if (count($mandatoryMovements) > 0) {
             $promptForChatGPT .= "Mandatory movements that must appear in the workout:\n";
             $promptForChatGPT .= $this->formatMovementPromptSection($mandatoryMovements);
@@ -213,7 +214,7 @@ Return only valid JSON, with no markdown and no explanation, using this exact sh
   "scalingOptions": "A short Scaling options section with RX, Intermediate and Scaled adaptations",
   "movements": ["Exact movement name from the allowed lists"]
 }
-The flow should include the scaling options at the end. The movements array must contain the exact selected movement names used in the flow.
+The flow should include the scaling options at the end. The movements array must contain exactly {$workoutGeneration->getNumberOfDifferentMovements()} unique movement name(s), with no duplicates, using only exact names from the allowed lists, and every listed movement must appear in the main flow.
 EOD;
 
         $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);

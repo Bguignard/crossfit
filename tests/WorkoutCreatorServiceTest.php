@@ -114,6 +114,7 @@ class WorkoutCreatorServiceTest extends TestCase
         $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
 
         self::assertStringContainsString('Candidate movement pool', $chatGpt->prompt);
+        self::assertStringContainsString('The workout examples are format references only', $chatGpt->prompt);
         self::assertStringContainsString('- Run', $chatGpt->prompt);
         self::assertStringContainsString('- Row', $chatGpt->prompt);
         self::assertStringContainsString('- Burpee', $chatGpt->prompt);
@@ -125,6 +126,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringNotContainsString('185/135 lb', $chatGpt->prompt);
         self::assertStringContainsString('Scaling options', $chatGpt->prompt);
         self::assertStringContainsString('"scalingOptions"', $chatGpt->prompt);
+        self::assertStringContainsString('The movements array must contain exactly 2 unique movement name(s)', $chatGpt->prompt);
+        self::assertStringContainsString('with no duplicates, using only exact names from the allowed lists', $chatGpt->prompt);
         self::assertStringContainsString('Team workout guidance: this is an individual workout', $chatGpt->prompt);
         self::assertStringContainsString("Scaling options:\nRX: as written", $workout->getFlow());
         self::assertSame(['Run', 'Burpee'], array_map(
