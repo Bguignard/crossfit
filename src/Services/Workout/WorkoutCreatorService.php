@@ -512,11 +512,8 @@ TXT;
             throw new \RuntimeException('OpenAI workout generation did not return any allowed movement names.');
         }
 
-        foreach ($candidateMovements as $movement) {
-            if (count($selectedMovementsByName) >= $targetCount) {
-                break;
-            }
-            $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        if (count($selectedMovementsByName) < $targetCount) {
+            throw new \RuntimeException(sprintf('OpenAI workout generation returned %d allowed movement%s, expected %d.', count($selectedMovementsByName), count($selectedMovementsByName) > 1 ? 's' : '', $targetCount));
         }
 
         return array_slice(array_values($selectedMovementsByName), 0, $targetCount);
