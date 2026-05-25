@@ -455,12 +455,18 @@ TXT;
             $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
         }
 
+        $matchedSelectedMovementCount = 0;
         foreach ($selectedMovementNames as $selectedMovementName) {
             $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
             if (!$movement instanceof Movement) {
                 continue;
             }
+            ++$matchedSelectedMovementCount;
             $selectedMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        if ($matchedSelectedMovementCount === 0) {
+            throw new \RuntimeException('OpenAI workout generation did not return any allowed movement names.');
         }
 
         foreach ($candidateMovements as $movement) {
