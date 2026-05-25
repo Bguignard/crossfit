@@ -553,6 +553,10 @@ TXT;
             throw new \RuntimeException(sprintf('OpenAI workout generation returned %d allowed movement%s, expected %d.', count($selectedMovementsByName), count($selectedMovementsByName) > 1 ? 's' : '', $targetCount));
         }
 
+        if (count($selectedMovementsByName) > $targetCount) {
+            throw new \RuntimeException(sprintf('OpenAI workout generation returned %d allowed movement%s, expected %d.', count($selectedMovementsByName), count($selectedMovementsByName) > 1 ? 's' : '', $targetCount));
+        }
+
         return array_slice(array_values($selectedMovementsByName), 0, $targetCount);
     }
 
