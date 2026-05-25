@@ -543,8 +543,15 @@ TXT;
         }
 
         $matchedSelectedMovementCount = 0;
+        $seenSelectedMovementNames = [];
         foreach ($selectedMovementNames as $selectedMovementName) {
-            $movement = $allowedMovementsByName[$this->normalizeMovementName($selectedMovementName)] ?? null;
+            $normalizedSelectedMovementName = $this->normalizeMovementName($selectedMovementName);
+            if (isset($seenSelectedMovementNames[$normalizedSelectedMovementName])) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation returned duplicate movement "%s".', $selectedMovementName));
+            }
+            $seenSelectedMovementNames[$normalizedSelectedMovementName] = true;
+
+            $movement = $allowedMovementsByName[$normalizedSelectedMovementName] ?? null;
             if (!$movement instanceof Movement) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation returned unrecognized movement "%s".', $selectedMovementName));
             }
