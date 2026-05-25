@@ -135,13 +135,13 @@ EOD;
             -Example 2 :
             Intervals 2 minutes on / 1 minute off for 20 minutes
             -250m row
-            -5 Thrusters (40/30 kgs)
+            -5 Thrusters (40 kg men / 30 kg women)
             -3 rings muscle-ups
             
             -Example 3 :
             For Time (Intervals 2 minutes on / 1 minute off)
             -1500m row
-            -52 Thrusters (40/30 kgs)
+            -52 Thrusters (40 kg men / 30 kg women)
             -30 rings muscle-ups
             Time cap : 20 minutes.
             EOD;
@@ -164,21 +164,21 @@ EOD;
             
             -Example 3 :
             3 rounds for time:
-            -21 Deadlifts (185/135 lb)
+            -21 Deadlifts (83 kg men / 61 kg women)
             -15 Pull-Ups
-            -9 Front Squats (185/135 lb)
+            -9 Front Squats (83 kg men / 61 kg women)
             Time cap : 10 minutes.
             
             -Example 4 :
             For time: 
             5 rounds of:     
-                10 thrusters (29 / 43 kgs)
+                10 thrusters (43 kg men / 29 kg women)
                 10 chest-to-bar pull-ups 
             
             Rest 1 minute, then:
             
             5 rounds of: 
-                7 thrusters (43 / 61 kgs)
+                7 thrusters (61 kg men / 43 kg women)
                 7 bar muscle-ups 
             
             Time cap : 15 minutes
