@@ -306,13 +306,17 @@ class WorkoutGenerationFlowController extends AbstractController
     private function catalogEntities(string $className, mixed $identifiers): array
     {
         if (!is_array($identifiers)) {
-            return [];
+            throw new UnprocessableEntityHttpException('Workout generation catalog references must be an array.');
         }
 
-        return array_values(array_filter(array_map(
-            fn (mixed $identifier): ?object => $this->catalogEntity($className, $identifier),
-            $identifiers,
-        )));
+        return array_values(array_map(function (mixed $identifier) use ($className): object {
+            $entity = $this->catalogEntity($className, $identifier);
+            if ($entity === null) {
+                throw new UnprocessableEntityHttpException(sprintf('Invalid workout generation catalog reference "%s".', $this->catalogReferenceLabel($identifier)));
+            }
+
+            return $entity;
+        }, $identifiers));
     }
 
     /**
