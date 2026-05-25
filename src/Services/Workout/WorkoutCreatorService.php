@@ -331,7 +331,7 @@ TXT;
         if ($scalingOptions === '') {
             $scalingOptions = $this->scalingOptionsFromFlow($flow);
         }
-        $movements = $payload['movements'] ?? [];
+        $movements = $this->movementNamesFromPayload($payload['movements'] ?? []);
         if ($flow === '' || $scalingOptions === '' || !is_array($movements)) {
             throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
         }
@@ -339,11 +339,27 @@ TXT;
         return [
             'flow' => $flow,
             'scalingOptions' => $scalingOptions,
-            'movements' => array_values(array_filter(array_map(
-                static fn (mixed $movement): ?string => is_string($movement) && trim($movement) !== '' ? trim($movement) : null,
-                $movements
-            ))),
+            'movements' => $movements,
         ];
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function movementNamesFromPayload(mixed $movements): ?array
+    {
+        if (is_string($movements)) {
+            $movements = preg_split('/[,;\n]+/', $movements) ?: [];
+        }
+
+        if (!is_array($movements)) {
+            return null;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (mixed $movement): ?string => is_string($movement) && trim($movement) !== '' ? trim($movement) : null,
+            $movements
+        )));
     }
 
     private function scalingOptionsFromFlow(string $flow): string
