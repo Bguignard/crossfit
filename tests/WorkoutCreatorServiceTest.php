@@ -117,6 +117,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('- Burpee', $chatGpt->prompt);
         self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
+        self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
+        self::assertStringNotContainsString('185/135 lb', $chatGpt->prompt);
         self::assertStringContainsString('Scaling options', $chatGpt->prompt);
         self::assertStringContainsString('"scalingOptions"', $chatGpt->prompt);
         self::assertStringContainsString('Team workout guidance: this is an individual workout', $chatGpt->prompt);
