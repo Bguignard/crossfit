@@ -247,6 +247,7 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('hyrox / RX / hyrox_official_25_26', $prompt);
         self::assertStringContainsString('Men Sled Push: 152 kg (Open men / mixed) - Includes sled', $prompt);
         self::assertStringContainsString('Women Deadlift: 70 kg (155 lb-style RX deadlift)', $prompt);
+        self::assertStringContainsString('Use exact movement standards before generic implement standards', $prompt);
         self::assertStringContainsString('Use these as anchors', $prompt);
     }
 

@@ -38,7 +38,7 @@ readonly class WorkoutPrescriptionStandardPromptBuilder
             }
         }
 
-        return $prompt."Use these as anchors, not as mandatory loads for every movement. If the requested stimulus, level or implement makes a different load safer or more coherent, explain it through the scaling options.\n";
+        return $prompt."Use exact movement standards before generic implement standards. Use these as anchors, not as mandatory loads for every movement. If the requested stimulus, level or implement makes a different load safer or more coherent, explain it through the scaling options.\n";
     }
 
     /**
