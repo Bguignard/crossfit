@@ -169,10 +169,10 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setName($this->requiredString($payload['name'], 'name'));
         }
         if (array_key_exists('stimulus', $payload)) {
-            $workoutGeneration->setStimulus($this->nullableString($payload['stimulus'] ?? null, 120));
+            $workoutGeneration->setStimulus($this->nullableString($payload['stimulus'] ?? null, 'stimulus', 120));
         }
         if (array_key_exists('stimulusIntent', $payload)) {
-            $workoutGeneration->setStimulusIntent($this->nullableString($payload['stimulusIntent'] ?? null));
+            $workoutGeneration->setStimulusIntent($this->nullableString($payload['stimulusIntent'] ?? null, 'stimulusIntent'));
         }
         if (array_key_exists('timeCap', $payload)) {
             $workoutGeneration->setTimeCap($this->positiveInt($payload['timeCap'], 'timeCap'));
@@ -420,10 +420,13 @@ class WorkoutGenerationFlowController extends AbstractController
         }, $identifiers));
     }
 
-    private function nullableString(mixed $value, ?int $maxLength = null): ?string
+    private function nullableString(mixed $value, string $fieldName, ?int $maxLength = null): ?string
     {
         if ($value === null) {
             return null;
+        }
+        if (!is_scalar($value) && !$value instanceof \Stringable) {
+            throw new UnprocessableEntityHttpException(sprintf('"%s" must be a string or null.', $fieldName));
         }
 
         $value = trim((string) $value);
