@@ -202,13 +202,13 @@ class WorkoutGenerationFlowController extends AbstractController
             $workoutGeneration->setMovementGenerationType($this->requiredCatalogEntity(WorkoutMovementGenerationType::class, $payload['movementGenerationType']));
         }
         if (array_key_exists('movementTypes', $payload)) {
-            $workoutGeneration->setMovementTypes($this->catalogEntities(MovementType::class, $payload['movementTypes']));
+            $workoutGeneration->setMovementTypes($this->catalogEntities(MovementType::class, $payload['movementTypes'], 'movementTypes'));
         }
         if (array_key_exists('availableImplements', $payload)) {
-            $workoutGeneration->setAvailableImplements($this->catalogEntities(Implement::class, $payload['availableImplements']));
+            $workoutGeneration->setAvailableImplements($this->catalogEntities(Implement::class, $payload['availableImplements'], 'availableImplements'));
         }
         if (array_key_exists('mandatoryBodyParts', $payload)) {
-            $workoutGeneration->setMandatoryBodyParts($this->catalogEntities(BodyPart::class, $payload['mandatoryBodyParts']));
+            $workoutGeneration->setMandatoryBodyParts($this->catalogEntities(BodyPart::class, $payload['mandatoryBodyParts'], 'mandatoryBodyParts'));
         }
         if (array_key_exists('bannedMovements', $payload)) {
             $workoutGeneration->setBannedMovements($this->movementEntities($payload['bannedMovements'], 'bannedMovements'));
@@ -372,13 +372,22 @@ class WorkoutGenerationFlowController extends AbstractController
      *
      * @return list<T>
      */
-    private function catalogEntities(string $className, mixed $identifiers): array
+    private function catalogEntities(string $className, mixed $identifiers, string $fieldName): array
     {
         if (!is_array($identifiers)) {
             throw new UnprocessableEntityHttpException('Workout generation catalog references must be an array.');
         }
+        $seenIdentifiers = [];
 
-        return array_values(array_map(function (mixed $identifier) use ($className): object {
+        return array_values(array_map(function (mixed $identifier) use ($className, $fieldName, &$seenIdentifiers): object {
+            if (is_string($identifier)) {
+                $normalizedIdentifier = strtolower($identifier);
+                if (isset($seenIdentifiers[$normalizedIdentifier])) {
+                    throw new UnprocessableEntityHttpException(sprintf('Duplicate workout generation catalog reference "%s" in %s.', $identifier, $fieldName));
+                }
+                $seenIdentifiers[$normalizedIdentifier] = true;
+            }
+
             $entity = $this->catalogEntity($className, $identifier);
             if ($entity === null) {
                 throw new UnprocessableEntityHttpException(sprintf('Invalid workout generation catalog reference "%s".', $this->catalogReferenceLabel($identifier)));

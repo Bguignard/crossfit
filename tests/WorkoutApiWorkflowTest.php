@@ -823,6 +823,37 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
     }
 
+    public function testWorkoutGenerationDraftRejectsDuplicateCatalogListReferences(): void
+    {
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Duplicate catalog reference draft',
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => [],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell', 'barbell'],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->getRepository(WorkoutGeneration::class)->count([]));
+    }
+
     public function testFrontendCanRegenerateWorkoutForTheSameDraft(): void
     {
         $this->browser()->disableReboot();
