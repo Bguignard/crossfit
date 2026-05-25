@@ -219,6 +219,7 @@ EOD;
             $generatedWorkout['flow']
         );
         $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $generatedWorkout['flow']);
+        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $generatedWorkout['flow']);
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
@@ -479,6 +480,21 @@ TXT;
         foreach ($mandatoryMovements as $movement) {
             if (!str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation did not include mandatory movement "%s" in the workout flow.', $movement->getName()));
+            }
+        }
+    }
+
+    /**
+     * @param Movement[] $bannedMovements
+     */
+    private function assertBannedMovementsDoNotAppearInFlow(array $bannedMovements, string $flow): void
+    {
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedFlow = $this->normalizeMovementSearchText($mainFlow);
+
+        foreach ($bannedMovements as $movement) {
+            if (str_contains($normalizedFlow, $this->normalizeMovementSearchText($movement->getName()))) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation included banned movement "%s" in the workout flow.', $movement->getName()));
             }
         }
     }
