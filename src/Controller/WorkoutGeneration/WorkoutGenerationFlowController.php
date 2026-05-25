@@ -321,18 +321,23 @@ class WorkoutGenerationFlowController extends AbstractController
     private function movementEntities(mixed $identifiers): array
     {
         if (!is_array($identifiers)) {
-            return [];
+            throw new UnprocessableEntityHttpException('Movement references must be an array.');
         }
 
         $repository = $this->entityManager->getRepository(Movement::class);
 
-        return array_values(array_filter(array_map(static function (mixed $identifier) use ($repository): ?Movement {
+        return array_values(array_map(function (mixed $identifier) use ($repository): Movement {
             if (!is_string($identifier) || !Uuid::isValid($identifier)) {
-                return null;
+                throw new UnprocessableEntityHttpException(sprintf('Invalid movement reference "%s".', $this->catalogReferenceLabel($identifier)));
             }
 
-            return $repository->find(Uuid::fromString($identifier));
-        }, $identifiers)));
+            $movement = $repository->find(Uuid::fromString($identifier));
+            if (!$movement instanceof Movement) {
+                throw new UnprocessableEntityHttpException(sprintf('Invalid movement reference "%s".', $identifier));
+            }
+
+            return $movement;
+        }, $identifiers));
     }
 
     private function nullableString(mixed $value, ?int $maxLength = null): ?string
