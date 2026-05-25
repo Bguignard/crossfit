@@ -376,6 +376,97 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Intermediate: 800 m Row', $workout->getFlow());
     }
 
+    public function testScalingOptionsRecoveredFromFlowStopBeforeFollowingSections(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+
+        $movementService = new class([$row]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public string $prompt = '';
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompt = $prompt;
+
+                return json_encode([
+                    'flow' => "For time:\n1000 m Row\n\nScaling options:\nRX: as written\nIntermediate: 800 m Row\nScaled: 600 m Row\n\nCoach notes:\nKeep stroke rate smooth.",
+                    'scalingOptions' => '',
+                    'movements' => ['Row'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Scaling section boundary test')
+            ->setTimeCap(12)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $creator = new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService);
+        $workout = $creator->createWorkout($workoutGeneration);
+
+        self::assertStringContainsString("Scaling options:\nRX: as written", $workout->getFlow());
+        self::assertStringContainsString("Coach notes:\nKeep stroke rate smooth.", $workout->getFlow());
+
+        $extractScaling = new \ReflectionMethod(WorkoutCreatorService::class, 'scalingOptionsFromFlow');
+        self::assertSame(
+            "RX: as written\nIntermediate: 800 m Row\nScaled: 600 m Row",
+            $extractScaling->invoke($creator, $workout->getFlow())
+        );
+    }
+
     public function testWorkoutGenerationAcceptsSelectedMovementsAsStringList(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
