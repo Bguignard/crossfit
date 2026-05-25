@@ -328,6 +328,9 @@ TXT;
 
         $flow = trim((string) ($payload['flow'] ?? ''));
         $scalingOptions = trim((string) ($payload['scalingOptions'] ?? ''));
+        if ($scalingOptions === '') {
+            $scalingOptions = $this->scalingOptionsFromFlow($flow);
+        }
         $movements = $payload['movements'] ?? [];
         if ($flow === '' || $scalingOptions === '' || !is_array($movements)) {
             throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
@@ -341,6 +344,15 @@ TXT;
                 $movements
             ))),
         ];
+    }
+
+    private function scalingOptionsFromFlow(string $flow): string
+    {
+        if (preg_match('/^\s*scaling(?: options)?\s*:\s*(?<scaling>.*)$/mis', $flow, $matches) !== 1) {
+            return '';
+        }
+
+        return trim((string) $matches['scaling']);
     }
 
     private function flowWithScalingOptions(string $flow, string $scalingOptions): string
