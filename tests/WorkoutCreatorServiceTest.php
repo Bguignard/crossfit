@@ -1992,6 +1992,92 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testWorkoutGenerationResolvesBodyweightMovementAliasesReturnedByOpenAI(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $plyometric = new MovementType(MovementTypeEnum::PLYOMETRIC);
+        $burpeeBoxJumpOver = new Movement('Burpee Box Jump Over', $difficulty, $plyometric);
+        $handstandWalk = new Movement('Handstand Walk', $difficulty, $gymnastics);
+        $wallWalk = new Movement('Wall Walk', $difficulty, $gymnastics);
+        $boxStepUp = new Movement('Box Step Up', $difficulty, $plyometric);
+
+        $movementService = new class([$burpeeBoxJumpOver, $handstandWalk, $wallWalk, $boxStepUp]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => "AMRAP 16 minutes\n12 BBJO\n25-ft HSW\n8 wall walks\n20 box step-ups",
+                    'scalingOptions' => "RX: as written\nIntermediate: 10 burpee box jump-overs, shorter HS walk, 6 wall walks, 16 box step-ups\nScaled: step-over, bear crawl, wall walk scale, lower box",
+                    'movements' => ['BBJO', 'HSW', 'Wall Walks', 'Box Step-Ups'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Generated bodyweight aliases test')
+            ->setTimeCap(16)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastics, $plyometric])
+            ->setNumberOfDifferentMovements(4)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertSame(['Burpee Box Jump Over', 'Handstand Walk', 'Wall Walk', 'Box Step Up'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testWorkoutGenerationRejectsIncompleteGeneratedMovementList(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
