@@ -615,9 +615,13 @@ TXT;
     {
         return match ($this->normalizeMovementName($movementName)) {
             'bike erg' => ['BikeErg', 'Bike Erg Calories', 'Bike Erg Calorie'],
+            'box jump over' => ['Box Jump-Over', 'Box Jump-Overs', 'Box Jump Overs'],
+            'box step up' => ['Box Step-Up', 'Box Step-Ups', 'Box Step Ups'],
+            'burpee box jump over' => ['BBJO', 'BBJOs', 'Burpee Box Jump-Over', 'Burpee Box Jump-Overs', 'Burpee Box Jump Overs'],
             'chest to bar pull up' => ['C2B', 'C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
             'clean and jerk' => ['C&J', 'Clean & Jerk', 'Clean + Jerk', 'Clean Jerks'],
             'double under' => ['DU', 'DUs', 'Double Unders'],
+            'handstand walk' => ['HS Walk', 'HS Walks', 'HSW', 'HSWs', 'Handstand Walks'],
             'handstand push up' => ['HSPU', 'HSPUs', 'Handstand Push Ups'],
             'muscle up' => ['BMU', 'BMUs', 'Bar Muscle Up', 'Bar Muscle Ups', 'RMU', 'RMUs', 'Ring Muscle Up', 'Ring Muscle Ups'],
             'overhead squat' => ['OHS', 'Overhead Squats'],
@@ -627,6 +631,7 @@ TXT;
             'strict handstand push up' => ['Strict HSPU', 'Strict HSPUs', 'SHSPU', 'SHSPUs', 'Strict Handstand Push Ups'],
             'toes to bar' => ['T2B', 'TTB', 'Toes to Bars'],
             'wall ball shot' => ['Wall Ball', 'Wall Balls', 'Wall Ball Shots'],
+            'wall walk' => ['Wall Walks'],
             default => [],
         };
     }
