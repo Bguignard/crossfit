@@ -616,10 +616,13 @@ TXT;
         return match ($this->normalizeMovementName($movementName)) {
             'bike erg' => ['BikeErg', 'Bike Erg Calories', 'Bike Erg Calorie'],
             'chest to bar pull up' => ['C2B', 'C2B Pull Up', 'C2B Pull Ups', 'Chest to Bar Pull Ups', 'Chest to Bars'],
+            'clean and jerk' => ['C&J', 'Clean & Jerk', 'Clean + Jerk', 'Clean Jerks'],
             'double under' => ['DU', 'DUs', 'Double Unders'],
             'handstand push up' => ['HSPU', 'HSPUs', 'Handstand Push Ups'],
             'muscle up' => ['BMU', 'BMUs', 'Bar Muscle Up', 'Bar Muscle Ups', 'RMU', 'RMUs', 'Ring Muscle Up', 'Ring Muscle Ups'],
+            'overhead squat' => ['OHS', 'Overhead Squats'],
             'row' => ['Rowing', 'Rower', 'Calorie Row', 'Calorie Rows', 'Row Calories', 'Rowing for Calories'],
+            'shoulder to overhead' => ['S2OH', 'STOH', 'Shoulder-to-Overhead', 'Shoulder-to-Overheads', 'Shoulder Overhead'],
             'ski erg' => ['Ski', 'SkiErg', 'Ski Erg Calories', 'Ski Calories', 'Skiing'],
             'strict handstand push up' => ['Strict HSPU', 'Strict HSPUs', 'SHSPU', 'SHSPUs', 'Strict Handstand Push Ups'],
             'toes to bar' => ['T2B', 'TTB', 'Toes to Bars'],
