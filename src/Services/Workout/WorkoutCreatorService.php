@@ -598,14 +598,32 @@ TXT;
         $searchTexts = [];
         foreach ($movements as $movement) {
             $movementName = $movement->getName();
-            $searchTexts[] = $this->normalizeMovementSearchText($movementName);
+            array_push($searchTexts, ...$this->movementSearchTextVariants($this->normalizeMovementSearchText($movementName)));
 
             foreach ($this->movementSearchAliases($movementName) as $alias) {
-                $searchTexts[] = $this->normalizeMovementSearchText($alias);
+                array_push($searchTexts, ...$this->movementSearchTextVariants($this->normalizeMovementSearchText($alias)));
             }
         }
 
         return array_values(array_unique(array_filter($searchTexts)));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementSearchTextVariants(string $searchText): array
+    {
+        $variants = [$searchText];
+
+        if (str_ends_with($searchText, 'y')) {
+            $variants[] = substr($searchText, 0, -1).'ies';
+        }
+
+        if (!str_ends_with($searchText, 's')) {
+            $variants[] = $searchText.'s';
+        }
+
+        return $variants;
     }
 
     /**
