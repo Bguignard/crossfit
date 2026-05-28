@@ -59,6 +59,18 @@ class WorkoutResult
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $division = null;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $divisionSourceId = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $competitionRank = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $competitionFormat = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $competitionFormatSlug = null;
+
     #[ORM\Column(nullable: true)]
     private ?int $points = null;
 
@@ -168,6 +180,58 @@ class WorkoutResult
     public function setDivision(?string $division): self
     {
         $this->division = $division;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getDivisionSourceId(): ?string
+    {
+        return $this->divisionSourceId;
+    }
+
+    public function setDivisionSourceId(?string $divisionSourceId): self
+    {
+        $this->divisionSourceId = $divisionSourceId;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCompetitionRank(): ?string
+    {
+        return $this->competitionRank;
+    }
+
+    public function setCompetitionRank(?string $competitionRank): self
+    {
+        $this->competitionRank = $competitionRank;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCompetitionFormat(): ?string
+    {
+        return $this->competitionFormat;
+    }
+
+    public function setCompetitionFormat(?string $competitionFormat): self
+    {
+        $this->competitionFormat = $competitionFormat;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCompetitionFormatSlug(): ?string
+    {
+        return $this->competitionFormatSlug;
+    }
+
+    public function setCompetitionFormatSlug(?string $competitionFormatSlug): self
+    {
+        $this->competitionFormatSlug = $competitionFormatSlug;
         $this->touch();
 
         return $this;

@@ -125,6 +125,10 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'rank' => 1,
                     'fieldSize' => 40,
                     'division' => 'Women',
+                    'divisionSourceId' => 'women',
+                    'competitionRank' => '7',
+                    'competitionFormat' => 'Individual',
+                    'competitionFormatSlug' => 'individual',
                     'score' => ['type' => 'time', 'rawValue' => '10:00', 'displayValue' => '10:00', 'timeInSeconds' => 600],
                 ],
                 [
@@ -133,6 +137,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'eventSourceId' => 'games-2024-event-1-women',
                     'rank' => 2,
                     'division' => 'Women',
+                    'divisionSourceId' => 'women',
                     'score' => ['type' => 'time', 'rawValue' => '10:30', 'displayValue' => '10:30', 'timeInSeconds' => 630],
                 ],
             ],
@@ -148,13 +153,17 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             $divisions = $this->getRepository(CompetitionDivision::class)->findAll();
             self::assertCount(1, $divisions);
             self::assertSame('Women', $divisions[0]->getName());
-            self::assertSame('games-2024:division:women', $divisions[0]->getExternalId());
+            self::assertSame('women', $divisions[0]->getExternalId());
 
             $results = $this->getRepository(WorkoutResult::class)->findBy([], ['rank' => 'ASC']);
             self::assertCount(2, $results);
             self::assertSame((string) $divisions[0]->getId(), (string) $results[0]->getCompetitionDivision()?->getId());
             self::assertSame((string) $divisions[0]->getId(), (string) $results[1]->getCompetitionDivision()?->getId());
             self::assertSame(40, $results[0]->getFieldSize());
+            self::assertSame('women', $results[0]->getDivisionSourceId());
+            self::assertSame('7', $results[0]->getCompetitionRank());
+            self::assertSame('Individual', $results[0]->getCompetitionFormat());
+            self::assertSame('individual', $results[0]->getCompetitionFormatSlug());
 
             /** @var Athlete|null $athlete */
             $athlete = $this->getRepository(Athlete::class)->findOneBy([

@@ -59,6 +59,7 @@ final class AthleteResultSummaryController extends AbstractController
         $event = $result->getEvent();
         $competition = $event->getCompetition();
         $division = $result->getCompetitionDivision();
+        $divisionName = $result->getDivision() ?? $division?->getName();
         $score = $result->getScore();
         $workout = $event->getWorkout();
 
@@ -71,7 +72,14 @@ final class AthleteResultSummaryController extends AbstractController
             'score' => '/api/scores/'.$score->getId(),
             'rank' => $result->getRank(),
             'fieldSize' => $result->getFieldSize(),
-            'division' => $result->getDivision(),
+            'division' => $divisionName,
+            'participationDetails' => [
+                'rank' => $result->getCompetitionRank(),
+                'division' => $divisionName,
+                'divisionSourceId' => $result->getDivisionSourceId(),
+                'format' => $result->getCompetitionFormat(),
+                'formatSlug' => $result->getCompetitionFormatSlug(),
+            ],
             'points' => $result->getPoints(),
             'sourceName' => $result->getSourceName(),
             'externalId' => $result->getExternalId(),
