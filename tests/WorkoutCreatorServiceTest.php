@@ -167,6 +167,94 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testOpenAiCanSuggestWorkoutVariantsBeforeFinalGeneration(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
+
+        $movementService = new class([$row, $burpee]) implements MovementServiceInterface {
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public string $prompt = '';
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompt = $prompt;
+
+                return json_encode([
+                    'variants' => [
+                        [
+                            'title' => 'Engine progressif',
+                            'intent' => 'Tenir un rythme respiratoire stable.',
+                            'format' => 'AMRAP 16',
+                            'movementNames' => ['Row', 'Burpee'],
+                            'summary' => 'Un choix simple pour tester le pacing.',
+                        ],
+                    ],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = $this->createMock(WorkoutOriginServiceInterface::class);
+        $workoutOriginService->expects(self::never())->method('getExistingOrInsertNewWorkoutOrigin');
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Variant test')
+            ->setStimulus('Engine long')
+            ->setStimulusIntent('Volume soutenu, respiration stable, gestion du pacing.')
+            ->setTimeCap(16)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(2)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $variants = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkoutVariants($workoutGeneration);
+
+        self::assertSame('Engine progressif', $variants[0]['title']);
+        self::assertSame(['Row', 'Burpee'], $variants[0]['movementNames']);
+        self::assertStringContainsString('Suggest 3 distinct CrossFit workout concepts before generating a final workout.', $chatGpt->prompt);
+        self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
+    }
+
     public function testTeamWorkoutPromptRequiresExplicitTeamStructure(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

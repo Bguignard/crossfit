@@ -128,6 +128,32 @@ class WorkoutGenerationFlowController extends AbstractController
         return $this->json($this->serializeWorkout($workout), Response::HTTP_CREATED);
     }
 
+    #[Route('/{id}/variants', name: 'workout_generation_flow_variants', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
+    public function variants(string $id): JsonResponse
+    {
+        $workoutGeneration = $this->findWorkoutGeneration($id);
+        if ($workoutGeneration === null) {
+            return $this->json(['error' => 'Workout generation not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $variants = $this->workoutCreator->createWorkoutVariants($workoutGeneration);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\RuntimeException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'error' => sprintf('Workout variant generation failed: %s: %s', $exception::class, $exception->getMessage()),
+            ], Response::HTTP_BAD_GATEWAY);
+        }
+
+        return $this->json([
+            'workoutGenerationId' => $id,
+            'variants' => $variants,
+        ]);
+    }
+
     private function upsertGeneratedWorkout(WorkoutGeneration $workoutGeneration, Workout $generatedWorkout): Workout
     {
         $existingWorkout = $this->entityManager->getRepository(Workout::class)->findOneBy([

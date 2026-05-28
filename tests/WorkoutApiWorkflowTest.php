@@ -947,6 +947,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                     ->setWorkoutGeneration($workoutGeneration)
                     ->setGenerationPrompt('Prompt sent to OpenAI');
             }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
         });
 
         $this->browser()->request(
@@ -1009,6 +1014,75 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('Prompt sent to OpenAI', $adminWorkout['generationPrompt']);
     }
 
+    public function testFrontendCanRequestWorkoutVariantsForADraft(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                throw new \RuntimeException('Unexpected final generation call.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [
+                    [
+                        'title' => 'Engine progressif',
+                        'intent' => 'Installer un rythme respiratoire stable avant d’accélérer.',
+                        'format' => 'AMRAP 16',
+                        'movementNames' => ['Row'],
+                        'summary' => 'Une option simple pour prioriser le pacing.',
+                    ],
+                    [
+                        'title' => 'Sprint contrôlé',
+                        'intent' => 'Limiter les transitions et garder des séries courtes.',
+                        'format' => 'For time',
+                        'movementNames' => ['Row'],
+                        'summary' => 'Une option plus nerveuse mais encore répétable.',
+                    ],
+                ];
+            }
+        });
+
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => 'Variant WOD',
+                'stimulus' => 'Engine long',
+                'stimulusIntent' => 'Volume soutenu, respiration stable, gestion du pacing.',
+                'timeCap' => 16,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => ['Weightlifting'],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell'],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+        self::assertResponseStatusCodeSame(201);
+        $draft = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/variants', $draft['id']));
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame($draft['id'], $payload['workoutGenerationId']);
+        self::assertCount(2, $payload['variants']);
+        self::assertSame('Engine progressif', $payload['variants'][0]['title']);
+        self::assertSame(['Row'], $payload['variants'][0]['movementNames']);
+    }
+
     public function testWorkoutGenerationReturnsBadGatewayWhenCreatorRejectsPayload(): void
     {
         $this->browser()->disableReboot();
@@ -1016,6 +1090,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
             {
                 throw new \RuntimeException('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
             }
         });
 
