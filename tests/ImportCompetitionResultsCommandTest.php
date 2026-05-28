@@ -230,4 +230,39 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             @unlink($file);
         }
     }
+
+    public function testPlaceholderWorkoutFlowsAreSkipped(): void
+    {
+        $command = $this->getService(ImportCompetitionResultsCommand::class);
+        self::assertInstanceOf(ImportCompetitionResultsCommand::class, $command);
+
+        $file = tempnam(sys_get_temp_dir(), 'competition-import-');
+        self::assertIsString($file);
+        file_put_contents($file, json_encode([
+            'contractVersion' => 'competition-results.v1',
+            'source' => ['name' => 'competition_corner'],
+            'workouts' => [
+                [
+                    'source' => ['externalId' => 'marseille-2025-workout-1'],
+                    'name' => 'Workout 1',
+                    'flow' => '*',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            $tester = new CommandTester($command);
+
+            self::assertSame(Command::SUCCESS, $tester->execute(['file' => $file]));
+            $this->getEntityManager()->clear();
+
+            self::assertNull($this->getRepository(Workout::class)->findOneBy([
+                'sourceName' => 'competition_corner',
+                'externalId' => 'marseille-2025-workout-1',
+            ]));
+            self::assertStringContainsString('skipped', $tester->getDisplay());
+        } finally {
+            @unlink($file);
+        }
+    }
 }

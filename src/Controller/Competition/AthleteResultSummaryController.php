@@ -121,11 +121,18 @@ final class AthleteResultSummaryController extends AbstractController
                 '@id' => '/api/workouts/'.$workout->getId(),
                 'id' => (string) $workout->getId(),
                 'name' => $workout->getName(),
-                'flow' => $workout->getFlow(),
+                'flow' => $this->workoutFlow($workout),
                 'sourceName' => $workout->getSourceName(),
                 'externalId' => $workout->getExternalId(),
                 'sourceUrl' => $workout->getSourceUrl(),
             ] : null,
         ];
+    }
+
+    private function workoutFlow(Workout $workout): ?string
+    {
+        $flow = trim($workout->getFlow());
+
+        return in_array($flow, ['*', '-', '–', '—'], true) ? null : $flow;
     }
 }

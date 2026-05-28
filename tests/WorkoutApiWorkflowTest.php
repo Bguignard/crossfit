@@ -352,6 +352,40 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
     }
 
+    public function testAthleteResultSummaryHidesPlaceholderWorkoutFlow(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $workout = new Workout(
+            'Workout 1',
+            '*',
+            null,
+            null,
+            null,
+            new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2025),
+        );
+        $athlete = new Athlete('Bruno Guignard', 'competition_corner', 'bruno-corner');
+        $competition = (new Competition('Marseille Throwdown 2025', 'competition_corner', '15984'))
+            ->setSeason(2025);
+        $event = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', '15984-workout-1'))
+            ->setWorkout($workout);
+        $result = new WorkoutResult($athlete, $event, new Score(ScoreTypeEnum::TIME, '10:00'), 'competition_corner', 'bruno-marseille-1');
+
+        foreach ([$workout, $athlete, $competition, $event, $result] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/athletes/%s/result-summary', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('Workout 1', $payload['member'][0]['workoutDetails']['name']);
+        self::assertNull($payload['member'][0]['workoutDetails']['flow']);
+    }
+
     public function testPublicWorkoutCatalogIsReadOnly(): void
     {
         $this->browser()->request(
