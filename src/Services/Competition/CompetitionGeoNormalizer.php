@@ -127,8 +127,10 @@ final class CompetitionGeoNormalizer
         $country = $this->country($parts[count($parts) - 1]);
         if ($country === null) {
             return [
-                ...$empty,
+                'countryName' => null,
+                'countryCode' => null,
                 'regionName' => $parts[1] ?? null,
+                'departmentName' => null,
                 'cityName' => $parts[0] ?? null,
             ];
         }
