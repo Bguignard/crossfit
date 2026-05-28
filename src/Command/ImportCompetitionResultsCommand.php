@@ -18,6 +18,7 @@ use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutType;
 use App\Services\Competition\AthleteNameNormalizer;
+use App\Services\Competition\CompetitionGeoNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -53,6 +54,7 @@ class ImportCompetitionResultsCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AthleteNameNormalizer $athleteNameNormalizer,
+        private readonly CompetitionGeoNormalizer $competitionGeoNormalizer,
     ) {
         parent::__construct();
     }
@@ -288,6 +290,8 @@ class ImportCompetitionResultsCommand extends Command
             $this->entityManager->persist($competition);
         }
 
+        $geo = $this->competitionGeoNormalizer->fromImportRow($row);
+
         $competition
             ->setName($name)
             ->setSeason($this->intOrNull($row['season'] ?? null))
@@ -298,6 +302,13 @@ class ImportCompetitionResultsCommand extends Command
             ->setEndsAt($this->dateTimeOrNull($row['endsAt'] ?? null))
             ->setRegistrationUrl($this->stringOrNull($row['registrationUrl'] ?? null))
             ->setLocationLabel($this->stringOrNull($row['locationLabel'] ?? null))
+            ->setCountryName($geo['countryName'])
+            ->setCountryCode($geo['countryCode'])
+            ->setRegionName($geo['regionName'])
+            ->setDepartmentName($geo['departmentName'])
+            ->setCityName($geo['cityName'])
+            ->setLatitude($geo['latitude'])
+            ->setLongitude($geo['longitude'])
             ->setIsOnline($this->boolOrNull($row['isOnline'] ?? null))
             ->setCompetitionType($this->stringOrNull($row['competitionType'] ?? null))
             ->setParticipationType($this->stringOrNull($row['participationType'] ?? null))
