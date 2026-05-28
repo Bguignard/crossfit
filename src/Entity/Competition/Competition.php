@@ -55,6 +55,27 @@ class Competition
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $locationLabel = null;
 
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $countryName = null;
+
+    #[ORM\Column(length: 2, nullable: true)]
+    private ?string $countryCode = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $regionName = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $departmentName = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $cityName = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $latitude = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $longitude = null;
+
     #[ORM\Column(nullable: true)]
     private ?bool $isOnline = null;
 
@@ -225,6 +246,97 @@ class Competition
     public function setLocationLabel(?string $locationLabel): self
     {
         $this->locationLabel = $locationLabel;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCountryName(): ?string
+    {
+        return $this->countryName;
+    }
+
+    public function setCountryName(?string $countryName): self
+    {
+        $this->countryName = $countryName;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCountryCode(): ?string
+    {
+        return $this->countryCode;
+    }
+
+    public function setCountryCode(?string $countryCode): self
+    {
+        $this->countryCode = $countryCode === null ? null : mb_strtoupper($countryCode);
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getRegionName(): ?string
+    {
+        return $this->regionName;
+    }
+
+    public function setRegionName(?string $regionName): self
+    {
+        $this->regionName = $regionName;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getDepartmentName(): ?string
+    {
+        return $this->departmentName;
+    }
+
+    public function setDepartmentName(?string $departmentName): self
+    {
+        $this->departmentName = $departmentName;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCityName(): ?string
+    {
+        return $this->cityName;
+    }
+
+    public function setCityName(?string $cityName): self
+    {
+        $this->cityName = $cityName;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getLatitude(): ?float
+    {
+        return $this->latitude;
+    }
+
+    public function setLatitude(?float $latitude): self
+    {
+        $this->latitude = $latitude;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getLongitude(): ?float
+    {
+        return $this->longitude;
+    }
+
+    public function setLongitude(?float $longitude): self
+    {
+        $this->longitude = $longitude;
         $this->touch();
 
         return $this;

@@ -99,6 +99,13 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'endsAt' => '2024-08-11T20:00:00+00:00',
                     'registrationUrl' => 'https://example.test/register',
                     'locationLabel' => 'Fort Worth, TX',
+                    'countryName' => 'United States',
+                    'countryCode' => 'US',
+                    'regionName' => 'Texas',
+                    'departmentName' => 'Tarrant County',
+                    'cityName' => 'Fort Worth',
+                    'latitude' => 32.7555,
+                    'longitude' => -97.3308,
                     'isOnline' => false,
                     'competitionType' => 'functional_fitness',
                     'participationType' => 'individual',
@@ -187,6 +194,13 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertSame('2024-08-11T20:00:00+00:00', $competition->getEndsAt()?->format(DATE_ATOM));
             self::assertSame('https://example.test/register', $competition->getRegistrationUrl());
             self::assertSame('Fort Worth, TX', $competition->getLocationLabel());
+            self::assertSame('United States', $competition->getCountryName());
+            self::assertSame('US', $competition->getCountryCode());
+            self::assertSame('Texas', $competition->getRegionName());
+            self::assertSame('Tarrant County', $competition->getDepartmentName());
+            self::assertSame('Fort Worth', $competition->getCityName());
+            self::assertSame(32.7555, $competition->getLatitude());
+            self::assertSame(-97.3308, $competition->getLongitude());
             self::assertFalse($competition->isOnline());
             self::assertSame('functional_fitness', $competition->getCompetitionType());
             self::assertSame('individual', $competition->getParticipationType());

@@ -54,21 +54,22 @@ final class CompetitionCatalogController extends AbstractController
         $search = $this->normalizedString($request->query->get('q'));
         if ($search !== null) {
             $queryBuilder
-                ->andWhere('LOWER(competition.name) LIKE :search OR LOWER(competition.locationLabel) LIKE :search OR LOWER(competition.competitionType) LIKE :search OR LOWER(competition.sourceName) LIKE :search')
+                ->andWhere('LOWER(competition.name) LIKE :search OR LOWER(competition.locationLabel) LIKE :search OR LOWER(competition.cityName) LIKE :search OR LOWER(competition.departmentName) LIKE :search OR LOWER(competition.regionName) LIKE :search OR LOWER(competition.countryName) LIKE :search OR LOWER(competition.competitionType) LIKE :search OR LOWER(competition.sourceName) LIKE :search')
                 ->setParameter('search', '%'.$search.'%');
         }
 
         $country = $this->normalizedString($request->query->get('country'));
         if ($country !== null) {
             $queryBuilder
-                ->andWhere('LOWER(competition.locationLabel) LIKE :country')
-                ->setParameter('country', '%'.$country.'%');
+                ->andWhere('LOWER(competition.countryName) = :country OR LOWER(competition.countryCode) = :country OR LOWER(competition.locationLabel) LIKE :countryLike')
+                ->setParameter('country', $country)
+                ->setParameter('countryLike', '%'.$country.'%');
         }
 
         $location = $this->normalizedString($request->query->get('location'));
         if ($location !== null) {
             $queryBuilder
-                ->andWhere('LOWER(competition.locationLabel) LIKE :location')
+                ->andWhere('LOWER(competition.locationLabel) LIKE :location OR LOWER(competition.cityName) LIKE :location OR LOWER(competition.departmentName) LIKE :location OR LOWER(competition.regionName) LIKE :location OR LOWER(competition.countryName) LIKE :location')
                 ->setParameter('location', '%'.$location.'%');
         }
 
@@ -150,14 +151,15 @@ final class CompetitionCatalogController extends AbstractController
     private function countries(): array
     {
         $rows = $this->entityManager->getRepository(Competition::class)->createQueryBuilder('competition')
-            ->select('DISTINCT competition.locationLabel AS locationLabel')
-            ->where('competition.locationLabel IS NOT NULL')
+            ->select('DISTINCT competition.countryName AS countryName, competition.locationLabel AS locationLabel')
+            ->where('competition.countryName IS NOT NULL OR competition.locationLabel IS NOT NULL')
             ->getQuery()
             ->getArrayResult();
 
         $countries = [];
         foreach ($rows as $row) {
-            $country = $this->countryFromLocation((string) ($row['locationLabel'] ?? ''));
+            $country = $this->titleOrNull($row['countryName'] ?? null)
+                ?? $this->countryFromLocation((string) ($row['locationLabel'] ?? ''));
             if ($country !== null) {
                 $countries[$country] = true;
             }
@@ -182,6 +184,15 @@ final class CompetitionCatalogController extends AbstractController
         return mb_convert_case(mb_strtolower($country), MB_CASE_TITLE, 'UTF-8');
     }
 
+    private function titleOrNull(mixed $value): ?string
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
+    }
+
     private function serializeCompetition(Competition $competition): array
     {
         return [
@@ -198,6 +209,13 @@ final class CompetitionCatalogController extends AbstractController
             'endsAt' => $competition->getEndsAt()?->format(DATE_ATOM),
             'registrationUrl' => $competition->getRegistrationUrl(),
             'locationLabel' => $competition->getLocationLabel(),
+            'countryName' => $competition->getCountryName(),
+            'countryCode' => $competition->getCountryCode(),
+            'regionName' => $competition->getRegionName(),
+            'departmentName' => $competition->getDepartmentName(),
+            'cityName' => $competition->getCityName(),
+            'latitude' => $competition->getLatitude(),
+            'longitude' => $competition->getLongitude(),
             'isOnline' => $competition->isOnline(),
             'competitionType' => $competition->getCompetitionType(),
             'participationType' => $competition->getParticipationType(),

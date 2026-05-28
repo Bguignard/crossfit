@@ -99,12 +99,18 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $franceUpcoming = (new Competition('French Throwdown 2026', 'competition_corner', 'fast-catalog-france'))
             ->setStartsAt($now->modify('+1 month'))
             ->setLocationLabel('Paris, France')
+            ->setCountryName('France')
+            ->setCountryCode('FR')
+            ->setCityName('Paris')
             ->setCompetitionType('functional_fitness')
             ->setParticipationType('individual')
             ->setLogoUrl('https://example.test/french.png');
         $usaUpcoming = (new Competition('Granite Games 2026', 'competition_corner', 'fast-catalog-usa'))
             ->setStartsAt($now->modify('+2 months'))
             ->setLocationLabel('Minnesota, United States')
+            ->setCountryName('United States')
+            ->setCountryCode('US')
+            ->setRegionName('Minnesota')
             ->setParticipationType('team');
         $pastOpen = (new Competition('CrossFit Open 2024', 'crossfit_games', 'fast-catalog-open'))
             ->setSeason(2024)
@@ -124,6 +130,9 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['totalItems']);
         self::assertSame('French Throwdown 2026', $payload['member'][0]['name']);
         self::assertSame('https://example.test/french.png', $payload['member'][0]['logoUrl']);
+        self::assertSame('France', $payload['member'][0]['countryName']);
+        self::assertSame('FR', $payload['member'][0]['countryCode']);
+        self::assertSame('Paris', $payload['member'][0]['cityName']);
         self::assertContains('France', $payload['countries']);
         self::assertContains('United States', $payload['countries']);
         self::assertNull($payload['view']['next']);
