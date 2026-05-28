@@ -255,6 +255,80 @@ EOD;
             ->setGenerationPrompt($promptForChatGPT);
     }
 
+    public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+    {
+        if (count($workoutGeneration->getMandatoryMovements()) > $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new \InvalidArgumentException('The number of mandatory movements cannot be greater than the number of different movements.');
+        }
+        $this->assertMandatoryMovementsAreNotBanned($workoutGeneration);
+
+        $possibleMovements = [];
+        if (count($workoutGeneration->getMandatoryMovements()) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            $possibleMovements = match ($workoutGeneration->getMovementGenerationType()->getNameAsEnum()) {
+                WorkoutMovementGenerationTypeEnum::MOVEMENT => $this->movementService->getPossibleWorkoutMovementsFromWorkoutGeneration($workoutGeneration),
+                WorkoutMovementGenerationTypeEnum::BODY_PART => $this->movementService->getPossibleMovementsFromMuscles($workoutGeneration),
+            };
+        }
+
+        $mandatoryMovements = $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
+            $workoutGeneration->getAvailableImplements(),
+            $workoutGeneration->getMandatoryMovements()->toArray()
+        );
+        $candidateMovements = $this->movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
+            $workoutGeneration->getAvailableImplements(),
+            $possibleMovements
+        );
+        $allowedMovements = array_merge($mandatoryMovements, $candidateMovements);
+
+        if (count($allowedMovements) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($allowedMovements), count($allowedMovements) > 1 ? 's' : ''));
+        }
+
+        $promptForChatGPT = "Suggest 3 distinct CrossFit workout concepts before generating a final workout.\n";
+        $promptForChatGPT .= sprintf("Workout name: %s\n", $workoutGeneration->getName());
+        if ($workoutGeneration->getStimulus() !== null) {
+            $promptForChatGPT .= sprintf("Workout stimulus identity: %s\n", $workoutGeneration->getStimulus());
+        }
+        if ($workoutGeneration->getStimulusIntent() !== null) {
+            $promptForChatGPT .= sprintf("Base stimulus intent: %s\n", $workoutGeneration->getStimulusIntent());
+        }
+        $promptForChatGPT .= sprintf("Athlete level: %s\n", $workoutGeneration->getMovementDifficulty()->getName());
+        $promptForChatGPT .= sprintf("Workout format: %s\n", $workoutGeneration->getWorkoutType()->getName());
+        $promptForChatGPT .= sprintf("Time cap: %d minutes\n", $workoutGeneration->getTimeCap());
+        $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
+        $promptForChatGPT .= sprintf("Each concept must use exactly %d movement name(s).\n", $workoutGeneration->getNumberOfDifferentMovements());
+        if (count($mandatoryMovements) > 0) {
+            $promptForChatGPT .= "Mandatory movements that must appear in every concept:\n";
+            $promptForChatGPT .= $this->formatMovementPromptSection($mandatoryMovements);
+        }
+        $promptForChatGPT .= "Candidate movement pool. Use only exact names from this pool:\n";
+        $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovements);
+        $promptForChatGPT .= <<<EOD
+
+Return only valid JSON, with no markdown and no explanation, using this exact shape:
+{
+  "variants": [
+    {
+      "title": "Short memorable French title",
+      "intent": "One precise coaching intent in French",
+      "format": "Likely workout structure, for example AMRAP 16, 4 rounds for time, or intervals",
+      "movementNames": ["Exact movement name from the allowed lists"],
+      "summary": "One short French sentence explaining the feel of the workout"
+    }
+  ]
+}
+Every variant must be meaningfully different from the others. Do not write the final workout flow yet.
+EOD;
+
+        $payload = $this->decodeOpenAiJsonObject($this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT));
+        $variants = $this->variantsFromPayload($payload['variants'] ?? null, $allowedMovements, $workoutGeneration->getNumberOfDifferentMovements());
+        if (count($variants) === 0) {
+            throw new \RuntimeException('OpenAI workout variant generation returned an invalid variants payload.');
+        }
+
+        return $variants;
+    }
+
     /**
      * @param Movement[] $movements
      */
@@ -338,6 +412,27 @@ TXT;
      */
     private function parseGeneratedWorkout(string $rawResponse): array
     {
+        $payload = $this->decodeOpenAiJsonObject($rawResponse);
+
+        $flow = trim((string) ($payload['flow'] ?? ''));
+        $scalingOptions = $this->scalingOptionsFromPayload($payload['scalingOptions'] ?? '');
+        if ($scalingOptions === '') {
+            $scalingOptions = $this->scalingOptionsFromFlow($flow);
+        }
+        $movements = $this->movementNamesFromPayload($payload['movements'] ?? []);
+        if ($flow === '' || $scalingOptions === '' || !is_array($movements)) {
+            throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
+        }
+
+        return [
+            'flow' => $flow,
+            'scalingOptions' => $scalingOptions,
+            'movements' => $movements,
+        ];
+    }
+
+    private function decodeOpenAiJsonObject(string $rawResponse): array
+    {
         $json = trim($rawResponse);
         if (str_starts_with($json, '```')) {
             $json = preg_replace('/^```(?:json)?\s*|\s*```$/', '', $json) ?? $json;
@@ -356,21 +451,68 @@ TXT;
             throw new \RuntimeException('OpenAI workout generation returned invalid JSON.', 0, $exception);
         }
 
-        $flow = trim((string) ($payload['flow'] ?? ''));
-        $scalingOptions = $this->scalingOptionsFromPayload($payload['scalingOptions'] ?? '');
-        if ($scalingOptions === '') {
-            $scalingOptions = $this->scalingOptionsFromFlow($flow);
-        }
-        $movements = $this->movementNamesFromPayload($payload['movements'] ?? []);
-        if ($flow === '' || $scalingOptions === '' || !is_array($movements)) {
-            throw new \RuntimeException('OpenAI workout generation returned an invalid workout payload.');
+        if (!is_array($payload)) {
+            throw new \RuntimeException('OpenAI workout generation returned an invalid JSON payload.');
         }
 
-        return [
-            'flow' => $flow,
-            'scalingOptions' => $scalingOptions,
-            'movements' => $movements,
-        ];
+        return $payload;
+    }
+
+    /**
+     * @param Movement[] $allowedMovements
+     *
+     * @return list<array{title: string, intent: string, format: string, movementNames: list<string>, summary: string}>
+     */
+    private function variantsFromPayload(mixed $variants, array $allowedMovements, int $expectedMovementCount): array
+    {
+        if (!is_array($variants)) {
+            return [];
+        }
+
+        $allowedMovementsByName = $this->movementsBySearchText($allowedMovements);
+        $normalizedAllowedMovementNames = [];
+        foreach ($allowedMovements as $movement) {
+            $normalizedAllowedMovementNames[$this->normalizeMovementSearchText($movement->getName())] = $movement->getName();
+        }
+
+        $parsedVariants = [];
+        foreach ($variants as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+
+            $title = trim((string) ($variant['title'] ?? ''));
+            $intent = trim((string) ($variant['intent'] ?? ''));
+            $format = trim((string) ($variant['format'] ?? ''));
+            $summary = trim((string) ($variant['summary'] ?? ''));
+            $movementNames = $this->movementNamesFromPayload($variant['movementNames'] ?? $variant['movements'] ?? []);
+            if ($title === '' || $intent === '' || $format === '' || $summary === '' || !is_array($movementNames)) {
+                continue;
+            }
+
+            $resolvedMovementNames = [];
+            foreach ($movementNames as $movementName) {
+                $normalizedMovementName = $this->normalizeMovementSearchText($movementName);
+                if (!isset($allowedMovementsByName[$normalizedMovementName], $normalizedAllowedMovementNames[$normalizedMovementName])) {
+                    continue 2;
+                }
+                $resolvedMovementNames[$normalizedMovementName] = $normalizedAllowedMovementNames[$normalizedMovementName];
+            }
+
+            if (count($resolvedMovementNames) !== $expectedMovementCount) {
+                continue;
+            }
+
+            $parsedVariants[] = [
+                'title' => $title,
+                'intent' => $intent,
+                'format' => $format,
+                'movementNames' => array_values($resolvedMovementNames),
+                'summary' => $summary,
+            ];
+        }
+
+        return $parsedVariants;
     }
 
     /**
