@@ -185,7 +185,13 @@ class ImportCompetitionResultsCommand extends Command
     {
         [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
         $name = $this->requiredString($row, 'name');
-        $flow = $this->requiredString($row, 'flow');
+        $flow = $this->stringOrNull($row['flow'] ?? null);
+        if ($flow === null) {
+            throw new \InvalidArgumentException('flow is required.');
+        }
+        if ($this->isPlaceholderWorkoutFlow($flow)) {
+            return 'skipped';
+        }
 
         /** @var Workout|null $workout */
         $workout = $this->entityManager->getRepository(Workout::class)->findOneBy([
@@ -670,6 +676,11 @@ class ImportCompetitionResultsCommand extends Command
         $value = trim($value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function isPlaceholderWorkoutFlow(string $value): bool
+    {
+        return in_array(trim($value), ['*', '-', '–', '—'], true);
     }
 
     private function intOrNull(mixed $value): ?int
