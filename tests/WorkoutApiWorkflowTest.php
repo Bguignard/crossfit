@@ -312,7 +312,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $gamesResult = (new WorkoutResult($gamesProfile, $event, new Score(ScoreTypeEnum::TIME, '8:21'), 'crossfit_games', 'oceane-games-event-1'))
             ->setCompetitionDivision($division)
             ->setRank(12)
-            ->setFieldSize(40);
+            ->setFieldSize(40)
+            ->setDivisionSourceId('women')
+            ->setCompetitionRank('8')
+            ->setCompetitionFormat('Individual')
+            ->setCompetitionFormatSlug('individual');
         $cornerResult = (new WorkoutResult($cornerProfile, $event, new Score(ScoreTypeEnum::REPS, '127'), 'competition_corner', 'oceane-corner-event-1'))
             ->setCompetitionDivision($division)
             ->setRank(2)
@@ -348,6 +352,13 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('Event 1', $payload['member'][0]['eventDetails']['name']);
         self::assertSame('Open 17.5', $payload['member'][0]['workoutDetails']['name']);
         self::assertArrayHasKey('scoreDetails', $payload['member'][0]);
+        self::assertSame([
+            'rank' => '8',
+            'division' => 'Women',
+            'divisionSourceId' => 'women',
+            'format' => 'Individual',
+            'formatSlug' => 'individual',
+        ], $payload['member'][0]['participationDetails']);
         self::assertContains('/api/athletes/'.$cornerProfile->getId(), array_column($payload['member'], 'athlete'));
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
     }
