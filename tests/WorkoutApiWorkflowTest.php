@@ -92,6 +92,43 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         ], $payload['competitionContexts']);
     }
 
+    public function testFrontendCanReadPaginatedCompetitionCatalogWithoutFetchingEverything(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $now = new \DateTimeImmutable();
+        $franceUpcoming = (new Competition('French Throwdown 2026', 'competition_corner', 'fast-catalog-france'))
+            ->setStartsAt($now->modify('+1 month'))
+            ->setLocationLabel('Paris, France')
+            ->setCompetitionType('functional_fitness')
+            ->setParticipationType('individual')
+            ->setLogoUrl('https://example.test/french.png');
+        $usaUpcoming = (new Competition('Granite Games 2026', 'competition_corner', 'fast-catalog-usa'))
+            ->setStartsAt($now->modify('+2 months'))
+            ->setLocationLabel('Minnesota, United States')
+            ->setParticipationType('team');
+        $pastOpen = (new Competition('CrossFit Open 2024', 'crossfit_games', 'fast-catalog-open'))
+            ->setSeason(2024)
+            ->setStatus('past')
+            ->setLocationLabel('En ligne');
+
+        foreach ([$franceUpcoming, $usaUpcoming, $pastOpen] as $competition) {
+            $entityManager->persist($competition);
+        }
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/competition-catalog?page=1&country=France&status=upcoming&source=competition_corner&participation=individual');
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(1, $payload['totalItems']);
+        self::assertSame('French Throwdown 2026', $payload['member'][0]['name']);
+        self::assertSame('https://example.test/french.png', $payload['member'][0]['logoUrl']);
+        self::assertContains('France', $payload['countries']);
+        self::assertContains('United States', $payload['countries']);
+        self::assertNull($payload['view']['next']);
+    }
+
     public function testFrontendCanListPublicAthletesEvenWhenCatalogIsEmpty(): void
     {
         $this->browser()->request('GET', '/api/athletes');
