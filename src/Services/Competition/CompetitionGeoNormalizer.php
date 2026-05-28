@@ -56,6 +56,7 @@ final class CompetitionGeoNormalizer
 
     /**
      * @param array<string, mixed> $row
+     *
      * @return array{countryName: ?string, countryCode: ?string, regionName: ?string, departmentName: ?string, cityName: ?string, latitude: ?float, longitude: ?float}
      */
     public function fromImportRow(array $row): array
