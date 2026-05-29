@@ -7,6 +7,7 @@ use App\Entity\Competition\Athlete;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
@@ -33,6 +34,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
         self::assertCount($initialWorkoutCount + 1, $this->getRepository(Workout::class)->findAll());
         self::assertCount(1, $this->getRepository(Athlete::class)->findAll());
         self::assertCount(1, $this->getRepository(Competition::class)->findAll());
+        self::assertCount(1, $this->getRepository(CompetitionParticipation::class)->findAll());
         self::assertCount(1, $this->getRepository(CompetitionDivision::class)->findAll());
         self::assertCount(1, $this->getRepository(CompetitionEvent::class)->findAll());
         self::assertCount(1, $this->getRepository(WorkoutResult::class)->findAll());
@@ -115,6 +117,18 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'lastDiscoveredAt' => '2026-05-17T10:30:00+00:00',
                 ],
             ],
+            'participations' => [
+                [
+                    'source' => ['externalId' => 'games-2024:athlete-1'],
+                    'athleteSourceId' => 'athlete-1',
+                    'competitionSourceId' => 'games-2024',
+                    'rank' => '7',
+                    'division' => 'Women',
+                    'divisionSourceId' => 'women',
+                    'format' => 'Individual',
+                    'formatSlug' => 'individual',
+                ],
+            ],
             'events' => [
                 [
                     'source' => ['externalId' => 'games-2024-event-1-women'],
@@ -171,6 +185,21 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertSame('7', $results[0]->getCompetitionRank());
             self::assertSame('Individual', $results[0]->getCompetitionFormat());
             self::assertSame('individual', $results[0]->getCompetitionFormatSlug());
+
+            /** @var list<CompetitionParticipation> $participations */
+            $participations = $this->getRepository(CompetitionParticipation::class)->findAll();
+            self::assertCount(2, $participations);
+            $byExternalId = [];
+            foreach ($participations as $participation) {
+                $byExternalId[$participation->getExternalId()] = $participation;
+            }
+            self::assertArrayHasKey('games-2024:athlete-1', $byExternalId);
+            self::assertArrayHasKey('games-2024:athlete-2', $byExternalId);
+            self::assertSame('7', $byExternalId['games-2024:athlete-1']->getRank());
+            self::assertSame('Women', $byExternalId['games-2024:athlete-1']->getDivision());
+            self::assertSame('women', $byExternalId['games-2024:athlete-1']->getDivisionSourceId());
+            self::assertSame('Individual', $byExternalId['games-2024:athlete-1']->getFormat());
+            self::assertSame('individual', $byExternalId['games-2024:athlete-1']->getFormatSlug());
 
             /** @var Athlete|null $athlete */
             $athlete = $this->getRepository(Athlete::class)->findOneBy([
