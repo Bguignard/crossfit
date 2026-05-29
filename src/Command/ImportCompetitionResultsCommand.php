@@ -52,6 +52,11 @@ class ImportCompetitionResultsCommand extends Command
      */
     private array $competitionDivisions = [];
 
+    /**
+     * @var array<string, CompetitionParticipation>
+     */
+    private array $competitionParticipations = [];
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AthleteNameNormalizer $athleteNameNormalizer,
@@ -100,6 +105,7 @@ class ImportCompetitionResultsCommand extends Command
         $sourceName = $this->stringOrNull($payload['source']['name'] ?? null);
         $batchSize = max(1, (int) $input->getOption('batch-size'));
         $this->competitionDivisions = [];
+        $this->competitionParticipations = [];
 
         $this->importRows('workouts', $payload['workouts'] ?? [], fn (array $row): string => $this->importWorkout($row, $sourceName));
         $this->entityManager->flush();
@@ -179,6 +185,7 @@ class ImportCompetitionResultsCommand extends Command
                 $this->entityManager->flush();
                 $this->entityManager->clear();
                 $this->competitionDivisions = [];
+                $this->competitionParticipations = [];
             }
         }
     }
@@ -452,16 +459,23 @@ class ImportCompetitionResultsCommand extends Command
         ?string $format,
         ?string $formatSlug,
     ): string {
-        /** @var CompetitionParticipation|null $participation */
-        $participation = $this->entityManager->getRepository(CompetitionParticipation::class)->findOneBy([
-            'sourceName' => $sourceName,
-            'externalId' => $externalId,
-        ]);
-        $status = $participation === null ? 'created' : 'updated';
+        $cacheKey = $sourceName.'|'.$externalId;
+        if (isset($this->competitionParticipations[$cacheKey])) {
+            $participation = $this->competitionParticipations[$cacheKey];
+            $status = 'updated';
+        } else {
+            /** @var CompetitionParticipation|null $participation */
+            $participation = $this->entityManager->getRepository(CompetitionParticipation::class)->findOneBy([
+                'sourceName' => $sourceName,
+                'externalId' => $externalId,
+            ]);
+            $status = $participation === null ? 'created' : 'updated';
 
-        if ($participation === null) {
-            $participation = new CompetitionParticipation($athlete, $competition, $sourceName, $externalId);
-            $this->entityManager->persist($participation);
+            if ($participation === null) {
+                $participation = new CompetitionParticipation($athlete, $competition, $sourceName, $externalId);
+                $this->entityManager->persist($participation);
+            }
+            $this->competitionParticipations[$cacheKey] = $participation;
         }
 
         $participation
