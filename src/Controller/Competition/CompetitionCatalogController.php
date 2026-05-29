@@ -104,15 +104,15 @@ final class CompetitionCatalogController extends AbstractController
 
         match ($status) {
             'upcoming' => $queryBuilder
-                ->andWhere('competition.startsAt > :now OR competition.status = :upcoming')
+                ->andWhere('competition.startsAt > :now OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :upcoming)')
                 ->setParameter('now', $now)
                 ->setParameter('upcoming', 'upcoming'),
             'ongoing' => $queryBuilder
-                ->andWhere('(competition.startsAt <= :now AND competition.endsAt >= :now) OR competition.status = :ongoing')
+                ->andWhere('(competition.startsAt <= :now AND competition.endsAt >= :now) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :ongoing)')
                 ->setParameter('now', $now)
                 ->setParameter('ongoing', 'ongoing'),
             'past' => $queryBuilder
-                ->andWhere('competition.endsAt < :now OR competition.status = :past OR competition.season < :currentYear')
+                ->andWhere('competition.endsAt < :now OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :past) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.season < :currentYear)')
                 ->setParameter('now', $now)
                 ->setParameter('past', 'past')
                 ->setParameter('currentYear', $currentYear),
@@ -128,9 +128,9 @@ final class CompetitionCatalogController extends AbstractController
         return $queryBuilder
             ->addSelect(
                 'CASE
-                    WHEN ((competition.startsAt <= :orderNow AND competition.endsAt >= :orderNow) OR competition.status = :orderOngoing) THEN 0
-                    WHEN (competition.startsAt > :orderNow OR competition.status = :orderUpcoming) THEN 1
-                    WHEN (competition.endsAt < :orderNow OR competition.status = :orderPast OR competition.season < :orderCurrentYear) THEN 2
+                    WHEN ((competition.startsAt <= :orderNow AND competition.endsAt >= :orderNow) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderOngoing)) THEN 0
+                    WHEN (competition.startsAt > :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderUpcoming)) THEN 1
+                    WHEN (competition.endsAt < :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderPast) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.season < :orderCurrentYear)) THEN 2
                     ELSE 3
                 END AS HIDDEN statusWeight'
             )
