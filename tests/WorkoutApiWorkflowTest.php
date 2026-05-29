@@ -9,6 +9,7 @@ use App\Entity\Competition\AthletePublicAnalysis;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
@@ -414,6 +415,44 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         ], $payload['member'][0]['participationDetails']);
         self::assertContains('/api/athletes/'.$cornerProfile->getId(), array_column($payload['member'], 'athlete'));
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
+    }
+
+    public function testAthleteResultSummaryIncludesUpcomingParticipationsWithoutResults(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('Future Athlete', 'competition_corner', 'future-athlete');
+        $futureCompetition = (new Competition('Future Throwdown', 'competition_corner', 'future-throwdown'))
+            ->setStatus('upcoming')
+            ->setStartsAt(new \DateTimeImmutable('+30 days'))
+            ->setRegistrationUrl('https://competitioncorner.net/events/19804/details')
+            ->setLocationLabel('En ligne')
+            ->setIsOnline(true)
+            ->setParticipationType('individual');
+        $participation = (new CompetitionParticipation($athlete, $futureCompetition, 'competition_corner', 'future-throwdown:future-athlete'))
+            ->setDivision('Elite Women')
+            ->setDivisionSourceId('129901')
+            ->setFormat('Individual')
+            ->setFormatSlug('individual')
+            ->setSourceUrl('https://competitioncorner.net/ff/19804/lcd/results');
+
+        foreach ([$athlete, $futureCompetition, $participation] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/athletes/%s/result-summary', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(0, $payload['totalItems']);
+        self::assertCount(1, $payload['upcomingParticipations']);
+        self::assertSame('Future Throwdown', $payload['upcomingParticipations'][0]['competitionDetails']['name']);
+        self::assertSame('Elite Women', $payload['upcomingParticipations'][0]['division']);
+        self::assertSame('Individual', $payload['upcomingParticipations'][0]['format']);
+        self::assertSame('https://competitioncorner.net/events/19804/details', $payload['upcomingParticipations'][0]['competitionDetails']['registrationUrl']);
     }
 
     public function testAthleteResultSummaryHidesPlaceholderWorkoutFlow(): void

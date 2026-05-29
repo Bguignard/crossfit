@@ -6,6 +6,7 @@ use App\Entity\Competition\Athlete;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
@@ -105,6 +106,8 @@ class ImportCompetitionResultsCommand extends Command
         $this->importRows('athletes', $payload['athletes'] ?? [], fn (array $row): string => $this->importAthlete($row, $sourceName));
         $this->entityManager->flush();
         $this->importRows('competitions', $payload['competitions'] ?? [], fn (array $row): string => $this->importCompetition($row, $sourceName));
+        $this->entityManager->flush();
+        $this->importRows('participations', $payload['participations'] ?? [], fn (array $row): string => $this->importParticipation($row, $sourceName));
         $this->entityManager->flush();
         $this->importRows('events', $payload['events'] ?? [], fn (array $row): string => $this->importEvent($row, $sourceName));
         $this->entityManager->flush();
@@ -355,6 +358,29 @@ class ImportCompetitionResultsCommand extends Command
     /**
      * @param array<string, mixed> $row
      */
+    private function importParticipation(array $row, ?string $fallbackSourceName): string
+    {
+        [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
+        $athlete = $this->findImported(Athlete::class, $sourceName, $this->requiredString($row, 'athleteSourceId'));
+        $competition = $this->findImported(Competition::class, $sourceName, $this->requiredString($row, 'competitionSourceId'));
+
+        return $this->upsertCompetitionParticipation(
+            athlete: $athlete,
+            competition: $competition,
+            sourceName: $sourceName,
+            externalId: $externalId,
+            sourceUrl: $sourceUrl,
+            rank: $this->stringOrNull($row['rank'] ?? null),
+            division: $this->stringOrNull($row['division'] ?? null),
+            divisionSourceId: $this->stringOrNull($row['divisionSourceId'] ?? null),
+            format: $this->stringOrNull($row['format'] ?? null),
+            formatSlug: $this->stringOrNull($row['formatSlug'] ?? null),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
     private function importResult(array $row, ?string $fallbackSourceName): string
     {
         [$sourceName, $externalId, $sourceUrl] = $this->sourceIdentity($row, $fallbackSourceName);
@@ -394,7 +420,64 @@ class ImportCompetitionResultsCommand extends Command
             ->setPoints($this->intOrNull($row['points'] ?? null))
             ->setSourceUrl($sourceUrl);
 
+        $participationExternalId = $this->participationExternalId(
+            $this->requiredString($row, 'athleteSourceId'),
+            $event->getCompetition()->getExternalId(),
+        );
+        $this->upsertCompetitionParticipation(
+            athlete: $athlete,
+            competition: $event->getCompetition(),
+            sourceName: $sourceName,
+            externalId: $participationExternalId,
+            sourceUrl: $sourceUrl,
+            rank: $this->stringOrNull($row['competitionRank'] ?? null),
+            division: $divisionName,
+            divisionSourceId: $this->stringOrNull($row['divisionSourceId'] ?? null),
+            format: $this->stringOrNull($row['competitionFormat'] ?? null),
+            formatSlug: $this->stringOrNull($row['competitionFormatSlug'] ?? null),
+        );
+
         return $status;
+    }
+
+    private function upsertCompetitionParticipation(
+        Athlete $athlete,
+        Competition $competition,
+        string $sourceName,
+        string $externalId,
+        ?string $sourceUrl,
+        ?string $rank,
+        ?string $division,
+        ?string $divisionSourceId,
+        ?string $format,
+        ?string $formatSlug,
+    ): string {
+        /** @var CompetitionParticipation|null $participation */
+        $participation = $this->entityManager->getRepository(CompetitionParticipation::class)->findOneBy([
+            'sourceName' => $sourceName,
+            'externalId' => $externalId,
+        ]);
+        $status = $participation === null ? 'created' : 'updated';
+
+        if ($participation === null) {
+            $participation = new CompetitionParticipation($athlete, $competition, $sourceName, $externalId);
+            $this->entityManager->persist($participation);
+        }
+
+        $participation
+            ->setSourceUrl($sourceUrl)
+            ->setRank($rank)
+            ->setDivision($division)
+            ->setDivisionSourceId($divisionSourceId)
+            ->setFormat($format)
+            ->setFormatSlug($formatSlug);
+
+        return $status;
+    }
+
+    private function participationExternalId(string $athleteSourceId, string $competitionSourceId): string
+    {
+        return sprintf('%s:%s', $competitionSourceId, $athleteSourceId);
     }
 
     /**

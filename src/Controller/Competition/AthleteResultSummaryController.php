@@ -3,6 +3,7 @@
 namespace App\Controller\Competition;
 
 use App\Entity\Competition\Athlete;
+use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
 use App\Services\Competition\AthleteNameNormalizer;
@@ -44,10 +45,30 @@ final class AthleteResultSummaryController extends AbstractController
             ->orderBy('result.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
+        $participations = $entityManager->createQueryBuilder()
+            ->select('participation', 'competition')
+            ->from(CompetitionParticipation::class, 'participation')
+            ->join('participation.competition', 'competition')
+            ->andWhere('participation.athlete IN (:athletes)')
+            ->andWhere('competition.startsAt > :now OR (competition.startsAt IS NULL AND competition.status = :upcoming)')
+            ->andWhere('NOT EXISTS (
+                SELECT 1
+                FROM '.WorkoutResult::class.' existingResult
+                JOIN existingResult.event existingEvent
+                WHERE existingResult.athlete = participation.athlete
+                AND existingEvent.competition = competition
+            )')
+            ->setParameter('athletes', $relatedAthletes)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('upcoming', 'upcoming')
+            ->orderBy('competition.startsAt', 'ASC')
+            ->getQuery()
+            ->getResult();
 
         return $this->json([
             'totalItems' => count($results),
             'member' => array_map([$this, 'resultPayload'], $results),
+            'upcomingParticipations' => array_map([$this, 'participationPayload'], $participations),
         ]);
     }
 
@@ -134,6 +155,48 @@ final class AthleteResultSummaryController extends AbstractController
                 'externalId' => $workout->getExternalId(),
                 'sourceUrl' => $workout->getSourceUrl(),
             ] : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function participationPayload(CompetitionParticipation $participation): array
+    {
+        $competition = $participation->getCompetition();
+
+        return [
+            '@id' => '/api/competition_participations/'.$participation->getId(),
+            'id' => (string) $participation->getId(),
+            'athlete' => '/api/athletes/'.$participation->getAthlete()->getId(),
+            'competition' => '/api/competitions/'.$competition->getId(),
+            'rank' => $participation->getRank(),
+            'division' => $participation->getDivision(),
+            'divisionSourceId' => $participation->getDivisionSourceId(),
+            'format' => $participation->getFormat(),
+            'formatSlug' => $participation->getFormatSlug(),
+            'sourceName' => $participation->getSourceName(),
+            'externalId' => $participation->getExternalId(),
+            'sourceUrl' => $participation->getSourceUrl(),
+            'createdAt' => $participation->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'updatedAt' => $participation->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            'competitionDetails' => [
+                '@id' => '/api/competitions/'.$competition->getId(),
+                'id' => (string) $competition->getId(),
+                'name' => $competition->getName(),
+                'season' => $competition->getSeason(),
+                'sourceName' => $competition->getSourceName(),
+                'externalId' => $competition->getExternalId(),
+                'sourceUrl' => $competition->getSourceUrl(),
+                'registrationUrl' => $competition->getRegistrationUrl(),
+                'logoUrl' => $competition->getLogoUrl(),
+                'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
+                'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
+                'locationLabel' => $competition->getLocationLabel(),
+                'isOnline' => $competition->isOnline(),
+                'competitionType' => $competition->getCompetitionType(),
+                'participationType' => $competition->getParticipationType(),
+            ],
         ];
     }
 
