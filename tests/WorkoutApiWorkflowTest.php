@@ -116,8 +116,15 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setSeason(2024)
             ->setStatus('past')
             ->setLocationLabel('En ligne');
+        $staleUpcoming = (new Competition('Stale Throwdown 2026', 'competition_corner', 'fast-catalog-stale'))
+            ->setStatus('upcoming')
+            ->setStartsAt($now->modify('-10 days'))
+            ->setEndsAt($now->modify('-8 days'))
+            ->setLocationLabel('Paris, France')
+            ->setCountryName('France')
+            ->setParticipationType('individual');
 
-        foreach ([$franceUpcoming, $usaUpcoming, $pastOpen] as $competition) {
+        foreach ([$franceUpcoming, $usaUpcoming, $pastOpen, $staleUpcoming] as $competition) {
             $entityManager->persist($competition);
         }
         $entityManager->flush();
