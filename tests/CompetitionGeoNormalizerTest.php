@@ -43,6 +43,19 @@ final class CompetitionGeoNormalizerTest extends TestCase
         self::assertSame('Brisbane', $geo['cityName']);
     }
 
+    public function testItDerivesNordicCountryFromLocationLabel(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Ringkøbing, Jylland, Denmark',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Denmark', $geo['countryName']);
+        self::assertSame('DK', $geo['countryCode']);
+        self::assertSame('Jylland', $geo['regionName']);
+        self::assertSame('Ringkøbing', $geo['cityName']);
+    }
+
     public function testItLeavesOnlineCompetitionsUnclassified(): void
     {
         $geo = (new CompetitionGeoNormalizer())->fromImportRow([
