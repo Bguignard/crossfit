@@ -242,6 +242,57 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
         }
     }
 
+    public function testImportDeduplicatesUnflushedCompetitionParticipations(): void
+    {
+        $command = $this->getService(ImportCompetitionResultsCommand::class);
+        self::assertInstanceOf(ImportCompetitionResultsCommand::class, $command);
+
+        $file = tempnam(sys_get_temp_dir(), 'competition-import-');
+        self::assertIsString($file);
+        file_put_contents($file, json_encode([
+            'contractVersion' => 'competition-results.v1',
+            'source' => ['name' => 'competition_corner'],
+            'athletes' => [
+                ['source' => ['externalId' => '585064'], 'displayName' => 'Duplicate Athlete'],
+            ],
+            'competitions' => [
+                ['source' => ['externalId' => '19804'], 'name' => 'Marseille Throwdown 2026 Online Qualifier'],
+            ],
+            'participations' => [
+                [
+                    'source' => ['externalId' => '19804:585064'],
+                    'athleteSourceId' => '585064',
+                    'competitionSourceId' => '19804',
+                    'rank' => '12',
+                    'division' => 'Elite Male',
+                ],
+                [
+                    'source' => ['externalId' => '19804:585064'],
+                    'athleteSourceId' => '585064',
+                    'competitionSourceId' => '19804',
+                    'rank' => '11',
+                    'division' => 'Elite Male',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            $tester = new CommandTester($command);
+
+            self::assertSame(Command::SUCCESS, $tester->execute(['file' => $file]));
+            $this->getEntityManager()->clear();
+
+            /** @var list<CompetitionParticipation> $participations */
+            $participations = $this->getRepository(CompetitionParticipation::class)->findAll();
+            self::assertCount(1, $participations);
+            self::assertSame('19804:585064', $participations[0]->getExternalId());
+            self::assertSame('11', $participations[0]->getRank());
+            self::assertSame('Elite Male', $participations[0]->getDivision());
+        } finally {
+            @unlink($file);
+        }
+    }
+
     public function testInvalidRowsAreReportedWithoutBlockingValidRows(): void
     {
         $command = $this->getService(ImportCompetitionResultsCommand::class);
