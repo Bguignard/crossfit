@@ -125,11 +125,11 @@ EOD;
             -Example 2 :
             Team Workout (team of 2) :
             AMRAP 20 minutes
-            You go I go
-            -250m row
-            -5 Thrusters
-            -10 Wall ball
-            -5 Burpees box jump over
+            Split reps anyhow, except burpees synchronized
+            -40 Wall balls
+            -30 Thrusters
+            -20 Burpee box jump overs
+            -400m row, split in short 100m switches
             EOD;
         } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
             $promptForChatGPT .= <<<EOD
@@ -390,7 +390,9 @@ EOD;
         }
 
         return <<<TXT
-Team workout guidance: this must be explicitly written as a team workout. Use team-of-2 unless another team size is clearly better for the stimulus. Include a clear work-sharing pattern such as "you go, I go", shared reps, split anyhow, synchronized reps, relay stations or partner alternating rounds. The flow must make the team structure impossible to miss.
+Team workout guidance: this must be explicitly written as a team workout. Use team-of-2 unless another team size is clearly better for the stimulus. Include a clear work-sharing pattern such as short "you go, I go" switches, shared reps, split anyhow, synchronized reps, relay stations or partner alternating rounds. The flow must make the team structure impossible to miss.
+Avoid long idle partner windows: do not prescribe "you go, I go" chunks where one athlete waits 2-3 minutes while the other completes a long station, long row/run, large unbroken set or full round. If using "you go, I go", keep each switch short enough that the resting partner is back to work quickly, usually small sets, short distances or one compact movement at a time.
+For longer stations, prefer shared reps, split-anyhow work, synchronized work, active holds/carries for the waiting partner, or explicit short distance/repetition switches.
 
 TXT;
     }
