@@ -340,6 +340,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('this must be explicitly written as a team workout', $chatGpt->prompt);
         self::assertStringContainsString('team-of-2', $chatGpt->prompt);
         self::assertStringContainsString('you go, I go', $chatGpt->prompt);
+        self::assertStringContainsString('Avoid long idle partner windows', $chatGpt->prompt);
+        self::assertStringContainsString('do not prescribe "you go, I go" chunks where one athlete waits 2-3 minutes', $chatGpt->prompt);
+        self::assertStringContainsString('prefer shared reps, split-anyhow work, synchronized work, active holds/carries', $chatGpt->prompt);
     }
 
     public function testWorkoutFlowDoesNotDuplicateScalingSectionWhenModelUsesShortHeading(): void
