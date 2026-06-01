@@ -23,8 +23,6 @@ use Symfony\Component\Uid\Uuid;
     'name' => 'ipartial',
     'flow' => 'ipartial',
     'timeCap' => 'exact',
-    'movements.name' => 'iexact',
-    'implements.name' => 'iexact',
     'sourceName' => 'exact',
     'externalId' => 'exact',
 ])]

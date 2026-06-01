@@ -10,7 +10,7 @@ jobs:
   test:
     name: Symfony
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -85,5 +85,5 @@ jobs:
         run: composer psalm
 
       - name: Run PHPUnit
-        timeout-minutes: 8
-        run: php -d memory_limit=1G bin/phpunit --colors=always --debug
+        timeout-minutes: 12
+        run: php -d memory_limit=1G bin/phpunit --colors=always
