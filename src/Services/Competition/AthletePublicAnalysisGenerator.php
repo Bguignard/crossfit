@@ -149,8 +149,13 @@ final readonly class AthletePublicAnalysisGenerator
             ->getQuery()
             ->getResult();
 
+        $workoutResults = array_values(array_filter(
+            $results,
+            static fn ($result): bool => $result instanceof WorkoutResult,
+        ));
+
         $input = [];
-        foreach ($results as $result) {
+        foreach ($this->filterNonAttemptedQualificationResults($workoutResults) as $result) {
             if (!$result instanceof WorkoutResult) {
                 continue;
             }
@@ -191,6 +196,56 @@ final readonly class AthletePublicAnalysisGenerator
         return array_slice($input, -80);
     }
 
+    /**
+     * Removes qualification/Open series that look like ghost registrations: the
+     * athlete is ranked last on every event and every score is empty/zero/DNS.
+     *
+     * @param list<WorkoutResult> $results
+     *
+     * @return list<WorkoutResult>
+     */
+    private function filterNonAttemptedQualificationResults(array $results): array
+    {
+        $groups = [];
+        foreach ($results as $index => $result) {
+            $competition = $result->getEvent()->getCompetition();
+            if (!$this->isQualificationLikeCompetition($competition)) {
+                continue;
+            }
+
+            $groups[$this->analysisCompetitionGroupKey($result)][] = $index;
+        }
+
+        $excludedIndexes = [];
+        $maxRankCache = [];
+        foreach ($groups as $indexes) {
+            if (count($indexes) < 2) {
+                continue;
+            }
+
+            foreach ($indexes as $index) {
+                $result = $results[$index];
+                if (!$this->isLastRankInEventDivision($result, $maxRankCache) || $this->hasMeaningfulScore($result)) {
+                    continue 2;
+                }
+            }
+
+            foreach ($indexes as $index) {
+                $excludedIndexes[$index] = true;
+            }
+        }
+
+        if ($excludedIndexes === []) {
+            return $results;
+        }
+
+        return array_values(array_filter(
+            $results,
+            static fn (WorkoutResult $result, int $index): bool => !isset($excludedIndexes[$index]),
+            ARRAY_FILTER_USE_BOTH,
+        ));
+    }
+
     private function isRelevantCrossFitStage(Competition $competition): bool
     {
         $name = strtolower($competition->getName());
@@ -200,6 +255,124 @@ final readonly class AthletePublicAnalysisGenerator
             || str_contains($name, 'regional')
             || str_contains($name, 'quarterfinal')
             || str_contains($name, 'open');
+    }
+
+    private function isQualificationLikeCompetition(Competition $competition): bool
+    {
+        $name = strtolower($competition->getName());
+
+        return str_contains($name, 'open')
+            || str_contains($name, 'qualif')
+            || str_contains($name, 'qualifying');
+    }
+
+    private function analysisCompetitionGroupKey(WorkoutResult $result): string
+    {
+        $competition = $result->getEvent()->getCompetition();
+        $competitionKey = $competition->getSourceName().':'.$competition->getExternalId();
+        $divisionKey = $result->getDivisionSourceId()
+            ?? $result->getCompetitionDivision()?->getExternalId()
+            ?? strtolower((string) $result->getDivision());
+
+        return $competitionKey.':'.$divisionKey;
+    }
+
+    /**
+     * @param array<string, int|null> $maxRankCache
+     */
+    private function isLastRankInEventDivision(WorkoutResult $result, array &$maxRankCache): bool
+    {
+        $rank = $result->getRank();
+        if ($rank === null) {
+            return false;
+        }
+
+        $fieldSize = $result->getFieldSize();
+        if ($fieldSize !== null) {
+            return $rank >= $fieldSize;
+        }
+
+        $cacheKey = implode(':', [
+            $result->getEvent()->getSourceName(),
+            $result->getEvent()->getExternalId(),
+            $result->getDivisionSourceId() ?? '',
+            $result->getCompetitionDivision()?->getExternalId() ?? '',
+            strtolower((string) $result->getDivision()),
+        ]);
+
+        if (!array_key_exists($cacheKey, $maxRankCache)) {
+            $queryBuilder = $this->entityManager->createQueryBuilder()
+                ->select('MAX(peer.rank)')
+                ->from(WorkoutResult::class, 'peer')
+                ->where('peer.event = :event')
+                ->andWhere('peer.rank IS NOT NULL')
+                ->setParameter('event', $result->getEvent());
+
+            if ($result->getDivisionSourceId() !== null) {
+                $queryBuilder
+                    ->andWhere('peer.divisionSourceId = :divisionSourceId')
+                    ->setParameter('divisionSourceId', $result->getDivisionSourceId());
+            } elseif ($result->getCompetitionDivision() !== null) {
+                $queryBuilder
+                    ->andWhere('peer.competitionDivision = :division')
+                    ->setParameter('division', $result->getCompetitionDivision());
+            } elseif ($result->getDivision() !== null) {
+                $queryBuilder
+                    ->andWhere('LOWER(peer.division) = :division')
+                    ->setParameter('division', strtolower($result->getDivision()));
+            }
+
+            $maxRank = $queryBuilder->getQuery()->getSingleScalarResult();
+            $maxRankCache[$cacheKey] = $maxRank !== null ? (int) $maxRank : null;
+        }
+
+        return $maxRankCache[$cacheKey] !== null && $rank >= $maxRankCache[$cacheKey];
+    }
+
+    private function hasMeaningfulScore(WorkoutResult $result): bool
+    {
+        $score = $result->getScore();
+        if (($score->getNumericValue() ?? 0.0) > 0.0 || ($score->getTimeInSeconds() ?? 0) > 0) {
+            return true;
+        }
+
+        $value = strtolower(trim((string) ($score->getDisplayValue() ?? $score->getRawValue())));
+        if ($value === '') {
+            return false;
+        }
+
+        $nonMeaningfulValues = [
+            '-',
+            '--',
+            '0',
+            '0.0',
+            '0:00',
+            '00:00',
+            '0 reps',
+            '0 rep',
+            '0 rounds',
+            '0 points',
+            '0 pts',
+            '0 lb',
+            '0 lbs',
+            '0 kg',
+            'dnf',
+            'dns',
+            'no score',
+            'not submitted',
+            'did not finish',
+            'did not start',
+        ];
+
+        if (in_array($value, $nonMeaningfulValues, true)) {
+            return false;
+        }
+
+        if (preg_match('/^0(?:[.,]0+)?\s*(?:reps?|rounds?|pts?|points?|lb|lbs|kg|cal|cals|m|meters?)$/', $value) === 1) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
