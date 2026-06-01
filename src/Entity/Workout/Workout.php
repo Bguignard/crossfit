@@ -259,6 +259,7 @@ class Workout
 
     /**
      * @return list<array{
+     *     competitionId: string,
      *     competitionName: string,
      *     competitionSeason: int|null,
      *     competitionLogoUrl: string|null,
@@ -289,6 +290,7 @@ class Workout
             sort($divisionNames, SORT_NATURAL | SORT_FLAG_CASE);
 
             $context = [
+                'competitionId' => (string) $competition->getId(),
                 'competitionName' => $competition->getName(),
                 'competitionSeason' => $competition->getSeason(),
                 'competitionLogoUrl' => $competition->getLogoUrl(),

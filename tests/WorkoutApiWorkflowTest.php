@@ -96,6 +96,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame([
             [
+                'competitionId' => (string) $competition->getId(),
                 'competitionName' => 'CrossFit Games Open',
                 'competitionSeason' => 2017,
                 'competitionLogoUrl' => null,
