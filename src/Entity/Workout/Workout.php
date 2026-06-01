@@ -22,6 +22,9 @@ use Symfony\Component\Uid\Uuid;
 #[ApiFilter(SearchFilter::class, properties: [
     'name' => 'ipartial',
     'flow' => 'ipartial',
+    'timeCap' => 'exact',
+    'movements.name' => 'ipartial',
+    'implements.name' => 'ipartial',
     'sourceName' => 'exact',
     'externalId' => 'exact',
 ])]

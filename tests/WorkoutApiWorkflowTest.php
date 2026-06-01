@@ -50,6 +50,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertLessThanOrEqual(50, count($workouts));
     }
 
+    public function testFrontendCanFilterWorkoutCatalogByStructuredMovementAndImplement(): void
+    {
+        $this->browser()->request('GET', '/api/workouts?movements.name=Double%20Under&implements.name=Jump%20Rope&timeCap=40&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Open 17.5', $names);
+        self::assertNotContains('Fran', $names);
+    }
+
     public function testFrontendCanReadWorkoutCompetitionContext(): void
     {
         $entityManager = $this->getEntityManager();
