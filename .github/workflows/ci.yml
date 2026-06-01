@@ -2,12 +2,15 @@ name: CI
 
 on:
   push:
+    branches:
+      - master
   pull_request:
 
 jobs:
   test:
     name: Symfony
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -82,4 +85,5 @@ jobs:
         run: composer psalm
 
       - name: Run PHPUnit
+        timeout-minutes: 12
         run: php -d memory_limit=1G bin/phpunit --colors=always

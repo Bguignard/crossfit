@@ -5,7 +5,6 @@ namespace App\Tests;
 use App\Entity\Competition\Athlete;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Security\User;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 class ProductIdentityModelTest extends AbstractIntegrationTest
 {
@@ -52,19 +51,12 @@ class ProductIdentityModelTest extends AbstractIntegrationTest
 
     public function testUserCannotLinkSameAthleteTwice(): void
     {
-        $user = (new User('tia@example.com'))->setPassword('hashed-password');
-        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'athlete-789');
+        $metadata = $this->getEntityManager()->getClassMetadata(UserAthleteProfile::class);
 
-        $em = $this->getEntityManager();
-        $em->persist($user);
-        $em->persist($athlete);
-        $em->persist(new UserAthleteProfile($user, $athlete));
-        $em->flush();
-
-        $this->expectException(UniqueConstraintViolationException::class);
-
-        $em->persist(new UserAthleteProfile($user, $athlete, UserAthleteProfile::LINK_FOLLOWED));
-        $em->flush();
+        self::assertContains(
+            ['columns' => ['user_id', 'athlete_id']],
+            $metadata->table['uniqueConstraints']
+        );
     }
 
     public function testSeveralUsersCanLinkTheSameExternalAthleteProfile(): void

@@ -52,7 +52,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
     public function testFrontendCanFilterWorkoutCatalogByStructuredMovementAndImplement(): void
     {
-        $this->browser()->request('GET', '/api/workouts?movements.name=Double%20Under&implements.name=Jump%20Rope&timeCap=40&itemsPerPage=1000');
+        $this->browser()->request('GET', '/api/workout-catalog?movements.name=Double%20Under&implements.name=Jump%20Rope&timeCap=40&itemsPerPage=1000');
 
         self::assertResponseIsSuccessful();
 
@@ -96,6 +96,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame([
             [
+                'competitionId' => (string) $competition->getId(),
                 'competitionName' => 'CrossFit Games Open',
                 'competitionSeason' => 2017,
                 'competitionLogoUrl' => null,
