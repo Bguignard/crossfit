@@ -85,5 +85,5 @@ jobs:
         run: composer psalm
 
       - name: Run PHPUnit
-        timeout-minutes: 30
-        run: php -d memory_limit=1G bin/phpunit --colors=always
+        timeout-minutes: 8
+        run: php -d memory_limit=1G bin/phpunit --colors=always --debug
