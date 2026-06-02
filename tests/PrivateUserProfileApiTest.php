@@ -3,6 +3,12 @@
 namespace App\Tests;
 
 use App\Entity\Competition\Athlete;
+use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionDivision;
+use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\Enum\ScoreTypeEnum;
+use App\Entity\Competition\Score;
+use App\Entity\Competition\WorkoutResult;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\UserAthleteProfile;
@@ -165,10 +171,44 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $performanceProfile = new UserPerformanceProfile($user);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::STRICT_PULL_UP))->setBooleanValue(true);
+        $open = (new Competition('CrossFit Open 2026', 'crossfit_games', 'open-2026'))->setSeason(2026);
+        $division = new CompetitionDivision($open, 'Men', 'crossfit_games', 'open-2026-men');
+        $attemptedEvent = (new CompetitionEvent($open, 'Open 26.1', 'crossfit_games', 'open-2026-1'))
+            ->setEventOrder(1);
+        $missedEvent = (new CompetitionEvent($open, 'Open 26.2', 'crossfit_games', 'open-2026-2'))
+            ->setEventOrder(2);
+        $attemptedResult = (new WorkoutResult(
+            $athlete,
+            $attemptedEvent,
+            (new Score(ScoreTypeEnum::REPS, '200 reps'))->setNumericValue(200),
+            'crossfit_games',
+            'open-2026-1-bruno'
+        ))
+            ->setCompetitionDivision($division)
+            ->setDivision('Men')
+            ->setRank(30)
+            ->setFieldSize(100);
+        $missedResult = (new WorkoutResult(
+            $athlete,
+            $missedEvent,
+            new Score(ScoreTypeEnum::REPS, '0 reps'),
+            'crossfit_games',
+            'open-2026-2-bruno'
+        ))
+            ->setCompetitionDivision($division)
+            ->setDivision('Men')
+            ->setRank(100)
+            ->setFieldSize(100);
 
         $this->getEntityManager()->persist($athlete);
         $this->getEntityManager()->persist($athleteProfile);
         $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->persist($open);
+        $this->getEntityManager()->persist($division);
+        $this->getEntityManager()->persist($attemptedEvent);
+        $this->getEntityManager()->persist($missedEvent);
+        $this->getEntityManager()->persist($attemptedResult);
+        $this->getEntityManager()->persist($missedResult);
         $this->getEntityManager()->flush();
 
         $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
@@ -184,6 +224,13 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('identify weaknesses', $analysisPayload['parameters']['goal']);
         self::assertSame('Bruno Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
         self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertSame('Open 26.1', $analysisPayload['inputSnapshot']['competition_results'][0]['event']);
+        self::assertEquals(200.0, $analysisPayload['inputSnapshot']['competition_results'][0]['numeric_value']);
+        self::assertSame('Open 26.2', $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['event']);
+        self::assertSame(
+            'non_attempted_or_not_submitted',
+            $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['excluded_reason']
+        );
 
         $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
             'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
