@@ -13,6 +13,7 @@ use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Services\Profile\UserAvatarResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -33,8 +34,10 @@ class MeController extends AbstractController
         UserAthleteProfile::LINK_FOLLOWED,
     ];
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly UserAvatarResolver $userAvatarResolver,
+    ) {
     }
 
     #[Route('', name: 'api_me_dashboard', methods: ['GET'])]
@@ -280,6 +283,7 @@ class MeController extends AbstractController
                 'id' => (string) $user->getId(),
                 'email' => $user->getEmail(),
                 'displayName' => $user->getDisplayName(),
+                'avatarUrl' => $this->userAvatarResolver->avatarUrl($user),
                 'emailVerified' => $user->isEmailVerified(),
             ],
             'athleteProfiles' => array_map(
@@ -313,6 +317,7 @@ class MeController extends AbstractController
                 'sourceName' => $athlete->getSourceName(),
                 'externalId' => $athlete->getExternalId(),
                 'sourceUrl' => $athlete->getSourceUrl(),
+                'avatarUrl' => $athlete->getAvatarUrl(),
             ],
         ];
     }

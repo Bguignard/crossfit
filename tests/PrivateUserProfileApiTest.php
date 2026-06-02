@@ -24,7 +24,8 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
     {
         [$userToken] = $this->createAuthenticatedUser('member@example.com', 'member-token');
         [$otherUserToken] = $this->createAuthenticatedUser('other@example.com', 'other-token');
-        $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-123');
+        $athlete = (new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-123'))
+            ->setAvatarUrl('https://images.crossfit.test/tia.jpg');
         $this->getEntityManager()->persist($athlete);
         $this->getEntityManager()->flush();
 
@@ -37,7 +38,18 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertResponseStatusCodeSame(201);
         $payload = $this->jsonResponse();
         self::assertSame('Tia-Clair Toomey', $payload['athleteProfile']['athlete']['displayName']);
+        self::assertSame('https://images.crossfit.test/tia.jpg', $payload['athleteProfile']['athlete']['avatarUrl']);
         self::assertTrue($payload['athleteProfile']['primaryProfile']);
+
+        $this->jsonRequest('GET', '/api/me', [], $userToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://images.crossfit.test/tia.jpg', $this->jsonResponse()['user']['avatarUrl']);
+
+        $this->jsonRequest('GET', '/api/auth/me', [], $userToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://images.crossfit.test/tia.jpg', $this->jsonResponse()['user']['avatarUrl']);
 
         $this->jsonRequest('POST', '/api/me/athlete-profiles', [
             'athleteId' => (string) $athlete->getId(),
