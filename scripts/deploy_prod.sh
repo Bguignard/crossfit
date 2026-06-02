@@ -8,6 +8,7 @@ PHP_BIN="${PHP_BIN:-php}"
 COMPOSER_BIN="${COMPOSER_BIN:-composer}"
 PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-php8.4-fpm}"
 MESSENGER_SERVICE="${MESSENGER_SERVICE:-monwod-symfony-messenger}"
+WEB_GROUP="${WEB_GROUP:-www-data}"
 RUN_MIGRATIONS=1
 
 usage() {
@@ -19,6 +20,7 @@ usage() {
     printf '  COMPOSER_BIN      Default: composer\n'
     printf '  PHP_FPM_SERVICE   Default: php8.4-fpm\n'
     printf '  MESSENGER_SERVICE Default: monwod-symfony-messenger\n'
+    printf '  WEB_GROUP         Default: www-data\n'
 }
 
 log() {
@@ -69,6 +71,15 @@ log "Clearing production cache"
 
 log "Warming production cache"
 "$PHP_BIN" bin/console cache:warmup --env=prod
+
+log "Ensuring Symfony writable directories are accessible to the web group"
+mkdir -p var/cache var/log
+if getent group "$WEB_GROUP" >/dev/null 2>&1; then
+    sudo chgrp -R "$WEB_GROUP" var/cache var/log
+    sudo chmod -R ug+rwX var/cache var/log
+else
+    chmod -R u+rwX var/cache var/log
+fi
 
 log "Stopping Messenger workers so systemd restarts them with fresh code"
 "$PHP_BIN" bin/console messenger:stop-workers --env=prod || true

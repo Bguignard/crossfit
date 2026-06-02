@@ -192,11 +192,15 @@ class AuthController extends AbstractController
             $token->consume();
             $this->entityManager->flush();
         } catch (\Throwable $exception) {
-            $this->logger->error('Password reset failed.', [
-                'exception' => $exception,
-                'userId' => $user->getId()?->toRfc4122(),
-                'tokenId' => $token->getId()?->toRfc4122(),
-            ]);
+            try {
+                $this->logger->error('Password reset failed.', [
+                    'exception' => $exception,
+                    'userId' => $user->getId()?->toRfc4122(),
+                    'tokenId' => $token->getId()?->toRfc4122(),
+                ]);
+            } catch (\Throwable) {
+                // Keep the API response stable even when production logging is misconfigured.
+            }
 
             return $this->json([
                 'error' => 'Password reset failed.',
