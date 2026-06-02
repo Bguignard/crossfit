@@ -108,12 +108,19 @@ class AuthWorkflowTest extends AbstractIntegrationTest
 
         self::assertResponseIsSuccessful();
         self::assertSame(['status' => 'password_reset_requested'], $this->jsonResponse());
+        self::assertEmailCount(0);
 
         $this->jsonRequest('POST', '/api/auth/forgot-password', [
             'email' => 'reset@example.com',
         ]);
 
         self::assertResponseIsSuccessful();
+        self::assertEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailSubjectContains($email, 'Réinitialisation');
+        self::assertEmailAddressContains($email, 'To', 'reset@example.com');
+        self::assertEmailTextBodyContains($email, '/reset-password?token=');
 
         /** @var UserToken|null $resetToken */
         $resetToken = $this->getRepository(UserToken::class)->findOneBy([
