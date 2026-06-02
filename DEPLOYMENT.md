@@ -87,9 +87,10 @@ MESSENGER_SERVICE=monwod-symfony-messenger \
 
 ## Messenger Worker
 
-Symfony queues emails through Messenger. Production must therefore run a worker
-continuously, otherwise account validation and password reset emails remain in
-`messenger_messages`.
+Transactional account emails are sent immediately so password reset and account
+validation do not depend on a queue worker. Messenger is still available for
+asynchronous jobs and notifier messages, so keep the worker installed when those
+features are used.
 
 Install or refresh the worker service on the server:
 
