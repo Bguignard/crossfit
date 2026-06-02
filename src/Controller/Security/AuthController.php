@@ -18,6 +18,11 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/auth')]
 class AuthController extends AbstractController
 {
+    private const MAX_BCRYPT_COST = 14;
+    private const MAX_ARGON_MEMORY_COST = 65536;
+    private const MAX_ARGON_TIME_COST = 4;
+    private const MAX_ARGON_THREADS = 4;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
@@ -109,7 +114,12 @@ class AuthController extends AbstractController
 
         /** @var User|null $user */
         $user = $email !== null ? $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]) : null;
-        if ($user === null || $plainPassword === null || !$this->passwordHasher->isPasswordValid($user, $plainPassword)) {
+        if (
+            $user === null
+            || $plainPassword === null
+            || !$this->isPasswordHashVerificationAllowed($user->getPassword())
+            || !$this->passwordHasher->isPasswordValid($user, $plainPassword)
+        ) {
             return $this->json(['error' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
         }
         if (!$user->isEmailVerified()) {
@@ -230,6 +240,31 @@ class AuthController extends AbstractController
         ]);
 
         return $token !== null && !$token->isExpired() ? $token : null;
+    }
+
+    private function isPasswordHashVerificationAllowed(string $hash): bool
+    {
+        $info = password_get_info($hash);
+        $algoName = $info['algoName'] ?? 'unknown';
+        $options = is_array($info['options'] ?? null) ? $info['options'] : [];
+
+        return match ($algoName) {
+            'bcrypt' => $this->intOption($options, 'cost') <= self::MAX_BCRYPT_COST,
+            'argon2i', 'argon2id' => $this->intOption($options, 'memory_cost') <= self::MAX_ARGON_MEMORY_COST
+                && $this->intOption($options, 'time_cost') <= self::MAX_ARGON_TIME_COST
+                && $this->intOption($options, 'threads') <= self::MAX_ARGON_THREADS,
+            default => false,
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function intOption(array $options, string $key): int
+    {
+        $value = $options[$key] ?? PHP_INT_MAX;
+
+        return is_numeric($value) ? (int) $value : PHP_INT_MAX;
     }
 
     private function email(mixed $value): ?string

@@ -4,6 +4,7 @@ namespace App\Tests;
 
 use App\Entity\Security\User;
 use App\Entity\Security\UserToken;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AuthWorkflowTest extends AbstractIntegrationTest
 {
@@ -140,6 +141,48 @@ class AuthWorkflowTest extends AbstractIntegrationTest
         self::assertIsString($this->jsonResponse()['token']);
     }
 
+    public function testExistingUserWrongPasswordReturnsUnauthorized(): void
+    {
+        $user = new User('wrong-password@example.com');
+        $user->setPassword($this->passwordHasher()->hashPassword($user, 'correct-password'));
+        $user->markEmailVerified();
+        $this->getEntityManager()->persist($user);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/auth/login', [
+            'email' => 'wrong-password@example.com',
+            'password' => 'wrong-password',
+        ]);
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertSame('Invalid credentials.', $this->jsonResponse()['error']);
+        self::assertSame([], $this->getRepository(UserToken::class)->findBy([
+            'user' => $user,
+            'purpose' => UserToken::PURPOSE_API_AUTH,
+        ]));
+    }
+
+    public function testLoginRejectsOverlyExpensivePasswordHashesBeforeVerification(): void
+    {
+        $user = new User('expensive-hash@example.com');
+        $user->setPassword('$argon2id$v=19$m=1048576,t=10,p=8$aaaaaaaaaaaaaaaaaaaaaa$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+        $user->markEmailVerified();
+        $this->getEntityManager()->persist($user);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/auth/login', [
+            'email' => 'expensive-hash@example.com',
+            'password' => 'any-password',
+        ]);
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertSame('Invalid credentials.', $this->jsonResponse()['error']);
+        self::assertSame([], $this->getRepository(UserToken::class)->findBy([
+            'user' => $user,
+            'purpose' => UserToken::PURPOSE_API_AUTH,
+        ]));
+    }
+
     /**
      * @param array<string, mixed> $payload
      */
@@ -160,6 +203,14 @@ class AuthWorkflowTest extends AbstractIntegrationTest
         self::assertIsArray($payload);
 
         return $payload;
+    }
+
+    private function passwordHasher(): UserPasswordHasherInterface
+    {
+        /** @var UserPasswordHasherInterface $passwordHasher */
+        $passwordHasher = $this->getService(UserPasswordHasherInterface::class);
+
+        return $passwordHasher;
     }
 
     private function plainTokenFromHash(UserToken $token): string
