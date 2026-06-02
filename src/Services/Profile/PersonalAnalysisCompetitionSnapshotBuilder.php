@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final class PersonalAnalysisCompetitionSnapshotBuilder
 {
     private const int MAX_RESULTS = 80;
+    private const array ANALYSABLE_SOURCES = ['crossfit_games', 'competition_corner'];
 
     public function __construct(private readonly EntityManagerInterface $entityManager)
     {
@@ -24,23 +25,49 @@ final class PersonalAnalysisCompetitionSnapshotBuilder
     public function build(?UserAthleteProfile $athleteProfile): array
     {
         if ($athleteProfile === null) {
+            return $this->buildMany([]);
+        }
+
+        return $this->buildMany([$athleteProfile]);
+    }
+
+    /**
+     * @param iterable<UserAthleteProfile> $athleteProfiles
+     *
+     * @return array{
+     *     competition_results: list<array<string, mixed>>,
+     *     excluded_non_attempted_results: list<array<string, mixed>>
+     * }
+     */
+    public function buildMany(iterable $athleteProfiles): array
+    {
+        $profiles = [];
+        foreach ($athleteProfiles as $athleteProfile) {
+            if (!$this->isAnalysableProfile($athleteProfile)) {
+                continue;
+            }
+            $profiles[] = $athleteProfile;
+        }
+
+        if ($profiles === []) {
             return [
                 'competition_results' => [],
                 'excluded_non_attempted_results' => [],
             ];
         }
 
-        $results = $this->workoutResults($athleteProfile);
         $included = [];
         $excluded = [];
 
-        foreach ($results as $result) {
-            if ($this->isNonAttemptedQualificationResult($result)) {
-                $excluded[] = $this->resultPayload($result, 'non_attempted_or_not_submitted');
-                continue;
-            }
+        foreach ($profiles as $athleteProfile) {
+            foreach ($this->workoutResults($athleteProfile) as $result) {
+                if ($this->isNonAttemptedQualificationResult($result)) {
+                    $excluded[] = $this->resultPayload($athleteProfile, $result, 'non_attempted_or_not_submitted');
+                    continue;
+                }
 
-            $included[] = $this->resultPayload($result);
+                $included[] = $this->resultPayload($athleteProfile, $result);
+            }
         }
 
         return [
@@ -79,13 +106,18 @@ final class PersonalAnalysisCompetitionSnapshotBuilder
     /**
      * @return array<string, mixed>
      */
-    private function resultPayload(WorkoutResult $result, ?string $excludedReason = null): array
+    private function resultPayload(UserAthleteProfile $athleteProfile, WorkoutResult $result, ?string $excludedReason = null): array
     {
         $event = $result->getEvent();
         $competition = $event->getCompetition();
         $score = $result->getScore();
 
         $payload = [
+            'athlete_profile_id' => (string) $athleteProfile->getId(),
+            'athlete_id' => (string) $athleteProfile->getAthlete()->getId(),
+            'athlete_display_name' => $athleteProfile->getAthlete()->getDisplayName(),
+            'athlete_source_name' => $athleteProfile->getAthlete()->getSourceName(),
+            'athlete_external_id' => $athleteProfile->getAthlete()->getExternalId(),
             'competition' => $competition->getName(),
             'competition_source' => $competition->getSourceName(),
             'competition_external_id' => $competition->getExternalId(),
@@ -105,6 +137,12 @@ final class PersonalAnalysisCompetitionSnapshotBuilder
         }
 
         return $payload;
+    }
+
+    private function isAnalysableProfile(UserAthleteProfile $athleteProfile): bool
+    {
+        return $athleteProfile->getLinkType() === UserAthleteProfile::LINK_SELF
+            && in_array($athleteProfile->getAthlete()->getSourceName(), self::ANALYSABLE_SOURCES, true);
     }
 
     private function isNonAttemptedQualificationResult(WorkoutResult $result): bool
