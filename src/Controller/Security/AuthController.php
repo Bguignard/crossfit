@@ -4,6 +4,7 @@ namespace App\Controller\Security;
 
 use App\Entity\Security\User;
 use App\Entity\Security\UserToken;
+use App\Services\Profile\UserAvatarResolver;
 use App\Services\Security\AuthEmailSender;
 use App\Services\Security\TokenFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,6 +30,7 @@ class AuthController extends AbstractController
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly TokenFactory $tokenFactory,
         private readonly AuthEmailSender $authEmailSender,
+        private readonly UserAvatarResolver $userAvatarResolver,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -308,7 +310,7 @@ class AuthController extends AbstractController
     }
 
     /**
-     * @return array{id: string|null, email: string, displayName: string|null, emailVerified: bool, roles: list<string>}
+     * @return array{id: string|null, email: string, displayName: string|null, avatarUrl: string|null, emailVerified: bool, roles: list<string>}
      */
     private function userPayload(User $user): array
     {
@@ -316,6 +318,7 @@ class AuthController extends AbstractController
             'id' => $user->getId()?->toRfc4122(),
             'email' => $user->getEmail(),
             'displayName' => $user->getDisplayName(),
+            'avatarUrl' => $this->userAvatarResolver->avatarUrl($user),
             'emailVerified' => $user->isEmailVerified(),
             'roles' => $user->getRoles(),
         ];
