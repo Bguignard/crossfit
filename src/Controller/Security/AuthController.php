@@ -7,6 +7,7 @@ use App\Entity\Security\UserToken;
 use App\Services\Security\AuthEmailSender;
 use App\Services\Security\TokenFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,6 +29,7 @@ class AuthController extends AbstractController
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly TokenFactory $tokenFactory,
         private readonly AuthEmailSender $authEmailSender,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -184,9 +186,23 @@ class AuthController extends AbstractController
         }
 
         $user = $token->getUser();
-        $user->setPassword($this->passwordHasher->hashPassword($user, $plainPassword));
-        $token->consume();
-        $this->entityManager->flush();
+
+        try {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $plainPassword));
+            $token->consume();
+            $this->entityManager->flush();
+        } catch (\Throwable $exception) {
+            $this->logger->error('Password reset failed.', [
+                'exception' => $exception,
+                'userId' => $user->getId()?->toRfc4122(),
+                'tokenId' => $token->getId()?->toRfc4122(),
+            ]);
+
+            return $this->json([
+                'error' => 'Password reset failed.',
+                'code' => 'password_reset_failed',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
 
         return $this->json(['status' => 'password_reset']);
     }
