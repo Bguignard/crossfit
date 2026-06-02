@@ -166,19 +166,29 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
     public function testUserCanCreateAnalysisAndProgrammingRequests(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('requests@example.com', 'requests-token');
-        $athlete = new Athlete('Bruno Athlete', 'competition_corner', 'bruno-123');
-        $athleteProfile = (new UserAthleteProfile($user, $athlete))->setPrimaryProfile(true);
+        $gamesAthlete = new Athlete('Bruno Games', 'crossfit_games', '942782');
+        $cornerAthlete = new Athlete('Bruno Competition Corner', 'competition_corner', 'bruno-123');
+        $scoringAthlete = new Athlete('Bruno Scoring', 'scoring_fit', 'scoring-123');
+        $gamesProfile = (new UserAthleteProfile($user, $gamesAthlete))->setPrimaryProfile(true);
+        $cornerProfile = new UserAthleteProfile($user, $cornerAthlete);
+        $scoringProfile = new UserAthleteProfile($user, $scoringAthlete);
         $performanceProfile = new UserPerformanceProfile($user);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::STRICT_PULL_UP))->setBooleanValue(true);
         $open = (new Competition('CrossFit Open 2026', 'crossfit_games', 'open-2026'))->setSeason(2026);
+        $throwdown = (new Competition('Marseille Throwdown 2026', 'competition_corner', 'mt-2026'))->setSeason(2026);
+        $scoringCompetition = (new Competition('Scoring Event 2026', 'scoring_fit', 'sf-2026'))->setSeason(2026);
         $division = new CompetitionDivision($open, 'Men', 'crossfit_games', 'open-2026-men');
         $attemptedEvent = (new CompetitionEvent($open, 'Open 26.1', 'crossfit_games', 'open-2026-1'))
             ->setEventOrder(1);
         $missedEvent = (new CompetitionEvent($open, 'Open 26.2', 'crossfit_games', 'open-2026-2'))
             ->setEventOrder(2);
+        $throwdownEvent = (new CompetitionEvent($throwdown, 'Final 1', 'competition_corner', 'mt-2026-1'))
+            ->setEventOrder(1);
+        $scoringEvent = (new CompetitionEvent($scoringCompetition, 'Scoring 1', 'scoring_fit', 'sf-2026-1'))
+            ->setEventOrder(1);
         $attemptedResult = (new WorkoutResult(
-            $athlete,
+            $gamesAthlete,
             $attemptedEvent,
             (new Score(ScoreTypeEnum::REPS, '200 reps'))->setNumericValue(200),
             'crossfit_games',
@@ -189,7 +199,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             ->setRank(30)
             ->setFieldSize(100);
         $missedResult = (new WorkoutResult(
-            $athlete,
+            $gamesAthlete,
             $missedEvent,
             new Score(ScoreTypeEnum::REPS, '0 reps'),
             'crossfit_games',
@@ -199,20 +209,49 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             ->setDivision('Men')
             ->setRank(100)
             ->setFieldSize(100);
+        $throwdownResult = (new WorkoutResult(
+            $cornerAthlete,
+            $throwdownEvent,
+            (new Score(ScoreTypeEnum::TIME, '08:21'))->setTimeInSeconds(501),
+            'competition_corner',
+            'mt-2026-1-bruno'
+        ))
+            ->setDivision('Elite Men')
+            ->setRank(4)
+            ->setFieldSize(40);
+        $scoringResult = (new WorkoutResult(
+            $scoringAthlete,
+            $scoringEvent,
+            (new Score(ScoreTypeEnum::REPS, '120 reps'))->setNumericValue(120),
+            'scoring_fit',
+            'sf-2026-1-bruno'
+        ))
+            ->setDivision('RX')
+            ->setRank(5)
+            ->setFieldSize(50);
 
-        $this->getEntityManager()->persist($athlete);
-        $this->getEntityManager()->persist($athleteProfile);
+        $this->getEntityManager()->persist($gamesAthlete);
+        $this->getEntityManager()->persist($cornerAthlete);
+        $this->getEntityManager()->persist($scoringAthlete);
+        $this->getEntityManager()->persist($gamesProfile);
+        $this->getEntityManager()->persist($cornerProfile);
+        $this->getEntityManager()->persist($scoringProfile);
         $this->getEntityManager()->persist($performanceProfile);
         $this->getEntityManager()->persist($open);
+        $this->getEntityManager()->persist($throwdown);
+        $this->getEntityManager()->persist($scoringCompetition);
         $this->getEntityManager()->persist($division);
         $this->getEntityManager()->persist($attemptedEvent);
         $this->getEntityManager()->persist($missedEvent);
+        $this->getEntityManager()->persist($throwdownEvent);
+        $this->getEntityManager()->persist($scoringEvent);
         $this->getEntityManager()->persist($attemptedResult);
         $this->getEntityManager()->persist($missedResult);
+        $this->getEntityManager()->persist($throwdownResult);
+        $this->getEntityManager()->persist($scoringResult);
         $this->getEntityManager()->flush();
 
         $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
-            'athleteProfileId' => (string) $athleteProfile->getId(),
             'parameters' => [
                 'goal' => 'identify weaknesses',
             ],
@@ -222,9 +261,13 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $analysisPayload = $this->jsonResponse()['analysisRequest'];
         self::assertSame('queued', $analysisPayload['status']);
         self::assertSame('identify weaknesses', $analysisPayload['parameters']['goal']);
-        self::assertSame('Bruno Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
+        self::assertSame('Bruno Games', $analysisPayload['athleteProfile']['athlete']['displayName']);
         self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
-        self::assertSame('Open 26.1', $analysisPayload['inputSnapshot']['competition_results'][0]['event']);
+        self::assertCount(2, $analysisPayload['inputSnapshot']['athlete_profiles']);
+        self::assertSame(['crossfit_games', 'competition_corner'], array_values(array_unique(array_column($analysisPayload['inputSnapshot']['athlete_profiles'], 'source_name'))));
+        self::assertContains('Open 26.1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
+        self::assertContains('Final 1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
+        self::assertNotContains('Scoring 1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
         self::assertEquals(200.0, $analysisPayload['inputSnapshot']['competition_results'][0]['numeric_value']);
         self::assertSame('Open 26.2', $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['event']);
         self::assertSame(

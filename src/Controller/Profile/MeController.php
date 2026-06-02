@@ -187,23 +187,15 @@ class MeController extends AbstractController
         }
 
         $payload = $this->jsonPayload($request);
-        $athleteProfile = null;
-        $athleteProfileId = $payload['athleteProfileId'] ?? null;
-        if (is_string($athleteProfileId) && $athleteProfileId !== '') {
-            /** @var UserAthleteProfile|null $athleteProfile */
-            $athleteProfile = $this->entityManager->getRepository(UserAthleteProfile::class)->find($athleteProfileId);
-            if ($athleteProfile === null || $athleteProfile->getUser() !== $user) {
-                return $this->json(['error' => 'Athlete profile not found.'], Response::HTTP_NOT_FOUND);
-            }
-        }
-
+        $athleteProfiles = $this->personalAnalysisAthleteProfiles($user);
+        $primaryAthleteProfile = $this->primaryAnalysisAthleteProfile($athleteProfiles);
         $parameters = $this->arrayPayload($payload['parameters'] ?? []);
         $analysisRequest = (new PerformanceAnalysisRequest(
             $user,
             $profile,
-            $athleteProfile,
+            $primaryAthleteProfile,
             $parameters,
-            $this->buildAnalysisSnapshot($profile, $athleteProfile)
+            $this->buildAnalysisSnapshot($profile, $athleteProfiles)
         ))->markQueued();
 
         $this->entityManager->persist($analysisRequest);
@@ -519,20 +511,67 @@ class MeController extends AbstractController
     }
 
     /**
+     * @param list<UserAthleteProfile> $athleteProfiles
+     *
      * @return array<string, mixed>
      */
-    private function buildAnalysisSnapshot(UserPerformanceProfile $profile, ?UserAthleteProfile $athleteProfile): array
+    private function buildAnalysisSnapshot(UserPerformanceProfile $profile, array $athleteProfiles): array
     {
+        $primaryAthleteProfile = $this->primaryAnalysisAthleteProfile($athleteProfiles);
+
         return [
             'performance_metrics' => $this->performanceMetricSnapshot($profile),
-            'athlete_profile' => $athleteProfile !== null ? [
-                'id' => (string) $athleteProfile->getId(),
-                'athlete_id' => (string) $athleteProfile->getAthlete()->getId(),
-                'display_name' => $athleteProfile->getAthlete()->getDisplayName(),
-                'source_name' => $athleteProfile->getAthlete()->getSourceName(),
-                'external_id' => $athleteProfile->getAthlete()->getExternalId(),
-            ] : null,
-            ...$this->competitionSnapshotBuilder->build($athleteProfile),
+            'athlete_profile' => $primaryAthleteProfile !== null ? $this->athleteProfileSnapshot($primaryAthleteProfile) : null,
+            'athlete_profiles' => array_map(
+                fn (UserAthleteProfile $athleteProfile): array => $this->athleteProfileSnapshot($athleteProfile),
+                $athleteProfiles
+            ),
+            ...$this->competitionSnapshotBuilder->buildMany($athleteProfiles),
+        ];
+    }
+
+    /**
+     * @return list<UserAthleteProfile>
+     */
+    private function personalAnalysisAthleteProfiles(User $user): array
+    {
+        /** @var list<UserAthleteProfile> $userAthleteProfiles */
+        $userAthleteProfiles = $this->entityManager->getRepository(UserAthleteProfile::class)->findBy(['user' => $user]);
+        $profiles = array_values(array_filter(
+            $userAthleteProfiles,
+            static fn (UserAthleteProfile $athleteProfile): bool => $athleteProfile->getLinkType() === UserAthleteProfile::LINK_SELF
+                && in_array($athleteProfile->getAthlete()->getSourceName(), ['crossfit_games', 'competition_corner'], true)
+        ));
+
+        usort(
+            $profiles,
+            static fn (UserAthleteProfile $left, UserAthleteProfile $right): int => ($right->isPrimaryProfile() <=> $left->isPrimaryProfile())
+                ?: strcmp($left->getAthlete()->getSourceName(), $right->getAthlete()->getSourceName())
+        );
+
+        return $profiles;
+    }
+
+    /**
+     * @param list<UserAthleteProfile> $athleteProfiles
+     */
+    private function primaryAnalysisAthleteProfile(array $athleteProfiles): ?UserAthleteProfile
+    {
+        return $athleteProfiles[0] ?? null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function athleteProfileSnapshot(UserAthleteProfile $athleteProfile): array
+    {
+        return [
+            'id' => (string) $athleteProfile->getId(),
+            'athlete_id' => (string) $athleteProfile->getAthlete()->getId(),
+            'display_name' => $athleteProfile->getAthlete()->getDisplayName(),
+            'source_name' => $athleteProfile->getAthlete()->getSourceName(),
+            'external_id' => $athleteProfile->getAthlete()->getExternalId(),
+            'primary_profile' => $athleteProfile->isPrimaryProfile(),
         ];
     }
 
