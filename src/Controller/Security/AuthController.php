@@ -19,8 +19,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 class AuthController extends AbstractController
 {
     private const MAX_BCRYPT_COST = 14;
-    private const MAX_ARGON_MEMORY_COST = 65536;
-    private const MAX_ARGON_TIME_COST = 4;
+    private const MAX_ARGON_MEMORY_COST = 32768;
+    private const MAX_ARGON_TIME_COST = 2;
     private const MAX_ARGON_THREADS = 4;
 
     public function __construct(

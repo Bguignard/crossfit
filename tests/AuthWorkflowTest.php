@@ -172,7 +172,7 @@ class AuthWorkflowTest extends AbstractIntegrationTest
     public function testLoginRejectsOverlyExpensivePasswordHashesBeforeVerification(): void
     {
         $user = new User('expensive-hash@example.com');
-        $user->setPassword('$argon2id$v=19$m=1048576,t=10,p=8$aaaaaaaaaaaaaaaaaaaaaa$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+        $user->setPassword('$argon2id$v=19$m=65536,t=4,p=1$aaaaaaaaaaaaaaaaaaaaaa$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
         $user->markEmailVerified();
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
