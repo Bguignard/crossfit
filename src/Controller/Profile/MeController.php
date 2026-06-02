@@ -13,6 +13,7 @@ use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Services\Profile\PersonalAnalysisCompetitionSnapshotBuilder;
 use App\Services\Profile\UserAvatarResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,6 +38,7 @@ class MeController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly UserAvatarResolver $userAvatarResolver,
+        private readonly PersonalAnalysisCompetitionSnapshotBuilder $competitionSnapshotBuilder,
     ) {
     }
 
@@ -530,6 +532,7 @@ class MeController extends AbstractController
                 'source_name' => $athleteProfile->getAthlete()->getSourceName(),
                 'external_id' => $athleteProfile->getAthlete()->getExternalId(),
             ] : null,
+            ...$this->competitionSnapshotBuilder->build($athleteProfile),
         ];
     }
 
