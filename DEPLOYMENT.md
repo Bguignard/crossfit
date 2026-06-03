@@ -126,14 +126,16 @@ php bin/console messenger:failed:retry --env=prod
 php bin/console messenger:failed:remove --all --env=prod
 ```
 
-## Personal AI Analysis
+## Personal AI Analysis And Programming
 
-Personal performance analyses are queued from the profile page and dispatched to
-the Python analyser by Symfony. Users are limited to one request every 24 hours,
-but queued jobs still need a recurring dispatcher on the server:
+Personal performance analyses and personal programming generations are queued
+from the profile page and dispatched to the Python analyser by Symfony. Users
+are limited to one analysis request every 24 hours, but queued jobs still need
+recurring dispatchers on the server:
 
 ```cron
 * * * * * cd /var/www/crossfit && APP_ENV=prod APP_DEBUG=0 php bin/console app:performance-analysis:dispatch --limit=5 --env=prod --no-debug >> var/log/performance-analysis-dispatch.log 2>&1
+* * * * * cd /var/www/crossfit && APP_ENV=prod APP_DEBUG=0 php bin/console app:programming-generation:dispatch --limit=5 --env=prod --no-debug >> var/log/programming-generation-dispatch.log 2>&1
 ```
 
 The command requires `PYTHON_WORKER_BASE_URL` to point to the analyser service.
