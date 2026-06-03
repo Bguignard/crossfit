@@ -3,6 +3,7 @@
 namespace App\Controller\Profile;
 
 use App\Entity\Competition\Athlete;
+use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\PerformanceMetricValueTypeEnum;
@@ -224,11 +225,18 @@ class MeController extends AbstractController
 
         $profile = $this->getLatestPerformanceProfile($user);
         $constraints = $this->arrayPayload($payload['constraints'] ?? []);
+        $sourceAnalysisRequest = $this->sourceAnalysisRequest($user, $constraints);
+        if ($sourceAnalysisRequest === null) {
+            return $this->json([
+                'error' => 'A completed performance analysis is required before programming generation.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $programmingRequest = (new ProgrammingGenerationRequest(
             $user,
             $type,
             $constraints,
-            $this->buildProgrammingSnapshot($profile)
+            $this->buildProgrammingSnapshot($profile, $sourceAnalysisRequest)
         ))
             ->setPerformanceProfile($profile)
             ->markQueued();
@@ -510,6 +518,41 @@ class MeController extends AbstractController
         return $request;
     }
 
+    private function latestCompletedAnalysisRequest(User $user): ?PerformanceAnalysisRequest
+    {
+        /** @var PerformanceAnalysisRequest|null $request */
+        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findOneBy(
+            ['user' => $user, 'status' => AnalysisRequestStatusEnum::COMPLETED],
+            ['completedAt' => 'DESC', 'createdAt' => 'DESC']
+        );
+
+        return $request;
+    }
+
+    /**
+     * @param array<string, mixed> $constraints
+     */
+    private function sourceAnalysisRequest(User $user, array $constraints): ?PerformanceAnalysisRequest
+    {
+        $sourceAnalysisRequestId = $constraints['sourceAnalysisRequestId'] ?? null;
+        if (!is_string($sourceAnalysisRequestId) || trim($sourceAnalysisRequestId) === '') {
+            return $this->latestCompletedAnalysisRequest($user);
+        }
+
+        /** @var PerformanceAnalysisRequest|null $request */
+        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->find($sourceAnalysisRequestId);
+        if (
+            $request === null
+            || $request->getUser() !== $user
+            || $request->getStatus() !== AnalysisRequestStatusEnum::COMPLETED
+            || $request->getResult() === null
+        ) {
+            return null;
+        }
+
+        return $request;
+    }
+
     /**
      * @param list<UserAthleteProfile> $athleteProfiles
      *
@@ -578,11 +621,19 @@ class MeController extends AbstractController
     /**
      * @return array<string, mixed>
      */
-    private function buildProgrammingSnapshot(?UserPerformanceProfile $profile): array
+    private function buildProgrammingSnapshot(?UserPerformanceProfile $profile, PerformanceAnalysisRequest $sourceAnalysisRequest): array
     {
         return [
             'performance_profile_id' => $profile?->getId() !== null ? (string) $profile->getId() : null,
             'performance_metrics' => $profile !== null ? $this->performanceMetricSnapshot($profile) : [],
+            'source_analysis_request' => [
+                'id' => (string) $sourceAnalysisRequest->getId(),
+                'parameters' => $sourceAnalysisRequest->getParameters(),
+                'input_snapshot' => $sourceAnalysisRequest->getInputSnapshot(),
+                'result' => $sourceAnalysisRequest->getResult(),
+                'created_at' => $this->date($sourceAnalysisRequest->getCreatedAt()),
+                'completed_at' => $this->date($sourceAnalysisRequest->getCompletedAt()),
+            ],
         ];
     }
 
