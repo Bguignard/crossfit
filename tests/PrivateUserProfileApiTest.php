@@ -76,6 +76,35 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertCount(2, $this->getRepository(UserAthleteProfile::class)->findBy(['athlete' => $athlete]));
     }
 
+    public function testUserAvatarPrefersPrimaryCrossFitGamesProfilePhoto(): void
+    {
+        [$userToken, $user] = $this->createAuthenticatedUser('avatar-priority@example.com', 'avatar-priority-token');
+        $firstGamesAthlete = (new Athlete('First Games Athlete', 'crossfit_games', 'games-1'))
+            ->setAvatarUrl('https://images.crossfit.test/first-games.jpg');
+        $scoringFitAthlete = (new Athlete('Scoring Athlete', 'scoring_fit', 'scoring-1'))
+            ->setAvatarUrl('https://images.crossfit.test/scoring.jpg');
+        $primaryGamesAthlete = (new Athlete('Primary Games Athlete', 'crossfit_games', 'games-2'))
+            ->setAvatarUrl('https://images.crossfit.test/primary-games.jpg');
+
+        $this->getEntityManager()->persist($firstGamesAthlete);
+        $this->getEntityManager()->persist($scoringFitAthlete);
+        $this->getEntityManager()->persist($primaryGamesAthlete);
+        $this->getEntityManager()->persist(new UserAthleteProfile($user, $firstGamesAthlete));
+        $this->getEntityManager()->persist(
+            (new UserAthleteProfile($user, $scoringFitAthlete))->setPrimaryProfile(true)
+        );
+        $this->getEntityManager()->persist(
+            (new UserAthleteProfile($user, $primaryGamesAthlete))->setPrimaryProfile(true)
+        );
+        $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
+
+        $this->jsonRequest('GET', '/api/me', [], $userToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://images.crossfit.test/primary-games.jpg', $this->jsonResponse()['user']['avatarUrl']);
+    }
+
     public function testUserCanCreateAndUpdatePerformanceProfileMetrics(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('metrics@example.com', 'metrics-token');
