@@ -11,6 +11,7 @@ use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
+use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -283,12 +284,24 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['excluded_reason']
         );
 
+        /** @var PerformanceAnalysisRequest|null $storedAnalysisRequest */
+        $storedAnalysisRequest = $this->getRepository(PerformanceAnalysisRequest::class)->find($analysisPayload['id']);
+        self::assertNotNull($storedAnalysisRequest);
+        $storedAnalysisRequest->markCompleted([
+            'summary' => 'Gymnastics endurance is the main limiter.',
+            'programming_guidance' => [
+                'weekly_focus' => ['Strict pulling volume', 'Breathing under fatigue'],
+            ],
+        ]);
+        $this->getEntityManager()->flush();
+
         $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
             'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
             'constraints' => [
                 'durationWeeks' => 8,
                 'sessionsPerWeek' => 5,
                 'goal' => 'gymnastics endurance',
+                'sourceAnalysisRequestId' => $analysisPayload['id'],
             ],
         ], $token);
 
@@ -298,6 +311,8 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
         self::assertSame('gymnastics endurance', $programmingPayload['constraints']['goal']);
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
+        self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
+        self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
 
         $this->jsonRequest('GET', '/api/me/requests', [], $token);
 
@@ -305,6 +320,31 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $requestsPayload = $this->jsonResponse();
         self::assertCount(1, $requestsPayload['analysisRequests']);
         self::assertCount(1, $requestsPayload['programmingRequests']);
+    }
+
+    public function testUserCannotCreateProgrammingRequestWithoutCompletedAnalysis(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-prereq@example.com', 'programming-prereq-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'goal' => 'gymnastics endurance',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(
+            'A completed performance analysis is required before programming generation.',
+            $this->jsonResponse()['error']
+        );
     }
 
     public function testUserCannotCreateAnotherAnalysisRequestWithinTwentyFourHours(): void
