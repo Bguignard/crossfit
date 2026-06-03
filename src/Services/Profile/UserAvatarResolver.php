@@ -9,18 +9,32 @@ final class UserAvatarResolver
 {
     public function avatarUrl(User $user): ?string
     {
-        foreach ($user->getAthleteProfiles() as $profile) {
-            if (!$profile instanceof UserAthleteProfile) {
-                continue;
-            }
+        $profiles = array_filter(
+            $user->getAthleteProfiles()->toArray(),
+            static function (UserAthleteProfile $profile): bool {
+                $athlete = $profile->getAthlete();
 
+                return $athlete->getSourceName() === 'crossfit_games'
+                    && $athlete->getAvatarUrl() !== null
+                    && $athlete->getAvatarUrl() !== '';
+            }
+        );
+
+        usort(
+            $profiles,
+            static fn (UserAthleteProfile $left, UserAthleteProfile $right): int => [
+                $left->isPrimaryProfile() ? 0 : 1,
+                $left->getCreatedAt()->format('U.u'),
+            ] <=> [
+                $right->isPrimaryProfile() ? 0 : 1,
+                $right->getCreatedAt()->format('U.u'),
+            ]
+        );
+
+        foreach ($profiles as $profile) {
             $athlete = $profile->getAthlete();
-            if ($athlete->getSourceName() !== 'crossfit_games') {
-                continue;
-            }
-
             $avatarUrl = $athlete->getAvatarUrl();
-            if ($avatarUrl !== null && $avatarUrl !== '') {
+            if ($avatarUrl !== null) {
                 return $avatarUrl;
             }
         }
