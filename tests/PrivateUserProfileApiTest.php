@@ -376,6 +376,26 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         );
     }
 
+    public function testUserCannotCreateBoxProgrammingRequestYet(): void
+    {
+        [$token] = $this->createAuthenticatedUser('programming-box@example.com', 'programming-box-token');
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::BOX->value,
+            'constraints' => [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'goal' => 'box programming',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(
+            'Only individual programming generation is available for now.',
+            $this->jsonResponse()['error']
+        );
+    }
+
     public function testUserCannotCreateAnotherAnalysisRequestWithinTwentyFourHours(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('analysis-cooldown@example.com', 'analysis-cooldown-token');
