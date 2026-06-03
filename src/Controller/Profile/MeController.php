@@ -222,6 +222,11 @@ class MeController extends AbstractController
         if ($type === null) {
             return $this->json(['error' => 'Invalid programming generation type.'], Response::HTTP_BAD_REQUEST);
         }
+        if ($type !== ProgrammingGenerationTypeEnum::INDIVIDUAL) {
+            return $this->json([
+                'error' => 'Only individual programming generation is available for now.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
 
         $profile = $this->getLatestPerformanceProfile($user);
         $constraints = $this->arrayPayload($payload['constraints'] ?? []);
