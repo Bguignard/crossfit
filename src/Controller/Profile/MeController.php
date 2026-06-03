@@ -27,7 +27,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 class MeController extends AbstractController
 {
-    private const ANALYSIS_REQUEST_COOLDOWN = 'PT5M';
+    private const ANALYSIS_REQUEST_COOLDOWN = 'P1D';
 
     private const VALID_LINK_TYPES = [
         UserAthleteProfile::LINK_SELF,
@@ -175,7 +175,7 @@ class MeController extends AbstractController
         $nextAvailableAt = $latestRequest?->getCreatedAt()->add(new \DateInterval(self::ANALYSIS_REQUEST_COOLDOWN));
         if ($nextAvailableAt !== null && $nextAvailableAt > new \DateTimeImmutable()) {
             return $this->json([
-                'error' => 'A recent performance analysis request already exists.',
+                'error' => 'A performance analysis request can only be created once every 24 hours.',
                 'latestAnalysisRequest' => $this->serializeAnalysisRequest($latestRequest),
                 'nextAvailableAt' => $this->date($nextAvailableAt),
             ], Response::HTTP_TOO_MANY_REQUESTS);

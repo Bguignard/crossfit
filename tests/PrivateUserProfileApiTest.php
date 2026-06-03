@@ -299,7 +299,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertCount(1, $requestsPayload['programmingRequests']);
     }
 
-    public function testUserCannotCreateAnotherAnalysisRequestWithinFiveMinutes(): void
+    public function testUserCannotCreateAnotherAnalysisRequestWithinTwentyFourHours(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('analysis-cooldown@example.com', 'analysis-cooldown-token');
         $performanceProfile = new UserPerformanceProfile($user);
@@ -324,9 +324,10 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         self::assertResponseStatusCodeSame(429);
         $payload = $this->jsonResponse();
-        self::assertSame('A recent performance analysis request already exists.', $payload['error']);
+        self::assertSame('A performance analysis request can only be created once every 24 hours.', $payload['error']);
         self::assertSame('first pass', $payload['latestAnalysisRequest']['parameters']['goal']);
         self::assertArrayHasKey('nextAvailableAt', $payload);
+        self::assertGreaterThan((new \DateTimeImmutable('+23 hours'))->format(\DateTimeInterface::ATOM), $payload['nextAvailableAt']);
     }
 
     /**
