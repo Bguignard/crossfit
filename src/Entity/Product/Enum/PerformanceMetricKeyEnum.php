@@ -68,6 +68,7 @@ enum PerformanceMetricKeyEnum: string
     case RUN_5KM_TIME = 'run_5km_time';
     case RUN_10KM_TIME = 'run_10km_time';
     case MAX_UNBROKEN_DOUBLE_UNDERS = 'max_unbroken_double_unders';
+    case MAX_WALLBALLS_UNBROKEN = 'max_wallballs_unbroken';
 
     public function category(): PerformanceMetricCategoryEnum
     {
@@ -130,7 +131,8 @@ enum PerformanceMetricKeyEnum: string
             self::RUN_1600M_TIME,
             self::RUN_5KM_TIME,
             self::RUN_10KM_TIME,
-            self::MAX_UNBROKEN_DOUBLE_UNDERS => PerformanceMetricCategoryEnum::CARDIO,
+            self::MAX_UNBROKEN_DOUBLE_UNDERS,
+            self::MAX_WALLBALLS_UNBROKEN => PerformanceMetricCategoryEnum::CARDIO,
         };
     }
 
@@ -171,7 +173,8 @@ enum PerformanceMetricKeyEnum: string
             self::MAX_STRICT_HANDSTAND_PUSH_UPS,
             self::MAX_KIPPING_HANDSTAND_PUSH_UPS,
             self::MAX_PULL_OVERS,
-            self::MAX_UNBROKEN_DOUBLE_UNDERS => PerformanceMetricValueTypeEnum::REPS,
+            self::MAX_UNBROKEN_DOUBLE_UNDERS,
+            self::MAX_WALLBALLS_UNBROKEN => PerformanceMetricValueTypeEnum::REPS,
             default => PerformanceMetricValueTypeEnum::LOAD,
         };
     }

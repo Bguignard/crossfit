@@ -670,6 +670,10 @@ class MeController extends AbstractController
 
     private function label(string $value): string
     {
+        if ($value === PerformanceMetricKeyEnum::MAX_WALLBALLS_UNBROKEN->value) {
+            return 'Max wallballs unbroken (6kgs/9kgs)';
+        }
+
         return ucwords(str_replace('_', ' ', $value));
     }
 

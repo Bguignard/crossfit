@@ -85,6 +85,14 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $dashboard = $this->jsonResponse();
         self::assertNull($dashboard['performanceProfile']);
         self::assertArrayHasKey('strength', $dashboard['performanceMetricCatalog']);
+        self::assertArrayHasKey('cardio', $dashboard['performanceMetricCatalog']);
+        $wallballsMetric = array_values(array_filter(
+            $dashboard['performanceMetricCatalog']['cardio'],
+            static fn (array $definition): bool => $definition['key'] === PerformanceMetricKeyEnum::MAX_WALLBALLS_UNBROKEN->value
+        ));
+        self::assertCount(1, $wallballsMetric);
+        self::assertSame('Max wallballs unbroken (6kgs/9kgs)', $wallballsMetric[0]['label']);
+        self::assertSame('reps', $wallballsMetric[0]['valueType']);
 
         $this->jsonRequest('PUT', '/api/me/performance-profile', [
             'metrics' => [
