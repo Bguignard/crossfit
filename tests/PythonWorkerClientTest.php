@@ -8,6 +8,7 @@ use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -97,6 +98,50 @@ class PythonWorkerClientTest extends TestCase
         $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test');
 
         self::assertSame(['job_id' => 'programming-job-1'], $client->submitProgrammingGeneration($request));
+    }
+
+    public function testSubmitProgrammingSessionDetailsPostsValidatedProgrammingContext(): void
+    {
+        $user = (new User('python-programming-detail@example.com'))->setPassword('hashed-password');
+        $performanceProfile = new UserPerformanceProfile($user);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            ['durationWeeks' => 8, 'sessionsPerWeek' => 5],
+            ['source_analysis_request' => ['summary' => 'Gymnastics limiter.']],
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markCompleted([
+                'overview' => 'Eight-week plan.',
+            ]);
+        $detailRequest = new ProgrammingSessionDetailRequest(
+            $user,
+            $programmingRequest,
+            ['source_programming_request' => ['id' => 'programming-request-id']]
+        );
+
+        $this->assignId($user);
+        $this->assignId($performanceProfile);
+        $this->assignId($programmingRequest);
+        $this->assignId($detailRequest);
+
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use ($detailRequest, $programmingRequest, $user): MockResponse {
+            $payload = $this->payloadFromOptions($options);
+
+            self::assertSame('POST', $method);
+            self::assertSame('https://crawler.monwod.test/internal/programming-session-details', $url);
+            self::assertSame((string) $detailRequest->getId(), $payload['request_id']);
+            self::assertSame((string) $user->getId(), $payload['user_id']);
+            self::assertSame((string) $programmingRequest->getId(), $payload['programming_request_id']);
+            self::assertSame(8, $payload['constraints']['durationWeeks']);
+            self::assertSame('Eight-week plan.', $payload['global_programming']['overview']);
+            self::assertSame('programming-request-id', $payload['input_snapshot']['source_programming_request']['id']);
+
+            return new MockResponse(json_encode(['job_id' => 'programming-detail-job-1'], JSON_THROW_ON_ERROR));
+        });
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test');
+
+        self::assertSame(['job_id' => 'programming-detail-job-1'], $client->submitProgrammingSessionDetails($detailRequest));
     }
 
     public function testPythonWorkerHttpErrorsAreReported(): void

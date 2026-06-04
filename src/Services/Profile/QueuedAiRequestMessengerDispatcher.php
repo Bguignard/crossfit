@@ -7,9 +7,11 @@ use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Security\User;
 use App\Message\DispatchPerformanceAnalysisRequestMessage;
 use App\Message\DispatchProgrammingGenerationRequestMessage;
+use App\Message\DispatchProgrammingSessionDetailRequestMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -53,8 +55,23 @@ final readonly class QueuedAiRequestMessengerDispatcher
         return true;
     }
 
+    public function enqueueProgrammingSessionDetailRequest(
+        ProgrammingSessionDetailRequest $request,
+        bool $force = false,
+    ): bool {
+        if ($request->getStatus() !== ProgrammingGenerationRequestStatusEnum::QUEUED || !$this->shouldEnqueue($request->getMessengerEnqueuedAt(), $force)) {
+            return false;
+        }
+
+        $this->messageBus->dispatch(new DispatchProgrammingSessionDetailRequestMessage((string) $request->getId()));
+        $request->markMessengerEnqueued();
+        $this->entityManager->flush();
+
+        return true;
+    }
+
     /**
-     * @return array{analysis: int, programming: int}
+     * @return array{analysis: int, programming: int, programming_details: int}
      */
     public function enqueueQueuedBacklog(int $limit): array
     {
@@ -72,9 +89,17 @@ final readonly class QueuedAiRequestMessengerDispatcher
             }
         }
 
+        $programmingDetailsEnqueued = 0;
+        foreach ($this->queuedProgrammingSessionDetailRequests($limit) as $request) {
+            if ($this->enqueueProgrammingSessionDetailRequest($request)) {
+                ++$programmingDetailsEnqueued;
+            }
+        }
+
         return [
             'analysis' => $analysisEnqueued,
             'programming' => $programmingEnqueued,
+            'programming_details' => $programmingDetailsEnqueued,
         ];
     }
 
@@ -89,6 +114,12 @@ final readonly class QueuedAiRequestMessengerDispatcher
 
         foreach ($this->queuedProgrammingRequests($limit, $user) as $request) {
             if ($this->enqueueProgrammingGenerationRequest($request)) {
+                ++$enqueued;
+            }
+        }
+
+        foreach ($this->queuedProgrammingSessionDetailRequests($limit, $user) as $request) {
+            if ($this->enqueueProgrammingSessionDetailRequest($request)) {
                 ++$enqueued;
             }
         }
@@ -138,6 +169,28 @@ final readonly class QueuedAiRequestMessengerDispatcher
             ->andWhere('request.type = :type')
             ->setParameter('status', ProgrammingGenerationRequestStatusEnum::QUEUED)
             ->setParameter('type', ProgrammingGenerationTypeEnum::INDIVIDUAL)
+            ->orderBy('request.queuedAt', 'ASC')
+            ->addOrderBy('request.createdAt', 'ASC')
+            ->setMaxResults($limit);
+
+        if ($user !== null) {
+            $queryBuilder
+                ->andWhere('request.user = :user')
+                ->setParameter('user', $user);
+        }
+
+        return $queryBuilder->getQuery()->getResult();
+    }
+
+    /**
+     * @return list<ProgrammingSessionDetailRequest>
+     */
+    private function queuedProgrammingSessionDetailRequests(int $limit, ?User $user = null): array
+    {
+        $queryBuilder = $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)
+            ->createQueryBuilder('request')
+            ->andWhere('request.status = :status')
+            ->setParameter('status', ProgrammingGenerationRequestStatusEnum::QUEUED)
             ->orderBy('request.queuedAt', 'ASC')
             ->addOrderBy('request.createdAt', 'ASC')
             ->setMaxResults($limit);

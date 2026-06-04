@@ -4,6 +4,7 @@ namespace App\Services\PythonWorker;
 
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -42,6 +43,20 @@ final class PythonWorkerClient implements PythonWorkerClientInterface
                 ? (string) $request->getBox()->getId()
                 : null,
             'constraints' => $request->getConstraints(),
+            'input_snapshot' => $request->getInputSnapshot(),
+        ]);
+    }
+
+    public function submitProgrammingSessionDetails(ProgrammingSessionDetailRequest $request): array
+    {
+        $programmingRequest = $request->getProgrammingRequest();
+
+        return $this->postJson('/internal/programming-session-details', [
+            'request_id' => (string) $request->getId(),
+            'user_id' => (string) $request->getUser()->getId(),
+            'programming_request_id' => (string) $programmingRequest->getId(),
+            'constraints' => $programmingRequest->getConstraints(),
+            'global_programming' => $programmingRequest->getGeneratedProgramming(),
             'input_snapshot' => $request->getInputSnapshot(),
         ]);
     }

@@ -7,9 +7,11 @@ use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\PerformanceMetricValueTypeEnum;
+use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -168,6 +170,14 @@ class MeController extends AbstractController
                     20
                 )
             ),
+            'programmingSessionDetailRequests' => array_map(
+                fn (ProgrammingSessionDetailRequest $request): array => $this->serializeProgrammingSessionDetailRequest($request),
+                $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->findBy(
+                    ['user' => $user],
+                    ['createdAt' => 'DESC'],
+                    20
+                )
+            ),
         ]);
     }
 
@@ -256,6 +266,51 @@ class MeController extends AbstractController
 
         return $this->json(
             ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],
+            Response::HTTP_CREATED
+        );
+    }
+
+    #[Route('/programming-generation-requests/{id}/session-detail-requests', name: 'api_me_create_programming_session_detail_request', methods: ['POST'])]
+    public function createProgrammingSessionDetailRequest(string $id): JsonResponse
+    {
+        $user = $this->currentUser();
+        /** @var ProgrammingGenerationRequest|null $programmingRequest */
+        $programmingRequest = $this->entityManager->getRepository(ProgrammingGenerationRequest::class)->find($id);
+        if ($programmingRequest === null || $programmingRequest->getUser() !== $user) {
+            return $this->json(['error' => 'Programming request not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (
+            $programmingRequest->getStatus() !== ProgrammingGenerationRequestStatusEnum::COMPLETED
+            || $programmingRequest->getGeneratedProgramming() === null
+        ) {
+            return $this->json([
+                'error' => 'A completed programming generation is required before detailing sessions.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $existingRequest = $this->latestProgrammingSessionDetailRequest($user, $programmingRequest);
+        if (
+            $existingRequest !== null
+            && $existingRequest->getStatus() !== ProgrammingGenerationRequestStatusEnum::FAILED
+        ) {
+            $this->queuedAiRequestDispatcher->enqueueProgrammingSessionDetailRequest($existingRequest);
+
+            return $this->json(['programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($existingRequest)]);
+        }
+
+        $detailRequest = (new ProgrammingSessionDetailRequest(
+            $user,
+            $programmingRequest,
+            $this->buildProgrammingDetailSnapshot($programmingRequest)
+        ))->markQueued();
+
+        $this->entityManager->persist($detailRequest);
+        $this->entityManager->flush();
+        $this->queuedAiRequestDispatcher->enqueueProgrammingSessionDetailRequest($detailRequest, force: true);
+
+        return $this->json(
+            ['programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest)],
             Response::HTTP_CREATED
         );
     }
@@ -424,6 +479,29 @@ class MeController extends AbstractController
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function serializeProgrammingSessionDetailRequest(ProgrammingSessionDetailRequest $request): array
+    {
+        return [
+            'id' => (string) $request->getId(),
+            'programmingRequestId' => (string) $request->getProgrammingRequest()->getId(),
+            'status' => $request->getStatus()->value,
+            'inputSnapshot' => $request->getInputSnapshot(),
+            'detailedProgramming' => $request->getDetailedProgramming(),
+            'currentSessionIndex' => $request->getCurrentSessionIndex(),
+            'completedSessionKeys' => $request->getCompletedSessionKeys(),
+            'errorMessage' => $request->getErrorMessage(),
+            'createdAt' => $this->date($request->getCreatedAt()),
+            'updatedAt' => $this->date($request->getUpdatedAt()),
+            'queuedAt' => $this->date($request->getQueuedAt()),
+            'messengerEnqueuedAt' => $this->date($request->getMessengerEnqueuedAt()),
+            'startedAt' => $this->date($request->getStartedAt()),
+            'completedAt' => $this->date($request->getCompletedAt()),
+        ];
+    }
+
+    /**
      * @return array<string, list<array<string, mixed>>>
      */
     private function buildMetricCatalog(?UserPerformanceProfile $profile): array
@@ -565,6 +643,19 @@ class MeController extends AbstractController
         return $request;
     }
 
+    private function latestProgrammingSessionDetailRequest(
+        User $user,
+        ProgrammingGenerationRequest $programmingRequest,
+    ): ?ProgrammingSessionDetailRequest {
+        /** @var ProgrammingSessionDetailRequest|null $request */
+        $request = $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->findOneBy(
+            ['user' => $user, 'programmingRequest' => $programmingRequest],
+            ['createdAt' => 'DESC']
+        );
+
+        return $request;
+    }
+
     /**
      * @param list<UserAthleteProfile> $athleteProfiles
      *
@@ -645,6 +736,24 @@ class MeController extends AbstractController
                 'result' => $sourceAnalysisRequest->getResult(),
                 'created_at' => $this->date($sourceAnalysisRequest->getCreatedAt()),
                 'completed_at' => $this->date($sourceAnalysisRequest->getCompletedAt()),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildProgrammingDetailSnapshot(ProgrammingGenerationRequest $programmingRequest): array
+    {
+        return [
+            'source_programming_request' => [
+                'id' => (string) $programmingRequest->getId(),
+                'type' => $programmingRequest->getType()->value,
+                'constraints' => $programmingRequest->getConstraints(),
+                'input_snapshot' => $programmingRequest->getInputSnapshot(),
+                'global_programming' => $programmingRequest->getGeneratedProgramming(),
+                'created_at' => $this->date($programmingRequest->getCreatedAt()),
+                'completed_at' => $this->date($programmingRequest->getCompletedAt()),
             ],
         ];
     }
