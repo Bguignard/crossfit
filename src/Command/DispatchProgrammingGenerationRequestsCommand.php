@@ -5,7 +5,7 @@ namespace App\Command;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\ProgrammingGenerationRequest;
-use App\Services\PythonWorker\PythonWorkerClientInterface;
+use App\Services\Profile\ProgrammingGenerationRequestProcessor;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,7 +22,7 @@ final class DispatchProgrammingGenerationRequestsCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly PythonWorkerClientInterface $pythonWorkerClient,
+        private readonly ProgrammingGenerationRequestProcessor $processor,
     ) {
         parent::__construct();
     }
@@ -42,27 +42,13 @@ final class DispatchProgrammingGenerationRequestsCommand extends Command
 
         foreach ($this->queuedRequests($limit) as $request) {
             ++$processed;
-            $request->markRunning();
-            $this->entityManager->flush();
-
-            try {
-                $response = $this->pythonWorkerClient->submitProgrammingGeneration($request);
-                $programming = $response['programming'] ?? null;
-
-                if (!is_array($programming)) {
-                    throw new \RuntimeException('Python worker response did not include a programming object.');
-                }
-
-                $request->markCompleted($programming);
+            if ($this->processor->process($request)) {
                 ++$completed;
                 $io->writeln(sprintf('Completed programming request %s', $request->getId()));
-            } catch (\Throwable $exception) {
-                $request->markFailed($exception->getMessage());
+            } else {
                 ++$failed;
-                $io->warning(sprintf('Failed programming request %s: %s', $request->getId(), $exception->getMessage()));
+                $io->warning(sprintf('Failed programming request %s: %s', $request->getId(), $request->getErrorMessage() ?? 'Unknown error'));
             }
-
-            $this->entityManager->flush();
         }
 
         $io->table(['processed', 'completed', 'failed'], [[$processed, $completed, $failed]]);

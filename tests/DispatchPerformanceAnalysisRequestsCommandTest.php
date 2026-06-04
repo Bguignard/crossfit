@@ -10,6 +10,7 @@ use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Services\Profile\PerformanceAnalysisRequestProcessor;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -25,7 +26,10 @@ class DispatchPerformanceAnalysisRequestsCommandTest extends AbstractIntegration
                 'summary' => 'Strong engine, gymnastics limiter.',
             ],
         ]);
-        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand($this->getEntityManager(), $worker));
+        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand(
+            $this->getEntityManager(),
+            new PerformanceAnalysisRequestProcessor($this->getEntityManager(), $worker)
+        ));
 
         self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
         $this->getEntityManager()->clear();
@@ -45,7 +49,10 @@ class DispatchPerformanceAnalysisRequestsCommandTest extends AbstractIntegration
     {
         $request = $this->persistQueuedAnalysisRequest('dispatch-failure@example.com');
         $worker = new FakePerformanceAnalysisWorker(exception: new \RuntimeException('Python worker timeout'));
-        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand($this->getEntityManager(), $worker));
+        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand(
+            $this->getEntityManager(),
+            new PerformanceAnalysisRequestProcessor($this->getEntityManager(), $worker)
+        ));
 
         self::assertSame(Command::FAILURE, $tester->execute(['--limit' => 1]));
         $this->getEntityManager()->clear();

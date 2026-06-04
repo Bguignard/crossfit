@@ -129,13 +129,16 @@ php bin/console messenger:failed:remove --all --env=prod
 ## Personal AI Analysis And Programming
 
 Personal performance analyses and personal programming generations are queued
-from the profile page and dispatched to the Python analyser by Symfony. Users
-are limited to one analysis request every 24 hours, but queued jobs still need
-recurring dispatchers on the server:
+from the profile page and dispatched to the Python analyser through Symfony
+Messenger. Users are limited to one analysis request every 24 hours. The
+Messenger worker must be running, otherwise requests remain visible as queued.
 
-```cron
-* * * * * cd /var/www/crossfit && APP_ENV=prod APP_DEBUG=0 php bin/console app:performance-analysis:dispatch --limit=5 --env=prod --no-debug >> var/log/performance-analysis-dispatch.log 2>&1
-* * * * * cd /var/www/crossfit && APP_ENV=prod APP_DEBUG=0 php bin/console app:programming-generation:dispatch --limit=5 --env=prod --no-debug >> var/log/programming-generation-dispatch.log 2>&1
+Use the console dispatchers only as operational catch-up commands for requests
+created before the Messenger worker was available or after an incident:
+
+```bash
+APP_ENV=prod APP_DEBUG=0 php bin/console app:performance-analysis:dispatch --limit=5 --env=prod --no-debug
+APP_ENV=prod APP_DEBUG=0 php bin/console app:programming-generation:dispatch --limit=5 --env=prod --no-debug
 ```
 
 The command requires `PYTHON_WORKER_BASE_URL` to point to the analyser service.
