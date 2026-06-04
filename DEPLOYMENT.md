@@ -52,9 +52,10 @@ cd /var/www/crossfit
 ```
 
 The script updates `master`, installs production Composer dependencies, runs
-Doctrine migrations, clears and warms the Symfony cache, asks old Messenger
-workers to stop, reloads PHP-FPM, then restarts the Messenger worker when the
-systemd service exists.
+Doctrine migrations, clears and warms the Symfony cache, reloads PHP-FPM, then
+restarts the Messenger worker when the systemd service exists. The Messenger
+service is stopped before changing code or cache so a worker cannot load removed
+container files during deploy.
 
 ## Manual Deploy
 
