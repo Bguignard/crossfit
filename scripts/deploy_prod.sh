@@ -94,4 +94,7 @@ else
     log "Messenger service ${MESSENGER_SERVICE} is not installed; skipping restart"
 fi
 
+log "Enqueueing queued personal AI requests"
+"$PHP_BIN" bin/console app:ai-requests:enqueue-queued --limit=20 --env=prod --no-debug || true
+
 log "Deployment completed"

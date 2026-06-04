@@ -9,6 +9,7 @@ use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Services\Profile\ProgrammingGenerationRequestProcessor;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -24,7 +25,10 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
                 'overview' => 'Eight-week personal plan.',
             ],
         ]);
-        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand($this->getEntityManager(), $worker));
+        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand(
+            $this->getEntityManager(),
+            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker)
+        ));
 
         self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
         $this->getEntityManager()->clear();
@@ -44,7 +48,10 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
     {
         $request = $this->persistQueuedProgrammingRequest('programming-dispatch-failure@example.com');
         $worker = new FakeProgrammingGenerationWorker(exception: new \RuntimeException('Python worker timeout'));
-        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand($this->getEntityManager(), $worker));
+        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand(
+            $this->getEntityManager(),
+            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker)
+        ));
 
         self::assertSame(Command::FAILURE, $tester->execute(['--limit' => 1]));
         $this->getEntityManager()->clear();
@@ -69,7 +76,10 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
                 'kind' => 'personal_programming_generation_v1',
             ],
         ]);
-        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand($this->getEntityManager(), $worker));
+        $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand(
+            $this->getEntityManager(),
+            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker)
+        ));
 
         self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
         $this->getEntityManager()->clear();

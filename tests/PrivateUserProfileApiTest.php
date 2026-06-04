@@ -204,6 +204,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
     public function testUserCanCreateAnalysisAndProgrammingRequests(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('requests@example.com', 'requests-token');
+        $initialMessengerMessages = $this->messengerMessageCount();
         $gamesAthlete = new Athlete('Bruno Games', 'crossfit_games', '942782');
         $cornerAthlete = new Athlete('Bruno Competition Corner', 'competition_corner', 'bruno-123');
         $scoringAthlete = new Athlete('Bruno Scoring', 'scoring_fit', 'scoring-123');
@@ -312,6 +313,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             'non_attempted_or_not_submitted',
             $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['excluded_reason']
         );
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
 
         /** @var PerformanceAnalysisRequest|null $storedAnalysisRequest */
         $storedAnalysisRequest = $this->getRepository(PerformanceAnalysisRequest::class)->find($analysisPayload['id']);
@@ -342,6 +344,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
         self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
         self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
+        self::assertSame($initialMessengerMessages + 2, $this->messengerMessageCount());
 
         $this->jsonRequest('GET', '/api/me/requests', [], $token);
 
@@ -468,5 +471,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertIsArray($payload);
 
         return $payload;
+    }
+
+    private function messengerMessageCount(): int
+    {
+        return (int) $this->getEntityManager()
+            ->getConnection()
+            ->fetchOne('SELECT COUNT(*) FROM messenger_messages');
     }
 }

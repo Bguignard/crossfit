@@ -14,6 +14,8 @@ use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Message\DispatchPerformanceAnalysisRequestMessage;
+use App\Message\DispatchProgrammingGenerationRequestMessage;
 use App\Services\Profile\PersonalAnalysisCompetitionSnapshotBuilder;
 use App\Services\Profile\UserAvatarResolver;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +23,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -40,6 +43,7 @@ class MeController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly UserAvatarResolver $userAvatarResolver,
         private readonly PersonalAnalysisCompetitionSnapshotBuilder $competitionSnapshotBuilder,
+        private readonly MessageBusInterface $messageBus,
     ) {
     }
 
@@ -201,6 +205,7 @@ class MeController extends AbstractController
 
         $this->entityManager->persist($analysisRequest);
         $this->entityManager->flush();
+        $this->messageBus->dispatch(new DispatchPerformanceAnalysisRequestMessage((string) $analysisRequest->getId()));
 
         return $this->json(
             ['analysisRequest' => $this->serializeAnalysisRequest($analysisRequest)],
@@ -248,6 +253,7 @@ class MeController extends AbstractController
 
         $this->entityManager->persist($programmingRequest);
         $this->entityManager->flush();
+        $this->messageBus->dispatch(new DispatchProgrammingGenerationRequestMessage((string) $programmingRequest->getId()));
 
         return $this->json(
             ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],

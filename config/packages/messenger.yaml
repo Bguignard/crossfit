@@ -16,6 +16,8 @@ framework:
             # sync: 'sync://'
 
         routing:
+            App\Message\DispatchPerformanceAnalysisRequestMessage: async
+            App\Message\DispatchProgrammingGenerationRequestMessage: async
             Symfony\Component\Notifier\Message\ChatMessage: async
             Symfony\Component\Notifier\Message\SmsMessage: async
 

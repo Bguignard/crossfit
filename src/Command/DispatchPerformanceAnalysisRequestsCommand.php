@@ -4,7 +4,7 @@ namespace App\Command;
 
 use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
-use App\Services\PythonWorker\PythonWorkerClientInterface;
+use App\Services\Profile\PerformanceAnalysisRequestProcessor;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,7 +21,7 @@ final class DispatchPerformanceAnalysisRequestsCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly PythonWorkerClientInterface $pythonWorkerClient,
+        private readonly PerformanceAnalysisRequestProcessor $processor,
     ) {
         parent::__construct();
     }
@@ -41,27 +41,13 @@ final class DispatchPerformanceAnalysisRequestsCommand extends Command
 
         foreach ($this->queuedRequests($limit) as $request) {
             ++$processed;
-            $request->markRunning();
-            $this->entityManager->flush();
-
-            try {
-                $response = $this->pythonWorkerClient->submitPerformanceAnalysis($request);
-                $analysis = $response['analysis'] ?? null;
-
-                if (!is_array($analysis)) {
-                    throw new \RuntimeException('Python worker response did not include an analysis object.');
-                }
-
-                $request->markCompleted($analysis);
+            if ($this->processor->process($request)) {
                 ++$completed;
                 $io->writeln(sprintf('Completed analysis request %s', $request->getId()));
-            } catch (\Throwable $exception) {
-                $request->markFailed($exception->getMessage());
+            } else {
                 ++$failed;
-                $io->warning(sprintf('Failed analysis request %s: %s', $request->getId(), $exception->getMessage()));
+                $io->warning(sprintf('Failed analysis request %s: %s', $request->getId(), $request->getErrorMessage() ?? 'Unknown error'));
             }
-
-            $this->entityManager->flush();
         }
 
         $io->table(['processed', 'completed', 'failed'], [[$processed, $completed, $failed]]);
