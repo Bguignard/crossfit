@@ -414,6 +414,69 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertCount(1, $this->jsonResponse()['programmingSessionDetailRequests']);
     }
 
+    public function testAiRequestErrorsExposeOnlyPublicMessages(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('ai-public-errors@example.com', 'ai-public-errors-token');
+        $technicalError = 'Python worker request failed: Idle timeout reached for "http://127.0.0.1:8000/internal/programming-session-details".';
+        $performanceProfile = new UserPerformanceProfile($user);
+        $analysisRequest = (new PerformanceAnalysisRequest($user, $performanceProfile))
+            ->markQueued()
+            ->markRunning()
+            ->markFailed($technicalError);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            constraints: ['durationWeeks' => 8],
+            inputSnapshot: []
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markQueued()
+            ->markRunning()
+            ->markFailed($technicalError);
+        $completedProgrammingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            constraints: ['durationWeeks' => 8],
+            inputSnapshot: []
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markCompleted(['overview' => 'Completed plan.']);
+        $detailRequest = (new ProgrammingSessionDetailRequest(
+            $user,
+            $completedProgrammingRequest,
+            inputSnapshot: []
+        ))
+            ->markQueued()
+            ->markRunning()
+            ->markFailed($technicalError);
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->persist($analysisRequest);
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->persist($completedProgrammingRequest);
+        $this->getEntityManager()->persist($detailRequest);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->jsonResponse();
+        $failedProgrammingPayloads = array_values(array_filter(
+            $payload['programmingRequests'],
+            static fn (array $request): bool => $request['status'] === 'failed'
+        ));
+        self::assertSame('L’analyse IA a échoué. Tu peux réessayer dans quelques instants.', $payload['analysisRequests'][0]['errorMessage']);
+        self::assertStringNotContainsString('127.0.0.1', $payload['analysisRequests'][0]['errorMessage']);
+        self::assertCount(1, $failedProgrammingPayloads);
+        self::assertSame('La génération de programmation a échoué. Tu peux relancer une demande.', $failedProgrammingPayloads[0]['errorMessage']);
+        self::assertStringNotContainsString('Python worker', $failedProgrammingPayloads[0]['errorMessage']);
+        self::assertSame('La génération détaillée des séances a échoué. Tu peux relancer la demande.', $payload['programmingSessionDetailRequests'][0]['errorMessage']);
+        self::assertStringNotContainsString('internal/programming-session-details', $payload['programmingSessionDetailRequests'][0]['errorMessage']);
+        self::assertSame($technicalError, $analysisRequest->getErrorMessage());
+        self::assertSame($technicalError, $programmingRequest->getErrorMessage());
+        self::assertSame($technicalError, $detailRequest->getErrorMessage());
+    }
+
     public function testUserCanProgressThroughDetailedProgrammingSessions(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('programming-detail-progress@example.com', 'programming-detail-progress-token');
