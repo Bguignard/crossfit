@@ -51,6 +51,16 @@ export APP_DEBUG=0
 log "Changing directory to ${PROJECT_DIR}"
 cd "$PROJECT_DIR"
 
+if systemctl cat "$MESSENGER_SERVICE" >/dev/null 2>&1; then
+    log "Stopping ${MESSENGER_SERVICE} before changing code or cache"
+    sudo systemctl stop "$MESSENGER_SERVICE"
+elif [ -f bin/console ]; then
+    log "Messenger service ${MESSENGER_SERVICE} is not installed; asking existing workers to stop"
+    "$PHP_BIN" bin/console messenger:stop-workers --env=prod || true
+else
+    log "Messenger service ${MESSENGER_SERVICE} is not installed; skipping early stop"
+fi
+
 log "Updating code from origin/${BRANCH}"
 git fetch origin "$BRANCH"
 git checkout "$BRANCH"
@@ -80,9 +90,6 @@ if getent group "$WEB_GROUP" >/dev/null 2>&1; then
 else
     chmod -R u+rwX var/cache var/log
 fi
-
-log "Stopping Messenger workers so systemd restarts them with fresh code"
-"$PHP_BIN" bin/console messenger:stop-workers --env=prod || true
 
 log "Reloading ${PHP_FPM_SERVICE}"
 sudo systemctl reload "$PHP_FPM_SERVICE"
