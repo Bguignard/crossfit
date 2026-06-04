@@ -353,6 +353,90 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $requestsPayload = $this->jsonResponse();
         self::assertCount(1, $requestsPayload['analysisRequests']);
         self::assertCount(1, $requestsPayload['programmingRequests']);
+        self::assertCount(0, $requestsPayload['programmingSessionDetailRequests']);
+    }
+
+    public function testUserCanValidateProgrammingRequestForDetailedSessions(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-detail-api@example.com', 'programming-detail-api-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            constraints: [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'goal' => 'gymnastics endurance',
+            ],
+            inputSnapshot: [
+                'source_analysis_request' => [
+                    'id' => 'analysis-test',
+                    'result' => [
+                        'summary' => 'Gymnastics endurance is the main limiter.',
+                    ],
+                ],
+            ],
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markCompleted([
+                'overview' => 'Eight-week personal plan.',
+                'weeks' => [
+                    ['week' => 1, 'focus' => 'Pulling endurance'],
+                ],
+            ]);
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->flush();
+
+        $initialMessengerMessages = $this->messengerMessageCount();
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-generation-requests/%s/session-detail-requests', $programmingRequest->getId()), [], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $payload = $this->jsonResponse()['programmingSessionDetailRequest'];
+        self::assertSame((string) $programmingRequest->getId(), $payload['programmingRequestId']);
+        self::assertSame('queued', $payload['status']);
+        self::assertSame('Eight-week personal plan.', $payload['inputSnapshot']['source_programming_request']['global_programming']['overview']);
+        self::assertNotNull($payload['messengerEnqueuedAt']);
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-generation-requests/%s/session-detail-requests', $programmingRequest->getId()), [], $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($payload['id'], $this->jsonResponse()['programmingSessionDetailRequest']['id']);
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $this->jsonResponse()['programmingSessionDetailRequests']);
+    }
+
+    public function testUserCannotDetailIncompleteProgrammingRequest(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-detail-incomplete@example.com', 'programming-detail-incomplete-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            constraints: ['durationWeeks' => 8],
+            inputSnapshot: []
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markQueued();
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-generation-requests/%s/session-detail-requests', $programmingRequest->getId()), [], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(
+            'A completed programming generation is required before detailing sessions.',
+            $this->jsonResponse()['error']
+        );
     }
 
     public function testRequestsEndpointReenqueuesOrphanQueuedProgrammingRequest(): void

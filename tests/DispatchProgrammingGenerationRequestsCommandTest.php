@@ -7,6 +7,7 @@ use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Services\Profile\ProgrammingGenerationRequestProcessor;
@@ -151,5 +152,10 @@ final class FakeProgrammingGenerationWorker implements PythonWorkerClientInterfa
         }
 
         return $this->response;
+    }
+
+    public function submitProgrammingSessionDetails(ProgrammingSessionDetailRequest $request): array
+    {
+        throw new \LogicException('Programming session details are not used in this test.');
     }
 }

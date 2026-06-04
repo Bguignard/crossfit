@@ -34,8 +34,8 @@ final class EnqueueQueuedAiRequestsCommand extends Command
         $result = $this->dispatcher->enqueueQueuedBacklog($limit);
 
         $io->table(
-            ['analysis_enqueued', 'programming_enqueued'],
-            [[$result['analysis'], $result['programming']]]
+            ['analysis_enqueued', 'programming_enqueued', 'programming_details_enqueued'],
+            [[$result['analysis'], $result['programming'], $result['programming_details']]]
         );
 
         return Command::SUCCESS;
