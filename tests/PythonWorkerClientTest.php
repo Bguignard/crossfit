@@ -53,10 +53,12 @@ class PythonWorkerClientTest extends TestCase
             self::assertSame((string) $athleteProfile->getId(), $payload['athlete_profile_id']);
             self::assertSame('find weaknesses', $payload['parameters']['goal']);
             self::assertSame('Open 16.2', $payload['input_snapshot']['competition_results'][0]['event']);
+            self::assertSame(180.0, $options['timeout']);
+            self::assertSame(210.0, $options['max_duration']);
 
             return new MockResponse(json_encode(['job_id' => 'analysis-job-1'], JSON_THROW_ON_ERROR));
         });
-        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test/');
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test/', 180);
 
         self::assertSame(['job_id' => 'analysis-job-1'], $client->submitPerformanceAnalysis($request));
     }
@@ -92,10 +94,12 @@ class PythonWorkerClientTest extends TestCase
             self::assertSame((string) $performanceProfile->getId(), $payload['performance_profile_id']);
             self::assertSame(6, $payload['constraints']['duration_weeks']);
             self::assertSame('CrossFit MonWod', $payload['input_snapshot']['box']['name']);
+            self::assertSame(240.0, $options['timeout']);
+            self::assertSame(270.0, $options['max_duration']);
 
             return new MockResponse(json_encode(['job_id' => 'programming-job-1'], JSON_THROW_ON_ERROR));
         });
-        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test');
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test', 240);
 
         self::assertSame(['job_id' => 'programming-job-1'], $client->submitProgrammingGeneration($request));
     }
@@ -136,10 +140,12 @@ class PythonWorkerClientTest extends TestCase
             self::assertSame(8, $payload['constraints']['durationWeeks']);
             self::assertSame('Eight-week plan.', $payload['global_programming']['overview']);
             self::assertSame('programming-request-id', $payload['input_snapshot']['source_programming_request']['id']);
+            self::assertSame(300.0, $options['timeout']);
+            self::assertSame(330.0, $options['max_duration']);
 
             return new MockResponse(json_encode(['job_id' => 'programming-detail-job-1'], JSON_THROW_ON_ERROR));
         });
-        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test');
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test', 300);
 
         self::assertSame(['job_id' => 'programming-detail-job-1'], $client->submitProgrammingSessionDetails($detailRequest));
     }
@@ -152,7 +158,7 @@ class PythonWorkerClientTest extends TestCase
         $httpClient = new MockHttpClient([
             new MockResponse('{"detail":"not ready"}', ['http_code' => 503]),
         ]);
-        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test');
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test', 300);
 
         $this->expectException(PythonWorkerException::class);
         $this->expectExceptionMessage('Python worker returned HTTP 503');

@@ -13,6 +13,7 @@ final class PythonWorkerClient implements PythonWorkerClientInterface
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly string $pythonWorkerBaseUrl,
+        private readonly int $pythonWorkerTimeoutSeconds,
     ) {
     }
 
@@ -73,6 +74,8 @@ final class PythonWorkerClient implements PythonWorkerClientInterface
         try {
             $response = $this->httpClient->request('POST', $url, [
                 'json' => $payload,
+                'timeout' => $this->pythonWorkerTimeoutSeconds,
+                'max_duration' => $this->pythonWorkerTimeoutSeconds + 30,
             ]);
             $statusCode = $response->getStatusCode();
             $content = $response->getContent(false);
