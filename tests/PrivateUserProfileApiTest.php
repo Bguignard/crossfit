@@ -13,6 +13,7 @@ use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -411,6 +412,94 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         self::assertResponseIsSuccessful();
         self::assertCount(1, $this->jsonResponse()['programmingSessionDetailRequests']);
+    }
+
+    public function testUserCanProgressThroughDetailedProgrammingSessions(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-detail-progress@example.com', 'programming-detail-progress-token');
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            constraints: [
+                'durationWeeks' => 1,
+                'sessionsPerWeek' => 2,
+            ],
+            inputSnapshot: []
+        ))->markCompleted([
+            'overview' => 'One-week personal plan.',
+            'weeks' => [
+                [
+                    'week' => 1,
+                    'sessions' => [
+                        [
+                            'session_key' => 'week-1-session-1',
+                            'session' => 1,
+                            'title' => 'Pulling strength',
+                        ],
+                        [
+                            'session_key' => 'week-1-session-2',
+                            'session' => 2,
+                            'title' => 'Engine day',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $detailRequest = (new ProgrammingSessionDetailRequest(
+            $user,
+            $programmingRequest,
+            ['source_programming_request' => ['id' => 'programming-progress']]
+        ))->markCompleted([
+            'overview' => 'Detailed sessions.',
+            'weeks' => [
+                [
+                    'week' => 1,
+                    'sessions' => [
+                        [
+                            'session_key' => 'week-1-session-1',
+                            'session' => 1,
+                            'title' => 'Pulling strength',
+                            'blocks' => [],
+                        ],
+                        [
+                            'session_key' => 'week-1-session-2',
+                            'session' => 2,
+                            'title' => 'Engine day',
+                            'blocks' => [],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->persist($detailRequest);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        $initialPayload = $this->jsonResponse()['programmingSessionDetailRequests'][0];
+        self::assertSame(2, $initialPayload['sessionCount']);
+        self::assertSame(0, $initialPayload['currentSessionIndex']);
+        self::assertSame('Pulling strength', $initialPayload['currentSession']['title']);
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/complete-current-session', $detailRequest->getId()), [], $token);
+
+        self::assertResponseIsSuccessful();
+        $completedPayload = $this->jsonResponse()['programmingSessionDetailRequest'];
+        self::assertSame(['week-1-session-1'], $completedPayload['completedSessionKeys']);
+        self::assertSame(1, $completedPayload['currentSessionIndex']);
+        self::assertSame('Engine day', $completedPayload['currentSession']['title']);
+
+        $this->jsonRequest('PATCH', sprintf('/api/me/programming-session-detail-requests/%s/current-session', $detailRequest->getId()), [
+            'sessionIndex' => 0,
+        ], $token);
+
+        self::assertResponseIsSuccessful();
+        $rewoundPayload = $this->jsonResponse()['programmingSessionDetailRequest'];
+        self::assertSame(0, $rewoundPayload['currentSessionIndex']);
+        self::assertSame('Pulling strength', $rewoundPayload['currentSession']['title']);
     }
 
     public function testUserCannotDetailIncompleteProgrammingRequest(): void

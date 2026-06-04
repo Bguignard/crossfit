@@ -315,6 +315,68 @@ class MeController extends AbstractController
         );
     }
 
+    #[Route('/programming-session-detail-requests/{id}/current-session', name: 'api_me_update_programming_session_detail_current_session', methods: ['PATCH'])]
+    public function updateProgrammingSessionDetailCurrentSession(string $id, Request $request): JsonResponse
+    {
+        $detailRequest = $this->programmingSessionDetailRequestForCurrentUser($id);
+        if ($detailRequest === null) {
+            return $this->json(['error' => 'Programming session detail request not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if ($detailRequest->getStatus() !== ProgrammingGenerationRequestStatusEnum::COMPLETED) {
+            return $this->json(['error' => 'Completed session details are required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $sessions = $this->programmingDetailSessions($detailRequest);
+        if ($sessions === []) {
+            return $this->json(['error' => 'No detailed sessions are available.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $payload = $this->jsonPayload($request);
+        $sessionIndex = $payload['sessionIndex'] ?? null;
+        if (!is_int($sessionIndex)) {
+            return $this->json(['error' => 'sessionIndex must be an integer.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $detailRequest->setCurrentSessionIndex(min(max(0, $sessionIndex), count($sessions) - 1));
+        $this->entityManager->flush();
+
+        return $this->json(['programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest)]);
+    }
+
+    #[Route('/programming-session-detail-requests/{id}/complete-current-session', name: 'api_me_complete_programming_session_detail_current_session', methods: ['POST'])]
+    public function completeProgrammingSessionDetailCurrentSession(string $id): JsonResponse
+    {
+        $detailRequest = $this->programmingSessionDetailRequestForCurrentUser($id);
+        if ($detailRequest === null) {
+            return $this->json(['error' => 'Programming session detail request not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if ($detailRequest->getStatus() !== ProgrammingGenerationRequestStatusEnum::COMPLETED) {
+            return $this->json(['error' => 'Completed session details are required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $sessions = $this->programmingDetailSessions($detailRequest);
+        if ($sessions === []) {
+            return $this->json(['error' => 'No detailed sessions are available.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $currentIndex = min($detailRequest->getCurrentSessionIndex(), count($sessions) - 1);
+        $completedSessionKeys = $detailRequest->getCompletedSessionKeys();
+        $currentSessionKey = $this->programmingSessionKey($sessions[$currentIndex], $currentIndex);
+        if (!in_array($currentSessionKey, $completedSessionKeys, true)) {
+            $completedSessionKeys[] = $currentSessionKey;
+        }
+
+        $detailRequest
+            ->setCompletedSessionKeys($completedSessionKeys)
+            ->setCurrentSessionIndex(min($currentIndex + 1, count($sessions) - 1));
+
+        $this->entityManager->flush();
+
+        return $this->json(['programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest)]);
+    }
+
     #[Route('/performance-profile/metrics/{key}', name: 'api_me_delete_performance_metric', methods: ['DELETE'])]
     public function deletePerformanceMetric(string $key): JsonResponse
     {
@@ -483,13 +545,20 @@ class MeController extends AbstractController
      */
     private function serializeProgrammingSessionDetailRequest(ProgrammingSessionDetailRequest $request): array
     {
+        $sessions = $this->programmingDetailSessions($request);
+        $currentSessionIndex = $sessions !== []
+            ? min($request->getCurrentSessionIndex(), count($sessions) - 1)
+            : $request->getCurrentSessionIndex();
+
         return [
             'id' => (string) $request->getId(),
             'programmingRequestId' => (string) $request->getProgrammingRequest()->getId(),
             'status' => $request->getStatus()->value,
             'inputSnapshot' => $request->getInputSnapshot(),
             'detailedProgramming' => $request->getDetailedProgramming(),
-            'currentSessionIndex' => $request->getCurrentSessionIndex(),
+            'currentSessionIndex' => $currentSessionIndex,
+            'currentSession' => $sessions[$currentSessionIndex] ?? null,
+            'sessionCount' => count($sessions),
             'completedSessionKeys' => $request->getCompletedSessionKeys(),
             'errorMessage' => $request->getErrorMessage(),
             'createdAt' => $this->date($request->getCreatedAt()),
@@ -654,6 +723,78 @@ class MeController extends AbstractController
         );
 
         return $request;
+    }
+
+    private function programmingSessionDetailRequestForCurrentUser(string $id): ?ProgrammingSessionDetailRequest
+    {
+        /** @var ProgrammingSessionDetailRequest|null $request */
+        $request = $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->find($id);
+        if ($request === null || $request->getUser() !== $this->currentUser()) {
+            return null;
+        }
+
+        return $request;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function programmingDetailSessions(ProgrammingSessionDetailRequest $request): array
+    {
+        $detailedProgramming = $request->getDetailedProgramming();
+        if (!is_array($detailedProgramming)) {
+            return [];
+        }
+
+        $weeks = $detailedProgramming['weeks'] ?? null;
+        if (!is_array($weeks)) {
+            return [];
+        }
+
+        $sessions = [];
+        foreach ($weeks as $weekIndex => $week) {
+            if (!is_array($week)) {
+                continue;
+            }
+
+            $weekSessions = $week['sessions'] ?? null;
+            if (!is_array($weekSessions)) {
+                continue;
+            }
+
+            foreach ($weekSessions as $sessionIndex => $session) {
+                if (!is_array($session)) {
+                    continue;
+                }
+
+                $sessions[] = [
+                    'week' => $session['week'] ?? $week['week'] ?? $weekIndex + 1,
+                    'session' => $session['session'] ?? $sessionIndex + 1,
+                    ...$session,
+                ];
+            }
+        }
+
+        return $sessions;
+    }
+
+    /**
+     * @param array<string, mixed> $session
+     */
+    private function programmingSessionKey(array $session, int $fallbackIndex): string
+    {
+        $sessionKey = $session['session_key'] ?? null;
+        if (is_string($sessionKey) && trim($sessionKey) !== '') {
+            return $sessionKey;
+        }
+
+        $week = $session['week'] ?? null;
+        $sessionNumber = $session['session'] ?? null;
+        if ((is_int($week) || is_string($week)) && (is_int($sessionNumber) || is_string($sessionNumber))) {
+            return sprintf('week-%s-session-%s', $week, $sessionNumber);
+        }
+
+        return sprintf('session-%d', $fallbackIndex + 1);
     }
 
     /**
