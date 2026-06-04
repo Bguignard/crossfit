@@ -6,6 +6,7 @@
 parameters:
     env(CHAT_GPT_API_KEY): ''
     env(OPENAI_MODEL): 'gpt-5.4-mini'
+    env(PYTHON_WORKER_TIMEOUT_SECONDS): '300'
     maxNumberOfRounds: 10
 
 services:
@@ -66,6 +67,7 @@ services:
     App\Services\PythonWorker\PythonWorkerClient:
         arguments:
             $pythonWorkerBaseUrl: '%env(PYTHON_WORKER_BASE_URL)%'
+            $pythonWorkerTimeoutSeconds: '%env(int:PYTHON_WORKER_TIMEOUT_SECONDS)%'
 
     App\Services\PythonWorker\PythonWorkerClientInterface:
         alias: App\Services\PythonWorker\PythonWorkerClient
