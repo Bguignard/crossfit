@@ -505,7 +505,10 @@ class MeController extends AbstractController
             'parameters' => $request->getParameters(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'result' => $request->getResult(),
-            'errorMessage' => $request->getErrorMessage(),
+            'errorMessage' => $this->publicAiErrorMessage(
+                $request->getStatus()->value,
+                'analysis'
+            ),
             'createdAt' => $this->date($request->getCreatedAt()),
             'updatedAt' => $this->date($request->getUpdatedAt()),
             'queuedAt' => $this->date($request->getQueuedAt()),
@@ -530,7 +533,10 @@ class MeController extends AbstractController
             'constraints' => $request->getConstraints(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'generatedProgramming' => $request->getGeneratedProgramming(),
-            'errorMessage' => $request->getErrorMessage(),
+            'errorMessage' => $this->publicAiErrorMessage(
+                $request->getStatus()->value,
+                'programming'
+            ),
             'createdAt' => $this->date($request->getCreatedAt()),
             'updatedAt' => $this->date($request->getUpdatedAt()),
             'queuedAt' => $this->date($request->getQueuedAt()),
@@ -560,7 +566,10 @@ class MeController extends AbstractController
             'currentSession' => $sessions[$currentSessionIndex] ?? null,
             'sessionCount' => count($sessions),
             'completedSessionKeys' => $request->getCompletedSessionKeys(),
-            'errorMessage' => $request->getErrorMessage(),
+            'errorMessage' => $this->publicAiErrorMessage(
+                $request->getStatus()->value,
+                'session_details'
+            ),
             'createdAt' => $this->date($request->getCreatedAt()),
             'updatedAt' => $this->date($request->getUpdatedAt()),
             'queuedAt' => $this->date($request->getQueuedAt()),
@@ -723,6 +732,20 @@ class MeController extends AbstractController
         );
 
         return $request;
+    }
+
+    private function publicAiErrorMessage(string $status, string $requestType): ?string
+    {
+        if ($status !== ProgrammingGenerationRequestStatusEnum::FAILED->value) {
+            return null;
+        }
+
+        return match ($requestType) {
+            'analysis' => 'L’analyse IA a échoué. Tu peux réessayer dans quelques instants.',
+            'programming' => 'La génération de programmation a échoué. Tu peux relancer une demande.',
+            'session_details' => 'La génération détaillée des séances a échoué. Tu peux relancer la demande.',
+            default => 'La demande IA a échoué. Tu peux réessayer dans quelques instants.',
+        };
     }
 
     private function programmingSessionDetailRequestForCurrentUser(string $id): ?ProgrammingSessionDetailRequest
