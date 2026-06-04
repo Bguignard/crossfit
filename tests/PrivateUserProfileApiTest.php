@@ -12,6 +12,7 @@ use App\Entity\Competition\WorkoutResult;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
+use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -352,6 +353,37 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $requestsPayload = $this->jsonResponse();
         self::assertCount(1, $requestsPayload['analysisRequests']);
         self::assertCount(1, $requestsPayload['programmingRequests']);
+    }
+
+    public function testRequestsEndpointReenqueuesOrphanQueuedProgrammingRequest(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-orphan@example.com', 'programming-orphan-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            ['durationWeeks' => 8],
+            ['source' => 'test']
+        ))
+            ->setPerformanceProfile($performanceProfile)
+            ->markQueued();
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->flush();
+
+        $initialMessengerMessages = $this->messengerMessageCount();
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+        self::assertNotNull($this->jsonResponse()['programmingRequests'][0]['messengerEnqueuedAt']);
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
     }
 
     public function testUserCannotCreateProgrammingRequestWithoutCompletedAnalysis(): void

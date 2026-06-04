@@ -63,6 +63,9 @@ class ProgrammingGenerationRequest
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $completedAt = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $messengerEnqueuedAt = null;
+
     public function __construct(
         User $user,
         ProgrammingGenerationTypeEnum $type,
@@ -168,6 +171,14 @@ class ProgrammingGenerationRequest
         return $this;
     }
 
+    public function markMessengerEnqueued(?\DateTimeImmutable $messengerEnqueuedAt = null): self
+    {
+        $this->messengerEnqueuedAt = $messengerEnqueuedAt ?? new \DateTimeImmutable();
+        $this->touch();
+
+        return $this;
+    }
+
     public function markRunning(?\DateTimeImmutable $startedAt = null): self
     {
         $this->status = ProgrammingGenerationRequestStatusEnum::RUNNING;
@@ -221,6 +232,11 @@ class ProgrammingGenerationRequest
     public function getCompletedAt(): ?\DateTimeImmutable
     {
         return $this->completedAt;
+    }
+
+    public function getMessengerEnqueuedAt(): ?\DateTimeImmutable
+    {
+        return $this->messengerEnqueuedAt;
     }
 
     private function touch(): void

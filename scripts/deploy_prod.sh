@@ -95,6 +95,6 @@ else
 fi
 
 log "Enqueueing queued personal AI requests"
-"$PHP_BIN" bin/console app:ai-requests:enqueue-queued --limit=20 --env=prod --no-debug || true
+"$PHP_BIN" bin/console app:ai-requests:enqueue-queued --limit=20 --env=prod --no-debug
 
 log "Deployment completed"
