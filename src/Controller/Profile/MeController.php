@@ -14,16 +14,14 @@ use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
-use App\Message\DispatchPerformanceAnalysisRequestMessage;
-use App\Message\DispatchProgrammingGenerationRequestMessage;
 use App\Services\Profile\PersonalAnalysisCompetitionSnapshotBuilder;
+use App\Services\Profile\QueuedAiRequestMessengerDispatcher;
 use App\Services\Profile\UserAvatarResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -43,7 +41,7 @@ class MeController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly UserAvatarResolver $userAvatarResolver,
         private readonly PersonalAnalysisCompetitionSnapshotBuilder $competitionSnapshotBuilder,
-        private readonly MessageBusInterface $messageBus,
+        private readonly QueuedAiRequestMessengerDispatcher $queuedAiRequestDispatcher,
     ) {
     }
 
@@ -151,6 +149,7 @@ class MeController extends AbstractController
     public function requests(): JsonResponse
     {
         $user = $this->currentUser();
+        $this->queuedAiRequestDispatcher->enqueueQueuedRequestsForUser($user);
 
         return $this->json([
             'analysisRequests' => array_map(
@@ -205,7 +204,7 @@ class MeController extends AbstractController
 
         $this->entityManager->persist($analysisRequest);
         $this->entityManager->flush();
-        $this->messageBus->dispatch(new DispatchPerformanceAnalysisRequestMessage((string) $analysisRequest->getId()));
+        $this->queuedAiRequestDispatcher->enqueuePerformanceAnalysisRequest($analysisRequest, force: true);
 
         return $this->json(
             ['analysisRequest' => $this->serializeAnalysisRequest($analysisRequest)],
@@ -253,7 +252,7 @@ class MeController extends AbstractController
 
         $this->entityManager->persist($programmingRequest);
         $this->entityManager->flush();
-        $this->messageBus->dispatch(new DispatchProgrammingGenerationRequestMessage((string) $programmingRequest->getId()));
+        $this->queuedAiRequestDispatcher->enqueueProgrammingGenerationRequest($programmingRequest, force: true);
 
         return $this->json(
             ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],
@@ -393,6 +392,7 @@ class MeController extends AbstractController
             'createdAt' => $this->date($request->getCreatedAt()),
             'updatedAt' => $this->date($request->getUpdatedAt()),
             'queuedAt' => $this->date($request->getQueuedAt()),
+            'messengerEnqueuedAt' => $this->date($request->getMessengerEnqueuedAt()),
             'startedAt' => $this->date($request->getStartedAt()),
             'completedAt' => $this->date($request->getCompletedAt()),
             'athleteProfile' => $request->getAthleteProfile() !== null
@@ -417,6 +417,7 @@ class MeController extends AbstractController
             'createdAt' => $this->date($request->getCreatedAt()),
             'updatedAt' => $this->date($request->getUpdatedAt()),
             'queuedAt' => $this->date($request->getQueuedAt()),
+            'messengerEnqueuedAt' => $this->date($request->getMessengerEnqueuedAt()),
             'startedAt' => $this->date($request->getStartedAt()),
             'completedAt' => $this->date($request->getCompletedAt()),
         ];

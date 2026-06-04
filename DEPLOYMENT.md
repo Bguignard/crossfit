@@ -132,6 +132,10 @@ Personal performance analyses and personal programming generations are queued
 from the profile page and dispatched to the Python analyser through Symfony
 Messenger. Users are limited to one analysis request every 24 hours. The
 Messenger worker must be running, otherwise requests remain visible as queued.
+Queued requests keep a `messengerEnqueuedAt` timestamp. If a request is still
+queued and has no recent Messenger enqueue attempt, the profile requests API and
+the deployment catch-up command enqueue it again. This avoids orphaned requests
+remaining visible as queued when no corresponding Messenger message exists.
 
 Use the console dispatchers only as operational catch-up commands for requests
 created before the Messenger worker was available or after an incident:
