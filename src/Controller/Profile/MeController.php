@@ -32,6 +32,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class MeController extends AbstractController
 {
     private const ANALYSIS_REQUEST_COOLDOWN = 'P1D';
+    private const PROGRAMMING_DURATION_WEEKS = ['min' => 4, 'max' => 8, 'default' => 8];
+    private const PROGRAMMING_SESSIONS_PER_WEEK = ['min' => 1, 'max' => 6, 'default' => 5];
+    private const PROGRAMMING_SESSION_DURATION_MINUTES = ['min' => 30, 'max' => 180, 'default' => 60];
 
     private const VALID_LINK_TYPES = [
         UserAthleteProfile::LINK_SELF,
@@ -244,6 +247,12 @@ class MeController extends AbstractController
 
         $profile = $this->getLatestPerformanceProfile($user);
         $constraints = $this->arrayPayload($payload['constraints'] ?? []);
+        try {
+            $constraints = $this->normaliseProgrammingConstraints($constraints);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
         $sourceAnalysisRequest = $this->sourceAnalysisRequest($user, $constraints);
         if ($sourceAnalysisRequest === null) {
             return $this->json([
@@ -992,6 +1001,58 @@ class MeController extends AbstractController
         }
 
         return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $constraints
+     *
+     * @return array<string, mixed>
+     */
+    private function normaliseProgrammingConstraints(array $constraints): array
+    {
+        $constraints['durationWeeks'] = $this->boundedProgrammingInteger(
+            $constraints['durationWeeks'] ?? null,
+            'durationWeeks',
+            self::PROGRAMMING_DURATION_WEEKS
+        );
+        $constraints['sessionsPerWeek'] = $this->boundedProgrammingInteger(
+            $constraints['sessionsPerWeek'] ?? null,
+            'sessionsPerWeek',
+            self::PROGRAMMING_SESSIONS_PER_WEEK
+        );
+        $constraints['sessionDurationMinutes'] = $this->boundedProgrammingInteger(
+            $constraints['sessionDurationMinutes'] ?? null,
+            'sessionDurationMinutes',
+            self::PROGRAMMING_SESSION_DURATION_MINUTES
+        );
+
+        return $constraints;
+    }
+
+    /**
+     * @param array{min: int, max: int, default: int} $limit
+     */
+    private function boundedProgrammingInteger(mixed $value, string $field, array $limit): int
+    {
+        if ($value === null || $value === '') {
+            return $limit['default'];
+        }
+
+        if (is_int($value)) {
+            $integer = $value;
+        } elseif (is_float($value) && floor($value) === $value) {
+            $integer = (int) $value;
+        } elseif (is_string($value) && preg_match('/^\d+$/', trim($value)) === 1) {
+            $integer = (int) trim($value);
+        } else {
+            throw new \InvalidArgumentException(sprintf('%s must be an integer.', $field));
+        }
+
+        if ($integer < $limit['min'] || $integer > $limit['max']) {
+            throw new \InvalidArgumentException(sprintf('%s must be between %d and %d.', $field, $limit['min'], $limit['max']));
+        }
+
+        return $integer;
     }
 
     private function currentUser(): User
