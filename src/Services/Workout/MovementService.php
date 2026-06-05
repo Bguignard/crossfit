@@ -46,15 +46,19 @@ readonly class MovementService implements MovementServiceInterface
      */
     public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
     {
-        foreach ($movements as $movement) {
+        foreach ($movements as $movementKey => $movement) {
+            $requiresImplement = count($movement->getPossibleImplements()) > 0;
             foreach ($movement->getPossibleImplements() as $key => $implement) {
                 if (!$possibleImplements->contains($implement)) {
                     $movement->getPossibleImplements()->remove($key);
                 }
             }
+            if ($requiresImplement && count($movement->getPossibleImplements()) === 0) {
+                unset($movements[$movementKey]);
+            }
         }
 
-        return $movements;
+        return array_values($movements);
     }
 
     /**

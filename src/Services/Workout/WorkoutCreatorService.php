@@ -98,6 +98,7 @@ EOD;
         $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
         $promptForChatGPT .= sprintf("Choose exactly %d different movement%s for the final workout.\n", $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '');
         $promptForChatGPT .= "Use only movement names from the mandatory movements and candidate movement pool below.\n";
+        $promptForChatGPT .= "Use only the implement options printed under each selected movement. If a movement has no printed implement option because its required implement is unavailable, do not select or prescribe it. Never invent unavailable equipment.\n";
         $promptForChatGPT .= "The workout examples are format references only: do not copy their movement names unless those names are listed below.\n";
         if (count($mandatoryMovements) > 0) {
             $promptForChatGPT .= "Mandatory movements that must appear in the workout:\n";
@@ -305,6 +306,7 @@ EOD;
         }
         $promptForChatGPT .= "Candidate movement pool. Use only exact names from this pool:\n";
         $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovements);
+        $promptForChatGPT .= "Use only movements and implement options printed in the pool above. Do not invent unavailable equipment.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= <<<EOD
 
@@ -398,17 +400,17 @@ EOD;
         if (str_contains($stimulus, 'strength endurance')) {
             $guidance .= "- Strength Endurance: use moderate-to-heavy loads, meaningful volume, and local muscular fatigue. Every loaded movement must have a load or loading instruction. Avoid pure cardio limitation.\n";
         } elseif (str_contains($stimulus, 'strength')) {
-            $guidance .= "- Strength: write this like a true strength prescription, for example '5 x 3 Back Squat @ 85-90%, rest 3 min'. Keep reps low, rest long, and avoid turning it into a conditioning interval.\n";
+            $guidance .= "- Strength: write this like a true strength prescription, for example '5 x 3 Back Squat @ 85-90%, rest 3 min'. Keep reps low, rest long, and avoid turning it into a conditioning interval. Do not write 'Intervals X rounds' for pure strength work; use compact set x rep prescription lines.\n";
         } elseif (str_contains($stimulus, 'sprint')) {
             $guidance .= "- Sprint: keep the workout short, simple, and near-maximal. Target roughly 2-8 minutes, with few transitions and no pacing-heavy volume.\n";
         } elseif (str_contains($stimulus, 'threshold')) {
             $guidance .= "- Threshold: target 8-20 minutes at hard sustainable intensity. Include a pacing note and avoid both all-out sprint volume and slow aerobic cruising.\n";
         } elseif (str_contains($stimulus, 'engine')) {
-            $guidance .= "- Engine: make the limitation primarily aerobic. Prefer simple cardio-dominant movements, ergs, running, simple cyclical work, and low technical complexity. Avoid grip-heavy or high-skill gymnastics as the main limiter.\n";
+            $guidance .= "- Engine: make the limitation primarily aerobic. Prefer simple cardio-dominant movements, ergs, running, simple cyclical work, and low technical complexity. Avoid grip-heavy, high-skill gymnastics, and high-rep loaded stations as the main limiter. Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed in the allowed movement pool.\n";
         } elseif (str_contains($stimulus, 'hyrox')) {
-            $guidance .= "- Hyrox: build a hybrid endurance workout with repeated cardio/run/erg exposure and functional stations. Keep the station count realistic. The JSON movements list must exactly match the station movements written in the main flow, with no extra movement and no missing movement.\n";
+            $guidance .= "- Hyrox: build a hybrid endurance workout with repeated cardio/run/erg exposure and functional stations. Keep the station count realistic for training, usually 4-6 station movements plus run/erg exposure. Prefer an alternating sequence such as run/erg, station, run/erg, station. If there is only one pass through the sequence, do not write '1 rounds of'; write it as a chipper or ordered sequence. The JSON movements list must exactly match the station movements written in the main flow, with no extra movement and no missing movement.\n";
         } elseif (str_contains($stimulus, 'gymnastics') || str_contains($stimulus, 'skill')) {
-            $guidance .= "- Gymnastics / Skill: calibrate complexity and volume to the requested level. For RX, avoid accidental Elite volume; favor quality, control, and repeatable skill practice. Decide whether it is technical skill work or skill under fatigue and make that explicit.\n";
+            $guidance .= "- Gymnastics / Skill: calibrate complexity and volume to the requested level. For RX, avoid accidental Elite volume; favor quality, control, and repeatable skill practice. Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar. For RX skill-under-fatigue work, keep total volume manageable instead of testing max capacity. Decide whether it is technical skill work or skill under fatigue and make that explicit.\n";
         } elseif (str_contains($stimulus, 'competition')) {
             $guidance .= "- Competition: combine several qualities and movement families with clear standards and strategic pacing. It can feel Open-like, but must remain coherent for the requested level.\n";
         }

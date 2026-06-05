@@ -2,11 +2,13 @@
 
 namespace App\Tests;
 
+use App\Entity\Workout\Enum\ImplementEnum;
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\MovementTypeEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
+use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\MovementType;
@@ -16,12 +18,18 @@ use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutPrescriptionStandard;
 use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\MovementDifficultyRepositoryInterface;
+use App\Repository\Workout\MovementRepositoryInterface;
 use App\Repository\Workout\WorkoutPrescriptionStandardRepository;
 use App\Services\Workout\ChatGPTApiKeyInterface;
+use App\Services\Workout\MovementDifficultyService;
+use App\Services\Workout\MovementService;
 use App\Services\Workout\MovementServiceInterface;
+use App\Services\Workout\MuscleServiceInterface;
 use App\Services\Workout\WorkoutCreatorService;
 use App\Services\Workout\WorkoutOriginServiceInterface;
 use App\Services\Workout\WorkoutPrescriptionStandardPromptBuilder;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use PHPUnit\Framework\TestCase;
 
@@ -154,6 +162,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
+        self::assertStringContainsString('Never invent unavailable equipment', $chatGpt->prompt);
+        self::assertStringContainsString('Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
         self::assertStringContainsString('Every loaded movement written in the main workout flow must include either kg loads', $chatGpt->prompt);
         self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
@@ -169,6 +179,61 @@ class WorkoutCreatorServiceTest extends TestCase
             static fn (Movement $movement): ?string => $movement->getName(),
             $workout->getMovements()->toArray()
         ));
+    }
+
+    public function testMovementFilteringRemovesMovementsWhoseRequiredImplementIsUnavailable(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $rower = new Implement(ImplementEnum::ROWER, null);
+        $medicineBall = new Implement(ImplementEnum::MEDICINE_BALL, null);
+        $row = (new Movement('Row', $difficulty, $cardio))->addPossibleImplement($rower);
+        $wallBallShot = (new Movement('Wall Ball Shot', $difficulty, $cardio))->addPossibleImplement($medicineBall);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
+
+        $movementService = new MovementService(
+            $this->createMock(MovementRepositoryInterface::class),
+            new MovementDifficultyService($this->createMock(MovementDifficultyRepositoryInterface::class)),
+            $this->createMock(MuscleServiceInterface::class),
+        );
+
+        $filteredMovements = $movementService->removeNotAvailableImplementsFromMovementsOfWorkout(
+            new ArrayCollection([$rower]),
+            [$row, $wallBallShot, $burpee],
+        );
+
+        self::assertSame(['Row', 'Burpee'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $filteredMovements,
+        ));
+        self::assertSame([$rower], $row->getPossibleImplements()->toArray());
+        self::assertSame([], $burpee->getPossibleImplements()->toArray());
+    }
+
+    public function testStimulusGuidanceCoversPostAuditCorrections(): void
+    {
+        $creator = new WorkoutCreatorService(
+            $this->createMock(MovementServiceInterface::class),
+            $this->createMock(ChatGPTApiKeyInterface::class),
+            $this->createMock(WorkoutOriginServiceInterface::class),
+        );
+        $extractGuidance = new \ReflectionMethod(WorkoutCreatorService::class, 'stimulusSpecificGuidance');
+
+        $strengthGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Strength'));
+        self::assertStringContainsString("Do not write 'Intervals X rounds' for pure strength work", $strengthGuidance);
+        self::assertStringContainsString('compact set x rep prescription lines', $strengthGuidance);
+
+        $engineGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Engine'));
+        self::assertStringContainsString('Avoid grip-heavy, high-skill gymnastics, and high-rep loaded stations', $engineGuidance);
+        self::assertStringContainsString('Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed', $engineGuidance);
+
+        $hyroxGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Entrainement Hyrox'));
+        self::assertStringContainsString('Prefer an alternating sequence such as run/erg, station, run/erg, station', $hyroxGuidance);
+        self::assertStringContainsString("do not write '1 rounds of'", $hyroxGuidance);
+
+        $gymnasticsGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Gymnastics / Skill'));
+        self::assertStringContainsString('Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar', $gymnasticsGuidance);
+        self::assertStringContainsString('keep total volume manageable instead of testing max capacity', $gymnasticsGuidance);
     }
 
     public function testOpenAiCanSuggestWorkoutVariantsBeforeFinalGeneration(): void
