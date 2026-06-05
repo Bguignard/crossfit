@@ -47,11 +47,8 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
             throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($mandatoryMovements) + count($candidateMovements), count($mandatoryMovements) + count($candidateMovements) > 1 ? 's' : ''));
         }
 
-        // if no number of runds, we set a default value
-        $numberOfRounds = $workoutGeneration->getNumberOfRounds() ?? rand(1, 10);
-        if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::AMRAP) {
-            $numberOfRounds = 1;
-        }
+        $workoutType = $workoutGeneration->getWorkoutType()->getNameAsEnum();
+        $imposedNumberOfRounds = $workoutType === WorkoutTypeEnum::AMRAP ? null : $workoutGeneration->getNumberOfRounds();
 
         // création du prompt ChatGPT :
         $promptForChatGPT = "Create a crossfit workout with the following movements and possible implement for the movement. 
@@ -84,18 +81,26 @@ For high-skill movements, suggest realistic substitutions by level, for example 
 The Scaling options section is mandatory. Also return it separately in the JSON "scalingOptions" field.
 
 EOD;
-        if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::AMRAP) {
-            $promptForChatGPT .= "This workout is an AMRAP, there is only one round to repeat as many rounds as possible in the time cap.\n";
-        } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::FOR_TIME) {
+        if ($workoutType === WorkoutTypeEnum::AMRAP) {
+            $promptForChatGPT .= "This workout is an AMRAP: create one repeatable movement sequence for the athlete to repeat for as many rounds and reps as possible during the time cap. Do not impose or mention a fixed number of rounds.\n";
+        } elseif ($workoutType === WorkoutTypeEnum::FOR_TIME) {
             $promptForChatGPT .= "This workout is a For time, you have to complete the workout as fast as possible.\n";
-            $promptForChatGPT .= "Even if there are many rounds, you don't have to write them all, just write :\n";
-            $promptForChatGPT .= sprintf("%d rounds of : \n", $numberOfRounds);
+            if ($imposedNumberOfRounds !== null) {
+                $promptForChatGPT .= "The athlete explicitly imposed the number of rounds. Use this structure:\n";
+                $promptForChatGPT .= sprintf("%d rounds of : \n", $imposedNumberOfRounds);
+            } else {
+                $promptForChatGPT .= "The athlete did not impose a number of rounds. Choose the structure that best fits the stimulus, level, time cap and movement pool; it can be rounds, a chipper, a ladder, a couplet or a multi-part workout.\n";
+            }
             $promptForChatGPT .= "You may write a natural multi-part workout only if it improves the intended stimulus.\n";
             $promptForChatGPT .= "You don't have to write the number of milliseconds per movement.\n";
         }
 
         // - Durée de l'entrainement et nombre de tours
-        $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the number of rounds (there are %s rounds) and the timeCap which is %s minutes.\n", $numberOfRounds, $workoutGeneration->getTimeCap());
+        if ($imposedNumberOfRounds !== null) {
+            $promptForChatGPT .= sprintf("Choose the number of reps of each movement using the average time per movement as rough guidance, the imposed number of rounds (%s rounds) and the timeCap which is %s minutes.\n", $imposedNumberOfRounds, $workoutGeneration->getTimeCap());
+        } else {
+            $promptForChatGPT .= sprintf("Choose the movement sequence, reps, distances, intervals and round structure using the average time per movement as rough guidance and the timeCap which is %s minutes. Do not invent a fixed round count unless it is the most coherent structure for the workout format and stimulus.\n", $workoutGeneration->getTimeCap());
+        }
         $promptForChatGPT .= sprintf("Choose exactly %d different movement%s for the final workout.\n", $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '');
         $promptForChatGPT .= "Use only movement names from the mandatory movements and candidate movement pool below.\n";
         $promptForChatGPT .= "Use only the implement options printed under each selected movement. If a movement has no printed implement option because its required implement is unavailable, do not select or prescribe it. Never invent unavailable equipment.\n";
@@ -197,12 +202,19 @@ EOD;
 
         // Si c'est un entrainement avec des intervalles, fournir
         // - nb de tours + durée des intervalles + durée des repos
-        if ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
-            $promptForChatGPT .= sprintf("The workout pattern is an Intervals workout with %s rounds, each round last %s seconds with a rest of %s seconds between each round.\n",
-                $numberOfRounds,
-                $workoutGeneration->getIntervalsTime() ?? 60,
-                $workoutGeneration->getIntervalsRestTime() ?? 30
-            );
+        if ($workoutType === WorkoutTypeEnum::INTERVALS) {
+            if ($imposedNumberOfRounds !== null) {
+                $promptForChatGPT .= sprintf("The workout pattern is an Intervals workout with %s rounds, each round lasts %s seconds with a rest of %s seconds between each round.\n",
+                    $imposedNumberOfRounds,
+                    $workoutGeneration->getIntervalsTime() ?? 60,
+                    $workoutGeneration->getIntervalsRestTime() ?? 30
+                );
+            } else {
+                $promptForChatGPT .= sprintf("The workout pattern is an Intervals workout. The athlete did not impose the number of rounds; choose the number of intervals that best fits the stimulus and time cap. Each interval should last %s seconds with a rest of %s seconds between intervals unless a better interval structure is clearly justified.\n",
+                    $workoutGeneration->getIntervalsTime() ?? 60,
+                    $workoutGeneration->getIntervalsRestTime() ?? 30
+                );
+            }
         }
 
         // todo : le faire dans une méthode ?
@@ -247,7 +259,7 @@ EOD;
         return new Workout(
             $workoutGeneration->getName(),
             $flow,
-            $workoutGeneration->getNumberOfRounds(),
+            $imposedNumberOfRounds,
             $workoutGeneration->getTimeCap(),
             $workoutGeneration->getWorkoutType(),
             $workoutOrigin,
