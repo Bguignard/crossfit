@@ -216,8 +216,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
-        self::assertStringContainsString('Never invent unavailable equipment', $chatGpt->prompt);
-        self::assertStringContainsString('Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed', $chatGpt->prompt);
+        self::assertStringContainsString('Never infer, invent or borrow unavailable equipment', $chatGpt->prompt);
+        self::assertStringContainsString('check every selected movement against the printed pool', $chatGpt->prompt);
+        self::assertStringContainsString('Do not choose Wall Ball Shot, sled, sandbag, dumbbell or other equipment-specific movements unless their required implement is explicitly printed under that exact movement', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
         self::assertStringContainsString('Every loaded movement written in the main workout flow must include either kg loads', $chatGpt->prompt);
         self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
@@ -279,11 +280,12 @@ class WorkoutCreatorServiceTest extends TestCase
 
         $engineGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Engine'));
         self::assertStringContainsString('Avoid grip-heavy, high-skill gymnastics, and high-rep loaded stations', $engineGuidance);
-        self::assertStringContainsString('Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed', $engineGuidance);
+        self::assertStringContainsString('Do not choose Wall Ball Shot, sled, sandbag, dumbbell or other equipment-specific movements unless their required implement is explicitly printed under that exact movement', $engineGuidance);
 
         $hyroxGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Entrainement Hyrox'));
         self::assertStringContainsString('Prefer an alternating sequence such as run/erg, station, run/erg, station', $hyroxGuidance);
-        self::assertStringContainsString("do not write '1 rounds of'", $hyroxGuidance);
+        self::assertStringContainsString('include at least two run/erg exposures', $hyroxGuidance);
+        self::assertStringContainsString("do not write '1 rounds of' or '1 round of'", $hyroxGuidance);
         self::assertStringContainsString('usually 4-6 station movements', $hyroxGuidance);
 
         $fullHyroxGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Simulation Hyrox'));
@@ -294,7 +296,7 @@ class WorkoutCreatorServiceTest extends TestCase
 
         $gymnasticsGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Gymnastics / Skill'));
         self::assertStringContainsString('Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar', $gymnasticsGuidance);
-        self::assertStringContainsString('keep total volume manageable instead of testing max capacity', $gymnasticsGuidance);
+        self::assertStringContainsString('avoid combining high totals of muscle-ups, HSPU and toes-to-bar in the same workout', $gymnasticsGuidance);
     }
 
     public function testOpenAiCanSuggestWorkoutVariantsBeforeFinalGeneration(): void
