@@ -71,7 +71,7 @@ class PythonWorkerClientTest extends TestCase
         $request = (new ProgrammingGenerationRequest(
             $user,
             ProgrammingGenerationTypeEnum::BOX,
-            ['duration_weeks' => 6, 'equipment' => ['barbell', 'rower']],
+            ['duration_weeks' => 6, 'programmingPurpose' => 'main_program', 'equipment' => ['barbell', 'rower']],
             ['box' => ['name' => 'CrossFit MonWod']],
         ))
             ->setBox($box)
@@ -93,6 +93,7 @@ class PythonWorkerClientTest extends TestCase
             self::assertSame((string) $box->getId(), $payload['box_id']);
             self::assertSame((string) $performanceProfile->getId(), $payload['performance_profile_id']);
             self::assertSame(6, $payload['constraints']['duration_weeks']);
+            self::assertSame('main_program', $payload['constraints']['programmingPurpose']);
             self::assertSame('CrossFit MonWod', $payload['input_snapshot']['box']['name']);
             self::assertSame(240.0, $options['timeout']);
             self::assertSame(270.0, $options['max_duration']);

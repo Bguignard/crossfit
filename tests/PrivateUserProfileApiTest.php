@@ -334,6 +334,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
                 'durationWeeks' => 8,
                 'sessionsPerWeek' => 5,
                 'goal' => 'gymnastics endurance',
+                'programmingPurpose' => 'weakness_accessory',
                 'sourceAnalysisRequestId' => $analysisPayload['id'],
             ],
         ], $token);
@@ -343,6 +344,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('queued', $programmingPayload['status']);
         self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
         self::assertSame('gymnastics endurance', $programmingPayload['constraints']['goal']);
+        self::assertSame('weakness_accessory', $programmingPayload['constraints']['programmingPurpose']);
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
         self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
         self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
