@@ -284,6 +284,13 @@ class WorkoutCreatorServiceTest extends TestCase
         $hyroxGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Entrainement Hyrox'));
         self::assertStringContainsString('Prefer an alternating sequence such as run/erg, station, run/erg, station', $hyroxGuidance);
         self::assertStringContainsString("do not write '1 rounds of'", $hyroxGuidance);
+        self::assertStringContainsString('usually 4-6 station movements', $hyroxGuidance);
+
+        $fullHyroxGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Simulation Hyrox'));
+        self::assertStringContainsString('8 ordered functional stations', $fullHyroxGuidance);
+        self::assertStringContainsString('run segment, station 1, run segment, station 2', $fullHyroxGuidance);
+        self::assertStringContainsString('men/women standards or scaling options', $fullHyroxGuidance);
+        self::assertStringNotContainsString('usually 4-6 station movements', $fullHyroxGuidance);
 
         $gymnasticsGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Gymnastics / Skill'));
         self::assertStringContainsString('Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar', $gymnasticsGuidance);
