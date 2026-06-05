@@ -331,8 +331,24 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
             'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
             'constraints' => [
+                'durationWeeks' => 500,
+                'sessionsPerWeek' => 7,
+                'sessionDurationMinutes' => 20,
+                'goal' => 'gymnastics endurance',
+                'programmingPurpose' => 'weakness_accessory',
+                'sourceAnalysisRequestId' => $analysisPayload['id'],
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame('durationWeeks must be between 4 and 8.', $this->jsonResponse()['error']);
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
                 'durationWeeks' => 8,
                 'sessionsPerWeek' => 5,
+                'sessionDurationMinutes' => 60,
                 'goal' => 'gymnastics endurance',
                 'programmingPurpose' => 'weakness_accessory',
                 'sourceAnalysisRequestId' => $analysisPayload['id'],
@@ -345,6 +361,9 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
         self::assertSame('gymnastics endurance', $programmingPayload['constraints']['goal']);
         self::assertSame('weakness_accessory', $programmingPayload['constraints']['programmingPurpose']);
+        self::assertSame(8, $programmingPayload['constraints']['durationWeeks']);
+        self::assertSame(5, $programmingPayload['constraints']['sessionsPerWeek']);
+        self::assertSame(60, $programmingPayload['constraints']['sessionDurationMinutes']);
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
         self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
         self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
