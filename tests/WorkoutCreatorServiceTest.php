@@ -66,6 +66,60 @@ class WorkoutCreatorServiceTest extends TestCase
         (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
     }
 
+    public function testAmrapPromptIgnoresNumberOfRounds(): void
+    {
+        ['workout' => $workout, 'prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::AMRAP,
+            7,
+        );
+
+        self::assertNull($workout->getNumberOfRounds());
+        self::assertStringContainsString('This workout is an AMRAP: create one repeatable movement sequence', $prompt);
+        self::assertStringContainsString('Do not impose or mention a fixed number of rounds.', $prompt);
+        self::assertStringNotContainsString('there is only one round', $prompt);
+        self::assertStringNotContainsString('there are 1 rounds', $prompt);
+        self::assertStringNotContainsString('7 rounds of', $prompt);
+    }
+
+    public function testNonAmrapPromptCanUseImposedNumberOfRounds(): void
+    {
+        ['workout' => $workout, 'prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            3,
+        );
+
+        self::assertSame(3, $workout->getNumberOfRounds());
+        self::assertStringContainsString('The athlete explicitly imposed the number of rounds.', $prompt);
+        self::assertStringContainsString('3 rounds of', $prompt);
+        self::assertStringContainsString('the imposed number of rounds (3 rounds)', $prompt);
+    }
+
+    public function testNonAmrapPromptCanLeaveRoundsToAi(): void
+    {
+        ['workout' => $workout, 'prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+        );
+
+        self::assertNull($workout->getNumberOfRounds());
+        self::assertStringContainsString('The athlete did not impose a number of rounds.', $prompt);
+        self::assertStringContainsString('Choose the movement sequence, reps, distances, intervals and round structure', $prompt);
+        self::assertStringNotContainsString('there are', $prompt);
+    }
+
+    public function testIntervalsPromptCanLeaveRoundsToAi(): void
+    {
+        ['workout' => $workout, 'prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::INTERVALS,
+            null,
+        );
+
+        self::assertNull($workout->getNumberOfRounds());
+        self::assertStringContainsString('The workout pattern is an Intervals workout.', $prompt);
+        self::assertStringContainsString('choose the number of intervals that best fits the stimulus and time cap', $prompt);
+        self::assertStringNotContainsString('with  rounds', $prompt);
+    }
+
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -2891,5 +2945,96 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringNotContainsString('Women Deadlift: 70 kg', $prompt);
         self::assertStringNotContainsString('Women Deadlift: 83 kg', $prompt);
         self::assertStringNotContainsString('Women Deadlift: 102 kg', $prompt);
+    }
+
+    /**
+     * @return array{workout: \App\Entity\Workout\Workout, prompt: string}
+     */
+    private function createWorkoutAndCapturePrompt(WorkoutTypeEnum $workoutType, ?int $numberOfRounds): array
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+
+        $movementService = new class([$row]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public string $prompt = '';
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompt = $prompt;
+
+                return json_encode([
+                    'flow' => "Workout:\n1000 m Row",
+                    'scalingOptions' => "RX: as written\nIntermediate: 800 m Row\nScaled: 600 m Row",
+                    'movements' => ['Row'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Optional rounds prompt test')
+            ->setTimeCap(12)
+            ->setWorkoutType(new WorkoutType($workoutType))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfRounds($numberOfRounds)
+            ->setIntervalsTime(90)
+            ->setIntervalsRestTime(30)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        return [
+            'workout' => $workout,
+            'prompt' => $chatGpt->prompt,
+        ];
     }
 }
