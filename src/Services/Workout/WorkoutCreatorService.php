@@ -419,6 +419,8 @@ EOD;
             $guidance .= "- Threshold: target 8-20 minutes at hard sustainable intensity. Include a pacing note and avoid both all-out sprint volume and slow aerobic cruising.\n";
         } elseif (str_contains($stimulus, 'engine')) {
             $guidance .= "- Engine: make the limitation primarily aerobic. Prefer simple cardio-dominant movements, ergs, running, simple cyclical work, and low technical complexity. Avoid grip-heavy, high-skill gymnastics, and high-rep loaded stations as the main limiter. Do not choose Wall Ball Shot or other equipment-specific movements unless their required implement is explicitly printed in the allowed movement pool.\n";
+        } elseif ($this->isFullHyroxStimulus($stimulus)) {
+            $guidance .= "- Hyrox complete simulation: write a race-like simulation with 8 ordered functional stations and recurrent run segments between stations. Make the structure explicit: run segment, station 1, run segment, station 2, and so on until station 8. Include distances, calories, reps or loads for each station, and give men/women standards or scaling options when relevant. Keep the flow readable as an ordered simulation instead of compressing everything into generic rounds. The JSON movements list must exactly match the station movements written in the main flow, with no extra movement and no missing movement; recurrent run/erg exposure must also appear in the flow.\n";
         } elseif (str_contains($stimulus, 'hyrox')) {
             $guidance .= "- Hyrox: build a hybrid endurance workout with repeated cardio/run/erg exposure and functional stations. Keep the station count realistic for training, usually 4-6 station movements plus run/erg exposure. Prefer an alternating sequence such as run/erg, station, run/erg, station. If there is only one pass through the sequence, do not write '1 rounds of'; write it as a chipper or ordered sequence. The JSON movements list must exactly match the station movements written in the main flow, with no extra movement and no missing movement.\n";
         } elseif (str_contains($stimulus, 'gymnastics') || str_contains($stimulus, 'skill')) {
@@ -430,6 +432,14 @@ EOD;
         $guidance .= "- JSON integrity: the movements array must contain exactly the movement names used in the main workout flow, no extra movement and no missing movement.\n";
 
         return $guidance;
+    }
+
+    private function isFullHyroxStimulus(string $stimulus): bool
+    {
+        return str_contains($stimulus, 'simulation hyrox')
+            || str_contains($stimulus, 'hyrox complet')
+            || str_contains($stimulus, 'full hyrox')
+            || str_contains($stimulus, 'complete hyrox');
     }
 
     private function teamWorkoutGuidance(WorkoutGeneration $workoutGeneration): string
