@@ -152,13 +152,17 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Banned movements that must not appear in the workout flow', $chatGpt->prompt);
         self::assertStringContainsString('- Box Jump', $chatGpt->prompt);
         self::assertStringContainsString('Level prescription guidance: create an Intermediate version', $chatGpt->prompt);
+        self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
+        self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
+        self::assertStringContainsString('Every loaded movement written in the main workout flow must include either kg loads', $chatGpt->prompt);
         self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
         self::assertStringNotContainsString('185/135 lb', $chatGpt->prompt);
         self::assertStringContainsString('Scaling options', $chatGpt->prompt);
         self::assertStringContainsString('"scalingOptions"', $chatGpt->prompt);
         self::assertStringContainsString('The movements array must contain exactly 2 unique movement name(s)', $chatGpt->prompt);
         self::assertStringContainsString('with no duplicates, using only exact names from the allowed lists', $chatGpt->prompt);
+        self::assertStringContainsString('the movements array must contain exactly the movement names used in the main workout flow', strtolower($chatGpt->prompt));
         self::assertStringContainsString('Team workout guidance: this is an individual workout', $chatGpt->prompt);
         self::assertStringContainsString("Scaling options:\nRX: as written", $workout->getFlow());
         self::assertSame(['Run', 'Burpee'], array_map(
@@ -252,6 +256,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertSame('Engine progressif', $variants[0]['title']);
         self::assertSame(['Row', 'Burpee'], $variants[0]['movementNames']);
         self::assertStringContainsString('Suggest 3 distinct CrossFit workout concepts before generating a final workout.', $chatGpt->prompt);
+        self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
+        self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
     }
 

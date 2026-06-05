@@ -73,10 +73,12 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
         $promptForChatGPT .= $this->teamWorkoutGuidance($workoutGeneration);
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
+        $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
         $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
+Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
 Add a short "Scaling options" section at the end of the flow with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
 The Scaling options section is mandatory. Also return it separately in the JSON "scalingOptions" field.
@@ -303,6 +305,7 @@ EOD;
         }
         $promptForChatGPT .= "Candidate movement pool. Use only exact names from this pool:\n";
         $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovements);
+        $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= <<<EOD
 
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
@@ -381,6 +384,38 @@ EOD;
             'Beginner' => "Level prescription guidance: create a Scaled/Beginner version with accessible loads, simple movement patterns, and lower technical barriers while keeping the intended stimulus.\n",
             default => sprintf("Level prescription guidance: adapt loads, skills and volume to the requested level \"%s\" while keeping the intended stimulus.\n", $workoutGeneration->getMovementDifficulty()->getName()),
         };
+    }
+
+    private function stimulusSpecificGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        $stimulus = strtolower((string) $workoutGeneration->getStimulus());
+
+        if ($stimulus === '') {
+            return '';
+        }
+
+        $guidance = "Stimulus-specific guidance:\n";
+        if (str_contains($stimulus, 'strength endurance')) {
+            $guidance .= "- Strength Endurance: use moderate-to-heavy loads, meaningful volume, and local muscular fatigue. Every loaded movement must have a load or loading instruction. Avoid pure cardio limitation.\n";
+        } elseif (str_contains($stimulus, 'strength')) {
+            $guidance .= "- Strength: write this like a true strength prescription, for example '5 x 3 Back Squat @ 85-90%, rest 3 min'. Keep reps low, rest long, and avoid turning it into a conditioning interval.\n";
+        } elseif (str_contains($stimulus, 'sprint')) {
+            $guidance .= "- Sprint: keep the workout short, simple, and near-maximal. Target roughly 2-8 minutes, with few transitions and no pacing-heavy volume.\n";
+        } elseif (str_contains($stimulus, 'threshold')) {
+            $guidance .= "- Threshold: target 8-20 minutes at hard sustainable intensity. Include a pacing note and avoid both all-out sprint volume and slow aerobic cruising.\n";
+        } elseif (str_contains($stimulus, 'engine')) {
+            $guidance .= "- Engine: make the limitation primarily aerobic. Prefer simple cardio-dominant movements, ergs, running, simple cyclical work, and low technical complexity. Avoid grip-heavy or high-skill gymnastics as the main limiter.\n";
+        } elseif (str_contains($stimulus, 'hyrox')) {
+            $guidance .= "- Hyrox: build a hybrid endurance workout with repeated cardio/run/erg exposure and functional stations. Keep the station count realistic. The JSON movements list must exactly match the station movements written in the main flow, with no extra movement and no missing movement.\n";
+        } elseif (str_contains($stimulus, 'gymnastics') || str_contains($stimulus, 'skill')) {
+            $guidance .= "- Gymnastics / Skill: calibrate complexity and volume to the requested level. For RX, avoid accidental Elite volume; favor quality, control, and repeatable skill practice. Decide whether it is technical skill work or skill under fatigue and make that explicit.\n";
+        } elseif (str_contains($stimulus, 'competition')) {
+            $guidance .= "- Competition: combine several qualities and movement families with clear standards and strategic pacing. It can feel Open-like, but must remain coherent for the requested level.\n";
+        }
+
+        $guidance .= "- JSON integrity: the movements array must contain exactly the movement names used in the main workout flow, no extra movement and no missing movement.\n";
+
+        return $guidance;
     }
 
     private function teamWorkoutGuidance(WorkoutGeneration $workoutGeneration): string
