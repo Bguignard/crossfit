@@ -160,7 +160,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('Paris', $payload['member'][0]['cityName']);
         self::assertContains('France', $payload['countries']);
         self::assertContains('United States', $payload['countries']);
-        self::assertSame(['Ile-de-France'], $payload['regions']);
+        self::assertSame(['Île-de-France'], $payload['regions']);
         self::assertNull($payload['view']['next']);
     }
 
