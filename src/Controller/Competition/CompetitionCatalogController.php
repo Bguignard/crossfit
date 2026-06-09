@@ -42,6 +42,7 @@ final class CompetitionCatalogController extends AbstractController
             'totalItems' => $totalItems,
             'member' => array_map($this->serializeCompetition(...), $competitions),
             'countries' => $this->countries(),
+            'regions' => $this->regions($request),
             'view' => [
                 'next' => $page * self::PAGE_SIZE < $totalItems ? sprintf('/competitions?page=%d', $page + 1) : null,
             ],
@@ -71,6 +72,13 @@ final class CompetitionCatalogController extends AbstractController
             $queryBuilder
                 ->andWhere('LOWER(competition.locationLabel) LIKE :location OR LOWER(competition.cityName) LIKE :location OR LOWER(competition.departmentName) LIKE :location OR LOWER(competition.regionName) LIKE :location OR LOWER(competition.countryName) LIKE :location')
                 ->setParameter('location', '%'.$location.'%');
+        }
+
+        $region = $this->normalizedString($request->query->get('region'));
+        if ($region !== null) {
+            $queryBuilder
+                ->andWhere('LOWER(competition.regionName) = :region')
+                ->setParameter('region', $region);
         }
 
         $rawSources = $request->query->all()['source'] ?? [];
@@ -169,6 +177,65 @@ final class CompetitionCatalogController extends AbstractController
         sort($countries, SORT_STRING);
 
         return $countries;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function regions(Request $request): array
+    {
+        $queryBuilder = $this->entityManager->getRepository(Competition::class)->createQueryBuilder('competition')
+            ->select('DISTINCT competition.regionName AS regionName')
+            ->where('competition.regionName IS NOT NULL');
+
+        $country = $this->normalizedString($request->query->get('country'));
+        if ($country !== null) {
+            $queryBuilder
+                ->andWhere('LOWER(competition.countryName) = :regionCountry OR LOWER(competition.countryCode) = :regionCountry')
+                ->setParameter('regionCountry', $country);
+        }
+
+        $search = $this->normalizedString($request->query->get('q'));
+        if ($search !== null) {
+            $queryBuilder
+                ->andWhere('LOWER(competition.name) LIKE :regionSearch OR LOWER(competition.locationLabel) LIKE :regionSearch OR LOWER(competition.cityName) LIKE :regionSearch OR LOWER(competition.departmentName) LIKE :regionSearch OR LOWER(competition.regionName) LIKE :regionSearch OR LOWER(competition.countryName) LIKE :regionSearch OR LOWER(competition.competitionType) LIKE :regionSearch OR LOWER(competition.sourceName) LIKE :regionSearch')
+                ->setParameter('regionSearch', '%'.$search.'%');
+        }
+
+        $rawSources = $request->query->all()['source'] ?? [];
+        $rawSources = is_array($rawSources) ? $rawSources : [$rawSources];
+        $sources = array_values(array_filter($rawSources, static fn (mixed $source): bool => is_string($source) && trim($source) !== '' && $source !== 'none'));
+        if ($request->query->get('source') === 'none' || in_array('none', $rawSources, true)) {
+            return [];
+        }
+        if (count($sources) > 0) {
+            $queryBuilder
+                ->andWhere('competition.sourceName IN (:regionSources)')
+                ->setParameter('regionSources', $sources);
+        }
+
+        $participation = $this->normalizedString($request->query->get('participation'));
+        if ($participation !== null) {
+            $queryBuilder
+                ->andWhere('competition.participationType = :regionParticipation OR competition.participationType = :regionBoth')
+                ->setParameter('regionParticipation', $participation)
+                ->setParameter('regionBoth', 'both');
+        }
+
+        $this->applyStatusFilter($queryBuilder, $this->normalizedString($request->query->get('status')));
+
+        $regions = [];
+        foreach ($queryBuilder->getQuery()->getArrayResult() as $row) {
+            $region = $this->titleOrNull($row['regionName'] ?? null);
+            if ($region !== null) {
+                $regions[$region] = true;
+            }
+        }
+
+        $regions = array_keys($regions);
+        sort($regions, SORT_STRING);
+
+        return $regions;
     }
 
     private function countryFromLocation(string $location): ?string

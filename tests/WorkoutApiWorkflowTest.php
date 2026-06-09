@@ -117,6 +117,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setLocationLabel('Paris, France')
             ->setCountryName('France')
             ->setCountryCode('FR')
+            ->setRegionName('Ile-de-France')
             ->setCityName('Paris')
             ->setCompetitionType('functional_fitness')
             ->setParticipationType('individual')
@@ -155,9 +156,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('https://example.test/french.png', $payload['member'][0]['logoUrl']);
         self::assertSame('France', $payload['member'][0]['countryName']);
         self::assertSame('FR', $payload['member'][0]['countryCode']);
+        self::assertSame('Ile-de-France', $payload['member'][0]['regionName']);
         self::assertSame('Paris', $payload['member'][0]['cityName']);
         self::assertContains('France', $payload['countries']);
         self::assertContains('United States', $payload['countries']);
+        self::assertSame(['Ile-de-France'], $payload['regions']);
         self::assertNull($payload['view']['next']);
     }
 
