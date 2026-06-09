@@ -15,6 +15,36 @@ use Symfony\Component\Routing\Attribute\Route;
 final class CompetitionCatalogController extends AbstractController
 {
     private const PAGE_SIZE = 24;
+    private const FRENCH_REGIONS = [
+        'auvergne rhone alpes' => 'Auvergne-Rhône-Alpes',
+        'auvergne-rhone-alpes' => 'Auvergne-Rhône-Alpes',
+        'bourgogne franche comte' => 'Bourgogne-Franche-Comté',
+        'bourgogne-franche-comte' => 'Bourgogne-Franche-Comté',
+        'bretagne' => 'Bretagne',
+        'centre val de loire' => 'Centre-Val de Loire',
+        'centre-val-de-loire' => 'Centre-Val de Loire',
+        'corse' => 'Corse',
+        'grand est' => 'Grand Est',
+        'grand-est' => 'Grand Est',
+        'guadeloupe' => 'Guadeloupe',
+        'guyane' => 'Guyane',
+        'hauts de france' => 'Hauts-de-France',
+        'hauts-de-france' => 'Hauts-de-France',
+        'ile de france' => 'Île-de-France',
+        'ile-de-france' => 'Île-de-France',
+        'martinique' => 'Martinique',
+        'mayotte' => 'Mayotte',
+        'normandie' => 'Normandie',
+        'nouvelle aquitaine' => 'Nouvelle-Aquitaine',
+        'nouvelle-aquitaine' => 'Nouvelle-Aquitaine',
+        'occitanie' => 'Occitanie',
+        'pays de la loire' => 'Pays de la Loire',
+        'pays-de-la-loire' => 'Pays de la Loire',
+        'provence alpes cote d azur' => 'Provence-Alpes-Côte d’Azur',
+        'provence-alpes-cote-d-azur' => 'Provence-Alpes-Côte d’Azur',
+        'la reunion' => 'La Réunion',
+        'reunion' => 'La Réunion',
+    ];
 
     public function __construct(private readonly EntityManagerInterface $entityManager)
     {
@@ -226,7 +256,7 @@ final class CompetitionCatalogController extends AbstractController
 
         $regions = [];
         foreach ($queryBuilder->getQuery()->getArrayResult() as $row) {
-            $region = $this->titleOrNull($row['regionName'] ?? null);
+            $region = $this->trustedRegionOrNull($row['regionName'] ?? null, $country);
             if ($region !== null) {
                 $regions[$region] = true;
             }
@@ -236,6 +266,36 @@ final class CompetitionCatalogController extends AbstractController
         sort($regions, SORT_STRING);
 
         return $regions;
+    }
+
+    private function trustedRegionOrNull(mixed $value, ?string $country): ?string
+    {
+        $region = $this->titleOrNull($value);
+        if ($region === null) {
+            return null;
+        }
+
+        $decoded = trim(strip_tags(html_entity_decode($region, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        if ($decoded === '' || preg_match('/[0-9,<>]/', $decoded) === 1) {
+            return null;
+        }
+
+        $normalizedCountry = $country === null ? null : $this->asciiKey($country);
+        if ($normalizedCountry === 'france' || $normalizedCountry === 'fr') {
+            return self::FRENCH_REGIONS[$this->asciiKey($decoded)] ?? null;
+        }
+
+        return $decoded;
+    }
+
+    private function asciiKey(string $value): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if ($ascii === false) {
+            $ascii = $value;
+        }
+
+        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', mb_strtolower($ascii, 'UTF-8')));
     }
 
     private function countryFromLocation(string $location): ?string
