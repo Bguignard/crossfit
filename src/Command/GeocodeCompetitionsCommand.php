@@ -68,6 +68,8 @@ final class GeocodeCompetitionsCommand extends Command
         $unresolved = 0;
         $wouldUpdate = 0;
         $rows = [];
+        /** @var array<string, CompetitionGeocodingCache> $cacheByHash */
+        $cacheByHash = [];
 
         foreach ($competitions as $competition) {
             if (!$includeComplete && !$this->needsGeocoding($competition)) {
@@ -81,7 +83,8 @@ final class GeocodeCompetitionsCommand extends Command
 
             ++$processed;
             $hash = hash('sha256', mb_strtolower($rawLocation));
-            $cache = $this->entityManager->getRepository(CompetitionGeocodingCache::class)->findOneBy(['rawLocationHash' => $hash]);
+            $cache = $cacheByHash[$hash]
+                ?? $this->entityManager->getRepository(CompetitionGeocodingCache::class)->findOneBy(['rawLocationHash' => $hash]);
             if ($cache instanceof CompetitionGeocodingCache) {
                 ++$cacheHits;
                 if ($write) {
@@ -112,6 +115,7 @@ final class GeocodeCompetitionsCommand extends Command
                     $this->entityManager->persist($cache);
                 }
             }
+            $cacheByHash[$hash] = $cache;
 
             if (!$cache->isResolved()) {
                 ++$unresolved;
