@@ -68,6 +68,7 @@ final class GeocodeCompetitionsCommand extends Command
         $processed = 0;
         $cacheCreated = 0;
         $cacheHits = 0;
+        $cacheRefreshed = 0;
         $externalAttempts = 0;
         $externalResolved = 0;
         $resolved = 0;
@@ -97,42 +98,25 @@ final class GeocodeCompetitionsCommand extends Command
                     $cache->markUsed();
                 }
 
-                if (!$cache->isResolved() && $retryUnresolved) {
-                    ++$externalAttempts;
-                    $externalResult = $this->externalGeocoder->resolve($rawLocation);
-                    if ($externalResult !== null) {
-                        ++$externalResolved;
-                        $cache->markResolved($externalResult['geo'], $externalResult['confidence'], $externalResult['provider']);
+                $shouldRetryCache = (!$cache->isResolved() && $retryUnresolved)
+                    || ($cache->isResolved() && !$this->isCleanGeo($cache->geo()));
+                if ($shouldRetryCache) {
+                    ++$cacheRefreshed;
+                    $resolvedGeo = $this->resolveGeo($competition, $rawLocation, $externalAttempts, $externalResolved);
+                    if ($resolvedGeo !== null) {
+                        $cache->markResolved($resolvedGeo['geo'], $resolvedGeo['confidence'], $resolvedGeo['provider']);
                     } else {
-                        $cache->markUnresolved('External geocoder could not resolve structured geography.');
+                        $cache->markUnresolved('Resolvers could not derive clean structured geography.');
                     }
                 }
             } else {
                 $cache = new CompetitionGeocodingCache($hash, $rawLocation, self::PROVIDER_LOCAL_NORMALIZER);
                 ++$cacheCreated;
-                $geo = $this->competitionGeoNormalizer->fromImportRow([
-                    'locationLabel' => $rawLocation,
-                    'isOnline' => $competition->isOnline(),
-                    'countryName' => $competition->getCountryName(),
-                    'countryCode' => $competition->getCountryCode(),
-                    'regionName' => $competition->getRegionName(),
-                    'departmentName' => $competition->getDepartmentName(),
-                    'cityName' => $competition->getCityName(),
-                    'latitude' => $competition->getLatitude(),
-                    'longitude' => $competition->getLongitude(),
-                ]);
-
-                if ($this->isResolved($geo)) {
-                    $cache->markResolved($geo, $this->confidence($geo));
+                $resolvedGeo = $this->resolveGeo($competition, $rawLocation, $externalAttempts, $externalResolved);
+                if ($resolvedGeo !== null) {
+                    $cache->markResolved($resolvedGeo['geo'], $resolvedGeo['confidence'], $resolvedGeo['provider']);
                 } else {
-                    ++$externalAttempts;
-                    $externalResult = $this->externalGeocoder->resolve($rawLocation);
-                    if ($externalResult !== null) {
-                        ++$externalResolved;
-                        $cache->markResolved($externalResult['geo'], $externalResult['confidence'], $externalResult['provider']);
-                    } else {
-                        $cache->markUnresolved('Local and external resolvers could not derive enough structured geography.');
-                    }
+                    $cache->markUnresolved('Local and external resolvers could not derive clean structured geography.');
                 }
 
                 if ($write) {
@@ -187,6 +171,7 @@ final class GeocodeCompetitionsCommand extends Command
             ['scanned' => count($competitions)],
             ['processed' => $processed],
             ['cache_hits' => $cacheHits],
+            ['cache_refreshed' => $cacheRefreshed],
             [$write ? 'cache_created' : 'would_create_cache' => $cacheCreated],
             ['external_attempts' => $externalAttempts],
             ['external_resolved' => $externalResolved],
@@ -216,6 +201,17 @@ final class GeocodeCompetitionsCommand extends Command
     private function isSuspiciousGeoValue(?string $value): bool
     {
         return $value !== null && preg_match('/[<>]|<br|[0-9]{5}|,/', $value) === 1;
+    }
+
+    /**
+     * @param array{countryName: ?string, countryCode: ?string, regionName: ?string, departmentName: ?string, cityName: ?string, latitude: ?float, longitude: ?float} $geo
+     */
+    private function isCleanGeo(array $geo): bool
+    {
+        return $this->isResolved($geo)
+            && !$this->isSuspiciousGeoValue($geo['cityName'])
+            && !$this->isSuspiciousGeoValue($geo['regionName'])
+            && !$this->isSuspiciousGeoValue($geo['departmentName']);
     }
 
     private function normalizedRawLocation(?string $locationLabel): ?string
@@ -250,6 +246,46 @@ final class GeocodeCompetitionsCommand extends Command
         }
 
         return 0.5;
+    }
+
+    /**
+     * @return array{
+     *     provider: string,
+     *     confidence: float,
+     *     geo: array{countryName: ?string, countryCode: ?string, regionName: ?string, departmentName: ?string, cityName: ?string, latitude: ?float, longitude: ?float}
+     * }|null
+     */
+    private function resolveGeo(Competition $competition, string $rawLocation, int &$externalAttempts, int &$externalResolved): ?array
+    {
+        $geo = $this->competitionGeoNormalizer->fromImportRow([
+            'locationLabel' => $rawLocation,
+            'isOnline' => $competition->isOnline(),
+            'countryName' => $competition->getCountryName(),
+            'countryCode' => $competition->getCountryCode(),
+            'regionName' => $competition->getRegionName(),
+            'departmentName' => $competition->getDepartmentName(),
+            'cityName' => $competition->getCityName(),
+            'latitude' => $competition->getLatitude(),
+            'longitude' => $competition->getLongitude(),
+        ]);
+
+        if ($this->isCleanGeo($geo)) {
+            return [
+                'provider' => self::PROVIDER_LOCAL_NORMALIZER,
+                'confidence' => $this->confidence($geo),
+                'geo' => $geo,
+            ];
+        }
+
+        ++$externalAttempts;
+        $externalResult = $this->externalGeocoder->resolve($rawLocation);
+        if ($externalResult !== null && $this->isCleanGeo($externalResult['geo'])) {
+            ++$externalResolved;
+
+            return $externalResult;
+        }
+
+        return null;
     }
 
     /**
