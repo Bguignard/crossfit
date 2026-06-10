@@ -61,7 +61,7 @@ final class CompetitionNominatimGeocoderTest extends TestCase
     {
         $client = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
             parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
-            self::assertSame('Crossfit Vitosha, Donka Ushlinova 2, Sofia, 1000, 1766, Bulgaria', $query['q'] ?? null);
+            self::assertSame('Sofia, 1000, 1766, Bulgaria', $query['q'] ?? null);
 
             return new MockResponse(json_encode([
                 [
@@ -90,6 +90,52 @@ final class CompetitionNominatimGeocoderTest extends TestCase
         self::assertSame('BG', $result['geo']['countryCode']);
         self::assertSame('Sofia City', $result['geo']['regionName']);
         self::assertSame('Sofia', $result['geo']['cityName']);
+    }
+
+    public function testItFallsBackAcrossCandidateQueriesUntilOneResolves(): void
+    {
+        $queries = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$queries): MockResponse {
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+            $queries[] = $query['q'] ?? null;
+
+            if (count($queries) === 1) {
+                return new MockResponse(json_encode([], JSON_THROW_ON_ERROR));
+            }
+
+            return new MockResponse(json_encode([
+                [
+                    'lat' => '42.5751',
+                    'lon' => '-71.9981',
+                    'address' => [
+                        'city' => 'Gardner',
+                        'state' => 'Massachusetts',
+                        'county' => 'Worcester County',
+                        'country' => 'United States',
+                        'country_code' => 'us',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR));
+        });
+
+        $result = (new CompetitionNominatimGeocoder(
+            $client,
+            'https://nominatim.openstreetmap.org',
+            'MonWOD test geocoder',
+            10,
+            0,
+        ))->resolve('CrossFit 696<br />696 W Broadway<br />Gardner, MA, 01440, United States');
+
+        self::assertNotNull($result);
+        self::assertSame([
+            'Gardner, MA, 01440, United States',
+            'MA, 01440, United States',
+        ], $queries);
+        self::assertSame('United States', $result['geo']['countryName']);
+        self::assertSame('US', $result['geo']['countryCode']);
+        self::assertSame('Massachusetts', $result['geo']['regionName']);
+        self::assertSame('Worcester County', $result['geo']['departmentName']);
+        self::assertSame('Gardner', $result['geo']['cityName']);
     }
 
     public function testItReturnsNullWhenResponseHasNoUsableCountry(): void
