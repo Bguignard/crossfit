@@ -123,4 +123,40 @@ final class CompetitionGeoNormalizerTest extends TestCase
         self::assertSame('Haute-Garonne', $geo['departmentName']);
         self::assertSame('Toulouse', $geo['cityName']);
     }
+
+    public function testItDerivesFrenchRegionFromDepartmentLabelWithoutPostalCode(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Wittelsheim, haut-rhin, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Grand Est', $geo['regionName']);
+        self::assertSame('Haut-Rhin', $geo['departmentName']);
+        self::assertSame('Wittelsheim', $geo['cityName']);
+    }
+
+    public function testItDerivesFrenchRegionFromLegacyRegionLabelWithoutPostalCode(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Langon, Gironde, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Nouvelle-Aquitaine', $geo['regionName']);
+        self::assertSame('Gironde', $geo['departmentName']);
+        self::assertSame('Langon', $geo['cityName']);
+    }
+
+    public function testItDerivesFrenchOverseasAreaFromFwiLabel(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Saint barthelemy, FWI, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Saint-Barthélemy', $geo['regionName']);
+        self::assertSame('Saint-Barthélemy', $geo['departmentName']);
+        self::assertSame('Saint barthelemy', $geo['cityName']);
+    }
 }
