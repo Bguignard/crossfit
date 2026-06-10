@@ -102,4 +102,67 @@ final class GeocodeCompetitionsCommandTest extends AbstractIntegrationTest
         self::assertTrue($updatedCache->isResolved());
         self::assertSame('test_external', $updatedCache->getProvider());
     }
+
+    public function testItRefreshesResolvedCacheWhenGeoFieldsArePolluted(): void
+    {
+        $rawLocation = 'CrossFit 696<br />696 W Broadway<br />Gardner, MA, 01440, United States';
+        $hash = hash('sha256', mb_strtolower(html_entity_decode($rawLocation, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $competition = (new Competition('Battle USA', 'competition_corner', 'geocode-usa'))
+            ->setLocationLabel($rawLocation)
+            ->setIsOnline(false);
+        $cache = (new CompetitionGeocodingCache($hash, html_entity_decode($rawLocation, ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'local_normalizer'))
+            ->markResolved([
+                'countryName' => 'United States',
+                'countryCode' => 'US',
+                'regionName' => 'MA, 01440',
+                'departmentName' => null,
+                'cityName' => 'CrossFit 696<br />696 W Broadway<br />Gardner',
+                'latitude' => null,
+                'longitude' => null,
+            ], 0.7);
+
+        $this->getEntityManager()->persist($competition);
+        $this->getEntityManager()->persist($cache);
+        $this->getEntityManager()->flush();
+
+        $command = new GeocodeCompetitionsCommand(
+            $this->getEntityManager(),
+            new CompetitionGeoNormalizer(),
+            new class implements CompetitionExternalGeocoderInterface {
+                public function resolve(string $rawLocation): ?array
+                {
+                    return [
+                        'provider' => 'test_external',
+                        'confidence' => 0.9,
+                        'geo' => [
+                            'countryName' => 'United States',
+                            'countryCode' => 'US',
+                            'regionName' => 'Massachusetts',
+                            'departmentName' => 'Worcester County',
+                            'cityName' => 'Gardner',
+                            'latitude' => 42.5751,
+                            'longitude' => -71.9981,
+                        ],
+                    ];
+                }
+            },
+        );
+
+        $tester = new CommandTester($command);
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 50, '--write' => true]));
+        $this->getEntityManager()->clear();
+
+        /** @var Competition|null $updatedCompetition */
+        $updatedCompetition = $this->getRepository(Competition::class)->findOneBy(['externalId' => 'geocode-usa']);
+        /** @var CompetitionGeocodingCache|null $updatedCache */
+        $updatedCache = $this->getRepository(CompetitionGeocodingCache::class)->findOneBy(['rawLocationHash' => $hash]);
+
+        self::assertNotNull($updatedCompetition);
+        self::assertNotNull($updatedCache);
+        self::assertSame('Gardner', $updatedCompetition->getCityName());
+        self::assertSame('Massachusetts', $updatedCompetition->getRegionName());
+        self::assertSame('Worcester County', $updatedCompetition->getDepartmentName());
+        self::assertSame('test_external', $updatedCache->getProvider());
+        self::assertSame('Gardner', $updatedCache->geo()['cityName']);
+    }
 }
