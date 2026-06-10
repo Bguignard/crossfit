@@ -122,8 +122,14 @@ final class CompetitionGeoNormalizer
         'bouche du rhone' => ['departmentName' => 'Bouches-du-Rhône', 'regionName' => 'Provence-Alpes-Côte d’Azur'],
         'bouches du rhone' => ['departmentName' => 'Bouches-du-Rhône', 'regionName' => 'Provence-Alpes-Côte d’Azur'],
         'fwi' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
+        'guadeloupe' => ['departmentName' => 'Guadeloupe', 'regionName' => 'Guadeloupe'],
+        'guyane' => ['departmentName' => 'Guyane', 'regionName' => 'Guyane'],
+        'la reunion' => ['departmentName' => 'La Réunion', 'regionName' => 'La Réunion'],
+        'martinique' => ['departmentName' => 'Martinique', 'regionName' => 'Martinique'],
+        'mayotte' => ['departmentName' => 'Mayotte', 'regionName' => 'Mayotte'],
         'meurthe et moselle' => ['departmentName' => 'Meurthe-et-Moselle', 'regionName' => 'Grand Est'],
         'normandie' => ['departmentName' => null, 'regionName' => 'Normandie'],
+        'reunion' => ['departmentName' => 'La Réunion', 'regionName' => 'La Réunion'],
         'saint barthelemy' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
         'st barthelemy' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
     ];
@@ -150,6 +156,17 @@ final class CompetitionGeoNormalizer
         'fi' => ['name' => 'Finland', 'code' => 'FI'],
         'france' => ['name' => 'France', 'code' => 'FR'],
         'fr' => ['name' => 'France', 'code' => 'FR'],
+        'guadeloupe' => ['name' => 'France', 'code' => 'FR'],
+        'guyane' => ['name' => 'France', 'code' => 'FR'],
+        'la réunion' => ['name' => 'France', 'code' => 'FR'],
+        'la reunion' => ['name' => 'France', 'code' => 'FR'],
+        'martinique' => ['name' => 'France', 'code' => 'FR'],
+        'mayotte' => ['name' => 'France', 'code' => 'FR'],
+        'réunion' => ['name' => 'France', 'code' => 'FR'],
+        'reunion' => ['name' => 'France', 'code' => 'FR'],
+        'saint-barthélemy' => ['name' => 'France', 'code' => 'FR'],
+        'saint-barthelemy' => ['name' => 'France', 'code' => 'FR'],
+        'saint barthelemy' => ['name' => 'France', 'code' => 'FR'],
         'germany' => ['name' => 'Germany', 'code' => 'DE'],
         'allemagne' => ['name' => 'Germany', 'code' => 'DE'],
         'de' => ['name' => 'Germany', 'code' => 'DE'],
@@ -415,7 +432,10 @@ final class CompetitionGeoNormalizer
      */
     private function firstLocationNameCandidate(array $parts): ?string
     {
-        foreach ($parts as $part) {
+        foreach ($parts as $index => $part) {
+            if ($index === 0 && !$this->looksLikeStreetOrVenue($part)) {
+                return $part;
+            }
             if (!$this->looksLikeStreetOrVenue($part) && $this->country($part) === null) {
                 return $part;
             }

@@ -159,4 +159,32 @@ final class CompetitionGeoNormalizerTest extends TestCase
         self::assertSame('Saint-Barthélemy', $geo['departmentName']);
         self::assertSame('Saint barthelemy', $geo['cityName']);
     }
+
+    public function testItDerivesFrenchOverseasAreaWhenUsedAsCountryLabel(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Baie mahault, guadeloupe, Guadeloupe',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('France', $geo['countryName']);
+        self::assertSame('FR', $geo['countryCode']);
+        self::assertSame('Guadeloupe', $geo['regionName']);
+        self::assertSame('Guadeloupe', $geo['departmentName']);
+        self::assertSame('Baie mahault', $geo['cityName']);
+    }
+
+    public function testItDerivesReunionWhenUsedAsCountryLabel(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Sainte-clotilde, Sainte-Clotilde, Reunion',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('France', $geo['countryName']);
+        self::assertSame('FR', $geo['countryCode']);
+        self::assertSame('La Réunion', $geo['regionName']);
+        self::assertSame('La Réunion', $geo['departmentName']);
+        self::assertSame('Sainte-clotilde', $geo['cityName']);
+    }
 }
