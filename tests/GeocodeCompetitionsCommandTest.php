@@ -5,6 +5,8 @@ namespace App\Tests;
 use App\Command\GeocodeCompetitionsCommand;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionGeocodingCache;
+use App\Services\Competition\CompetitionExternalGeocoderInterface;
+use App\Services\Competition\CompetitionGeoNormalizer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -41,5 +43,63 @@ final class GeocodeCompetitionsCommandTest extends AbstractIntegrationTest
         self::assertNotNull($updatedB);
         self::assertSame('Normandie', $updatedA->getRegionName());
         self::assertSame('Normandie', $updatedB->getRegionName());
+    }
+
+    public function testItRetriesCachedUnresolvedLocationWithExternalGeocoder(): void
+    {
+        $rawLocation = 'Woolston, christchurch, New Zealand, New zealand';
+        $competition = (new Competition('Battle NZ', 'competition_corner', 'geocode-nz'))
+            ->setLocationLabel($rawLocation)
+            ->setIsOnline(false);
+        $cache = (new CompetitionGeocodingCache(
+            hash('sha256', mb_strtolower($rawLocation)),
+            $rawLocation,
+            'local_normalizer',
+        ))->markUnresolved('Local resolver could not derive enough structured geography.');
+
+        $this->getEntityManager()->persist($competition);
+        $this->getEntityManager()->persist($cache);
+        $this->getEntityManager()->flush();
+
+        $command = new GeocodeCompetitionsCommand(
+            $this->getEntityManager(),
+            new CompetitionGeoNormalizer(),
+            new class implements CompetitionExternalGeocoderInterface {
+                public function resolve(string $rawLocation): ?array
+                {
+                    return [
+                        'provider' => 'test_external',
+                        'confidence' => 0.9,
+                        'geo' => [
+                            'countryName' => 'New Zealand',
+                            'countryCode' => 'NZ',
+                            'regionName' => 'Canterbury',
+                            'departmentName' => null,
+                            'cityName' => 'Christchurch',
+                            'latitude' => -43.5505,
+                            'longitude' => 172.6811,
+                        ],
+                    ];
+                }
+            },
+        );
+
+        $tester = new CommandTester($command);
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 50, '--retry-unresolved' => true, '--write' => true]));
+        $this->getEntityManager()->clear();
+
+        /** @var Competition|null $updatedCompetition */
+        $updatedCompetition = $this->getRepository(Competition::class)->findOneBy(['externalId' => 'geocode-nz']);
+        /** @var CompetitionGeocodingCache|null $updatedCache */
+        $updatedCache = $this->getRepository(CompetitionGeocodingCache::class)->findOneBy(['rawLocationHash' => hash('sha256', mb_strtolower($rawLocation))]);
+
+        self::assertNotNull($updatedCompetition);
+        self::assertNotNull($updatedCache);
+        self::assertSame('New Zealand', $updatedCompetition->getCountryName());
+        self::assertSame('NZ', $updatedCompetition->getCountryCode());
+        self::assertSame('Canterbury', $updatedCompetition->getRegionName());
+        self::assertSame('Christchurch', $updatedCompetition->getCityName());
+        self::assertTrue($updatedCache->isResolved());
+        self::assertSame('test_external', $updatedCache->getProvider());
     }
 }
