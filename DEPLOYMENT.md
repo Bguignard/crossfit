@@ -149,6 +149,44 @@ APP_ENV=prod APP_DEBUG=0 php bin/console app:programming-generation:dispatch --l
 The command requires `PYTHON_WORKER_BASE_URL` to point to the analyser service.
 The analyser service must also have its OpenAI credentials configured.
 
+## Competition Geography Maintenance
+
+Competition imports can create or update raw locations. Keep structured
+competition geography fresh with the maintenance script:
+
+```bash
+cd /var/www/crossfit
+./scripts/run_competition_geo_maintenance.sh
+```
+
+The script runs local normalization first, then geocoding with the persistent
+cache. It uses a `flock` lock so overlapping cron runs exit cleanly.
+
+Recommended cron:
+
+```cron
+37 * * * * cd /var/www/crossfit && ./scripts/run_competition_geo_maintenance.sh >> var/log/competition-geo-maintenance.log 2>&1
+```
+
+Useful overrides:
+
+```bash
+PROJECT_DIR=/var/www/crossfit \
+PHP_BIN=/usr/bin/php \
+LIMIT=5000 \
+./scripts/run_competition_geo_maintenance.sh
+```
+
+The regular cron intentionally does not pass `--retry-unresolved`: new
+locations are geocoded, but addresses already known as unresolved are not
+retried forever. After improving the geocoder or correcting source data, run a
+manual retry:
+
+```bash
+php bin/console app:competitions:geocode --limit=5000 --retry-unresolved --env=prod
+php bin/console app:competitions:geocode --limit=5000 --retry-unresolved --write --env=prod
+```
+
 ## Smoke Test
 
 After deployment:
