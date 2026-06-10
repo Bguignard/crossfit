@@ -24,42 +24,49 @@ final class CompetitionNominatimGeocoder implements CompetitionExternalGeocoderI
 
     public function resolve(string $rawLocation): ?array
     {
-        $query = $this->queryFromRawLocation($rawLocation);
-        if ($query === null) {
+        $queries = $this->queriesFromRawLocation($rawLocation);
+        if ($queries === []) {
             return null;
         }
 
-        $this->throttle();
+        foreach ($queries as $query) {
+            $this->throttle();
 
-        try {
-            $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/').'/search', [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Accept-Language' => 'en',
-                    'User-Agent' => $this->userAgent,
-                ],
-                'query' => [
-                    'q' => $query,
-                    'format' => 'jsonv2',
-                    'addressdetails' => '1',
-                    'limit' => '1',
-                ],
-                'timeout' => max(1, $this->timeoutSeconds),
-            ]);
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                return null;
+            try {
+                $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/').'/search', [
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'Accept-Language' => 'en',
+                        'User-Agent' => $this->userAgent,
+                    ],
+                    'query' => [
+                        'q' => $query,
+                        'format' => 'jsonv2',
+                        'addressdetails' => '1',
+                        'limit' => '1',
+                    ],
+                    'timeout' => max(1, $this->timeoutSeconds),
+                ]);
+                $statusCode = $response->getStatusCode();
+                if ($statusCode < 200 || $statusCode >= 300) {
+                    continue;
+                }
+                $payload = json_decode($response->getContent(false), true, 512, JSON_THROW_ON_ERROR);
+            } catch (TransportExceptionInterface|\JsonException) {
+                continue;
             }
-            $payload = json_decode($response->getContent(false), true, 512, JSON_THROW_ON_ERROR);
-        } catch (TransportExceptionInterface|\JsonException) {
-            return null;
+
+            if (!is_array($payload) || !isset($payload[0]) || !is_array($payload[0])) {
+                continue;
+            }
+
+            $result = $this->resultFromNominatimPlace($payload[0]);
+            if ($result !== null) {
+                return $result;
+            }
         }
 
-        if (!is_array($payload) || !isset($payload[0]) || !is_array($payload[0])) {
-            return null;
-        }
-
-        return $this->resultFromNominatimPlace($payload[0]);
+        return null;
     }
 
     private function throttle(): void
@@ -79,7 +86,10 @@ final class CompetitionNominatimGeocoder implements CompetitionExternalGeocoderI
         $this->lastRequestAt = microtime(true);
     }
 
-    private function queryFromRawLocation(string $rawLocation): ?string
+    /**
+     * @return list<string>
+     */
+    private function queriesFromRawLocation(string $rawLocation): array
     {
         $query = html_entity_decode($rawLocation, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $query = preg_replace('/<br\s*\/?>/i', ', ', $query) ?? $query;
@@ -87,8 +97,41 @@ final class CompetitionNominatimGeocoder implements CompetitionExternalGeocoderI
         $query = preg_replace('/\s+/', ' ', $query) ?? $query;
         $query = preg_replace('/\s*,\s*/', ', ', $query) ?? $query;
         $query = trim($query, " \t\n\r\0\x0B,");
+        if ($query === '') {
+            return [];
+        }
 
-        return $query === '' ? null : $query;
+        $parts = array_values(array_filter(array_map('trim', explode(',', $query)), static fn (string $part): bool => $part !== ''));
+        $candidates = [];
+        foreach ([4, 3, 2] as $tailSize) {
+            if (count($parts) >= $tailSize) {
+                $candidate = implode(', ', array_slice($parts, -$tailSize));
+                if ($this->looksLikeLocationCandidate($candidate)) {
+                    $candidates[] = $candidate;
+                }
+            }
+        }
+        $candidates[] = $query;
+
+        return array_values(array_unique($candidates));
+    }
+
+    private function looksLikeLocationCandidate(string $candidate): bool
+    {
+        return preg_match('/\b([A-Z]{2}|[A-Z][a-z]+|[0-9]{4,6})\b/u', $candidate) === 1
+            && !$this->looksLikeVenueOnly($candidate);
+    }
+
+    private function looksLikeVenueOnly(string $candidate): bool
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $candidate);
+        if ($ascii === false) {
+            $ascii = $candidate;
+        }
+        $key = trim((string) preg_replace('/[^a-z0-9]+/', ' ', mb_strtolower($ascii, 'UTF-8')));
+
+        return preg_match('/\b(crossfit|fitness|training|gym|athletic|academy|club|strength|conditioning)\b/', $key) === 1
+            && preg_match('/\b[A-Z]{2}\b|\b[0-9]{4,6}\b/u', $candidate) !== 1;
     }
 
     /**
