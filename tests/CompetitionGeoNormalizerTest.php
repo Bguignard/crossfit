@@ -68,4 +68,59 @@ final class CompetitionGeoNormalizerTest extends TestCase
         self::assertNull($geo['countryCode']);
         self::assertNull($geo['cityName']);
     }
+
+    public function testItDerivesFrenchRegionFromHtmlAddressAndPostalCode(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'CrossFit Louviers<br />10 Rue des Entrepots<br />Louviers, Eure, 27400, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('France', $geo['countryName']);
+        self::assertSame('FR', $geo['countryCode']);
+        self::assertSame('Normandie', $geo['regionName']);
+        self::assertSame('Eure', $geo['departmentName']);
+        self::assertSame('Louviers', $geo['cityName']);
+    }
+
+    public function testItReplacesPollutedFrenchRegionFromLocationLabel(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'DISTRICT CROSSFIT BRUNSTATT DIDENHEIM<br />3, Avenue de Bruxelles<br />Brunstatt-Didenheim, Haut-Rhin, 68350, France',
+            'countryName' => 'France',
+            'regionName' => 'Avenue de Bruxelles<br />Brunstatt-Didenheim, Haut-Rhin, 68350',
+            'cityName' => 'DISTRICT CROSSFIT BRUNSTATT DIDENHEIM',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('France', $geo['countryName']);
+        self::assertSame('FR', $geo['countryCode']);
+        self::assertSame('Grand Est', $geo['regionName']);
+        self::assertSame('Haut-Rhin', $geo['departmentName']);
+        self::assertSame('Brunstatt-Didenheim', $geo['cityName']);
+    }
+
+    public function testItDerivesFrenchRegionWhenRawRegionIsHistorical(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'Plateau d’évolution de la Couronne<br />chemin du phare<br />La Couronne, Bouche du Rhone, 13500, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Provence-Alpes-Côte d’Azur', $geo['regionName']);
+        self::assertSame('Bouches-du-Rhône', $geo['departmentName']);
+        self::assertSame('La Couronne', $geo['cityName']);
+    }
+
+    public function testItDerivesFrenchRegionFromAddressWithCountryBeforePostalCode(): void
+    {
+        $geo = (new CompetitionGeoNormalizer())->fromImportRow([
+            'locationLabel' => 'H. TRAINING CLUB<br />20 RUE HELIOT<br />Toulouse, FRANCE, 31000, France',
+            'isOnline' => false,
+        ]);
+
+        self::assertSame('Occitanie', $geo['regionName']);
+        self::assertSame('Haute-Garonne', $geo['departmentName']);
+        self::assertSame('Toulouse', $geo['cityName']);
+    }
 }
