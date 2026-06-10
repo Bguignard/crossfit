@@ -7,6 +7,10 @@ parameters:
     env(CHAT_GPT_API_KEY): ''
     env(OPENAI_MODEL): 'gpt-5.4-mini'
     env(PYTHON_WORKER_TIMEOUT_SECONDS): '300'
+    env(COMPETITION_GEOCODING_NOMINATIM_BASE_URL): 'https://nominatim.openstreetmap.org'
+    env(COMPETITION_GEOCODING_USER_AGENT): 'MonWOD geocoder (https://www.monwod.fr)'
+    env(COMPETITION_GEOCODING_TIMEOUT_SECONDS): '10'
+    env(COMPETITION_GEOCODING_DELAY_MS): '1100'
     maxNumberOfRounds: 10
 
 services:
@@ -43,6 +47,16 @@ services:
         arguments:
             $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
             $openAiModel: '%env(OPENAI_MODEL)%'
+
+    App\Services\Competition\CompetitionNominatimGeocoder:
+        arguments:
+            $baseUrl: '%env(COMPETITION_GEOCODING_NOMINATIM_BASE_URL)%'
+            $userAgent: '%env(COMPETITION_GEOCODING_USER_AGENT)%'
+            $timeoutSeconds: '%env(int:COMPETITION_GEOCODING_TIMEOUT_SECONDS)%'
+            $delayMilliseconds: '%env(int:COMPETITION_GEOCODING_DELAY_MS)%'
+
+    App\Services\Competition\CompetitionExternalGeocoderInterface:
+        alias: App\Services\Competition\CompetitionNominatimGeocoder
 
     App\Services\Workout\MovementDifficultyServiceInterface:
         class: App\Services\Workout\MovementDifficultyService

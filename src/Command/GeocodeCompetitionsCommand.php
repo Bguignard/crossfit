@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionGeocodingCache;
+use App\Services\Competition\CompetitionExternalGeocoderInterface;
 use App\Services\Competition\CompetitionGeoNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -26,6 +27,7 @@ final class GeocodeCompetitionsCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly CompetitionGeoNormalizer $competitionGeoNormalizer,
+        private readonly CompetitionExternalGeocoderInterface $externalGeocoder,
     ) {
         parent::__construct();
     }
@@ -35,6 +37,7 @@ final class GeocodeCompetitionsCommand extends Command
         $this->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum number of competitions to scan.', 500);
         $this->addOption('source', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Restrict to one or more source names.');
         $this->addOption('include-complete', null, InputOption::VALUE_NONE, 'Also refresh competitions that already look geocoded.');
+        $this->addOption('retry-unresolved', null, InputOption::VALUE_NONE, 'Retry cached unresolved locations with the external geocoder.');
         $this->addOption('write', null, InputOption::VALUE_NONE, 'Persist competition and cache changes. Without this option, the command only reports what would change.');
     }
 
@@ -44,6 +47,7 @@ final class GeocodeCompetitionsCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $sources = array_values(array_filter(array_map('strval', (array) $input->getOption('source'))));
         $includeComplete = (bool) $input->getOption('include-complete');
+        $retryUnresolved = (bool) $input->getOption('retry-unresolved');
         $write = (bool) $input->getOption('write');
 
         $queryBuilder = $this->entityManager->getRepository(Competition::class)
@@ -64,6 +68,8 @@ final class GeocodeCompetitionsCommand extends Command
         $processed = 0;
         $cacheCreated = 0;
         $cacheHits = 0;
+        $externalAttempts = 0;
+        $externalResolved = 0;
         $resolved = 0;
         $unresolved = 0;
         $wouldUpdate = 0;
@@ -90,6 +96,17 @@ final class GeocodeCompetitionsCommand extends Command
                 if ($write) {
                     $cache->markUsed();
                 }
+
+                if (!$cache->isResolved() && $retryUnresolved) {
+                    ++$externalAttempts;
+                    $externalResult = $this->externalGeocoder->resolve($rawLocation);
+                    if ($externalResult !== null) {
+                        ++$externalResolved;
+                        $cache->markResolved($externalResult['geo'], $externalResult['confidence'], $externalResult['provider']);
+                    } else {
+                        $cache->markUnresolved('External geocoder could not resolve structured geography.');
+                    }
+                }
             } else {
                 $cache = new CompetitionGeocodingCache($hash, $rawLocation, self::PROVIDER_LOCAL_NORMALIZER);
                 ++$cacheCreated;
@@ -108,7 +125,14 @@ final class GeocodeCompetitionsCommand extends Command
                 if ($this->isResolved($geo)) {
                     $cache->markResolved($geo, $this->confidence($geo));
                 } else {
-                    $cache->markUnresolved('Local resolver could not derive enough structured geography.');
+                    ++$externalAttempts;
+                    $externalResult = $this->externalGeocoder->resolve($rawLocation);
+                    if ($externalResult !== null) {
+                        ++$externalResolved;
+                        $cache->markResolved($externalResult['geo'], $externalResult['confidence'], $externalResult['provider']);
+                    } else {
+                        $cache->markUnresolved('Local and external resolvers could not derive enough structured geography.');
+                    }
                 }
 
                 if ($write) {
@@ -164,6 +188,8 @@ final class GeocodeCompetitionsCommand extends Command
             ['processed' => $processed],
             ['cache_hits' => $cacheHits],
             [$write ? 'cache_created' : 'would_create_cache' => $cacheCreated],
+            ['external_attempts' => $externalAttempts],
+            ['external_resolved' => $externalResolved],
             ['resolved' => $resolved],
             ['unresolved' => $unresolved],
             [$write ? 'updated_competitions' : 'would_update_competitions' => $wouldUpdate],

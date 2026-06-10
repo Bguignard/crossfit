@@ -107,8 +107,11 @@ class CompetitionGeocodingCache
     /**
      * @param array{countryName: ?string, countryCode: ?string, regionName: ?string, departmentName: ?string, cityName: ?string, latitude: ?float, longitude: ?float} $geo
      */
-    public function markResolved(array $geo, float $confidence): self
+    public function markResolved(array $geo, float $confidence, ?string $provider = null): self
     {
+        if ($provider !== null) {
+            $this->provider = $provider;
+        }
         $this->status = self::STATUS_RESOLVED;
         $this->countryName = $geo['countryName'];
         $this->countryCode = $geo['countryCode'];
@@ -124,8 +127,11 @@ class CompetitionGeocodingCache
         return $this;
     }
 
-    public function markUnresolved(string $errorMessage): self
+    public function markUnresolved(string $errorMessage, ?string $provider = null): self
     {
+        if ($provider !== null) {
+            $this->provider = $provider;
+        }
         $this->status = self::STATUS_UNRESOLVED;
         $this->confidence = null;
         $this->errorMessage = $errorMessage;
