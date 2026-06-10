@@ -42,6 +42,8 @@ final class CompetitionCatalogController extends AbstractController
         'pays-de-la-loire' => 'Pays de la Loire',
         'provence alpes cote d azur' => 'Provence-Alpes-Côte d’Azur',
         'provence-alpes-cote-d-azur' => 'Provence-Alpes-Côte d’Azur',
+        'saint barthelemy' => 'Saint-Barthélemy',
+        'saint-barthelemy' => 'Saint-Barthélemy',
         'la reunion' => 'La Réunion',
         'reunion' => 'La Réunion',
     ];

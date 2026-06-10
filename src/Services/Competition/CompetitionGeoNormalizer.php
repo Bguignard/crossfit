@@ -113,6 +113,22 @@ final class CompetitionGeoNormalizer
     ];
 
     /**
+     * @var array<string, array{departmentName: ?string, regionName: string}>
+     */
+    private const FRENCH_AREA_ALIASES = [
+        'alsace' => ['departmentName' => null, 'regionName' => 'Grand Est'],
+        'aquitaine' => ['departmentName' => null, 'regionName' => 'Nouvelle-Aquitaine'],
+        'auvergne' => ['departmentName' => null, 'regionName' => 'Auvergne-Rhône-Alpes'],
+        'bouche du rhone' => ['departmentName' => 'Bouches-du-Rhône', 'regionName' => 'Provence-Alpes-Côte d’Azur'],
+        'bouches du rhone' => ['departmentName' => 'Bouches-du-Rhône', 'regionName' => 'Provence-Alpes-Côte d’Azur'],
+        'fwi' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
+        'meurthe et moselle' => ['departmentName' => 'Meurthe-et-Moselle', 'regionName' => 'Grand Est'],
+        'normandie' => ['departmentName' => null, 'regionName' => 'Normandie'],
+        'saint barthelemy' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
+        'st barthelemy' => ['departmentName' => 'Saint-Barthélemy', 'regionName' => 'Saint-Barthélemy'],
+    ];
+
+    /**
      * @var array<string, array{name: string, code: string}>
      */
     private const COUNTRIES = [
@@ -332,10 +348,11 @@ final class CompetitionGeoNormalizer
 
         if ($postalCode === null || $postalIndex === null) {
             $city = $this->firstLocationNameCandidate($parts);
+            $area = $this->frenchAreaFromParts($parts);
 
             return [
-                'regionName' => null,
-                'departmentName' => null,
+                'regionName' => $area['regionName'] ?? null,
+                'departmentName' => $area['departmentName'] ?? null,
                 'cityName' => $city,
             ];
         }
@@ -355,6 +372,42 @@ final class CompetitionGeoNormalizer
         }
 
         return $geo;
+    }
+
+    /**
+     * @param list<string> $parts
+     *
+     * @return array{departmentName: ?string, regionName: string}|null
+     */
+    private function frenchAreaFromParts(array $parts): ?array
+    {
+        foreach ($parts as $part) {
+            $area = $this->frenchAreaFromText($part);
+            if ($area !== null) {
+                return $area;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{departmentName: ?string, regionName: string}|null
+     */
+    private function frenchAreaFromText(string $value): ?array
+    {
+        $key = $this->asciiKey($value);
+        if (isset(self::FRENCH_AREA_ALIASES[$key])) {
+            return self::FRENCH_AREA_ALIASES[$key];
+        }
+
+        foreach (self::FRENCH_POSTAL_AREAS as $area) {
+            if ($this->asciiKey($area['departmentName']) === $key || $this->asciiKey($area['regionName']) === $key) {
+                return $area;
+            }
+        }
+
+        return null;
     }
 
     /**
