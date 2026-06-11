@@ -3,6 +3,8 @@
 Ce document sert a auditer la coherence entre l'analyse IA du profil athlete, les performances declarees et la programmation generee.
 Il ne remplace pas les tests automatises: il sert a valider la qualite produit des sorties IA avec des profils contrastes.
 
+La specification produit des familles de programmation est decrite dans `docs/PERSONAL_AI_PROGRAMMING_SPEC.md`.
+
 ## Objectif
 
 Verifier que la programmation personnalisee utilise vraiment les signaux forts du profil:
@@ -115,6 +117,7 @@ Chaque programmation doit etre notee sur 0, 1 ou 2 pour chaque critere.
 
 Criteres:
 
+- respect de la famille de programmation demandee;
 - exploitation de l'analyse IA source;
 - exploitation des performances declarees;
 - coherence entre faiblesse detectee et contenu du cycle;
@@ -164,6 +167,7 @@ Ouvrir une issue separee si un ecart est reproductible sur au moins un profil te
 
 Exemples:
 
+- la famille demandee est ignoree ou transformee en programmation generique;
 - la faiblesse principale est mentionnee mais absente des seances;
 - la programmation contient uniquement engine/renfo et aucun metcon;
 - les temps de repos sont absents ou noyes dans des notes;
