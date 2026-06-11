@@ -12,7 +12,7 @@ The product must let connected users:
 - link one or more imported athlete identities from Scoring.fit, CompetitionCorner, CrossFit Games, or future sources;
 - record personal performances such as 1RM, benchmark scores, and manual workout results;
 - request performance analysis based on personal metrics and imported competition history;
-- request personalized programming;
+- request personalized programming driven by an explicit programming family, athlete data, and the AI analysis;
 - request box programming;
 - create and manage competitions;
 - use a competition scoring engine, either linked to a MonWOD competition or standalone;
@@ -112,6 +112,7 @@ Python owns:
 - Add personal performance records owned by users.
 - Keep 1RM and benchmark records structured enough for performance analysis.
 - Prepare analysis and programming request models before implementing AI execution.
+- Personalized programming must follow `docs/PERSONAL_AI_PROGRAMMING_SPEC.md`: each request selects a family such as CrossFit general, weaknesses, strength, gymnastics, weightlifting, engine/cardio, or Hyrox, then uses athlete-specific data to avoid generic output.
 
 ## Phase 4b: Competition Management And Scoring
 

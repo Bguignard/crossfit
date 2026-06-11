@@ -76,6 +76,8 @@ Python owns:
 - AI programming generation
 - background jobs that should not block user requests
 
+Personal AI programming must be treated as a product capability with explicit programming families, not as one generic prompt. The detailed product rules live in `docs/PERSONAL_AI_PROGRAMMING_SPEC.md`.
+
 ## Competition And Scoring Boundary
 
 Competition management and competition scoring are two separate product capabilities.
