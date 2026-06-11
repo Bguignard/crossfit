@@ -7,6 +7,7 @@ use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\PerformanceMetricValueTypeEnum;
+use App\Entity\Product\Enum\PersonalProgrammingFamilyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
@@ -1010,6 +1011,7 @@ class MeController extends AbstractController
      */
     private function normaliseProgrammingConstraints(array $constraints): array
     {
+        $constraints['programmingFamily'] = $this->normaliseProgrammingFamily($constraints);
         $constraints['durationWeeks'] = $this->boundedProgrammingInteger(
             $constraints['durationWeeks'] ?? null,
             'durationWeeks',
@@ -1027,6 +1029,30 @@ class MeController extends AbstractController
         );
 
         return $constraints;
+    }
+
+    /**
+     * @param array<string, mixed> $constraints
+     */
+    private function normaliseProgrammingFamily(array $constraints): string
+    {
+        $familyValue = $constraints['programmingFamily'] ?? null;
+        if ($familyValue !== null && $familyValue !== '') {
+            if (!is_string($familyValue)) {
+                throw new \InvalidArgumentException('programmingFamily must be a string.');
+            }
+
+            $family = PersonalProgrammingFamilyEnum::tryFrom($familyValue);
+            if ($family === null) {
+                throw new \InvalidArgumentException(sprintf('programmingFamily must be one of: %s.', implode(', ', PersonalProgrammingFamilyEnum::values())));
+            }
+
+            return $family->value;
+        }
+
+        $legacyPurpose = $constraints['programmingPurpose'] ?? null;
+
+        return PersonalProgrammingFamilyEnum::fromLegacyPurpose(is_string($legacyPurpose) ? $legacyPurpose : null)->value;
     }
 
     /**

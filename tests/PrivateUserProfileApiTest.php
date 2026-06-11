@@ -350,6 +350,26 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
                 'sessionsPerWeek' => 5,
                 'sessionDurationMinutes' => 60,
                 'goal' => 'gymnastics endurance',
+                'programmingFamily' => 'generic_everything',
+                'programmingPurpose' => 'weakness_accessory',
+                'sourceAnalysisRequestId' => $analysisPayload['id'],
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(
+            'programmingFamily must be one of: crossfit_general, priority_weaknesses, strength, gymnastics, weightlifting, engine_cardio, hyrox.',
+            $this->jsonResponse()['error']
+        );
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'sessionDurationMinutes' => 60,
+                'goal' => 'gymnastics endurance',
+                'programmingFamily' => 'gymnastics',
                 'programmingPurpose' => 'weakness_accessory',
                 'sourceAnalysisRequestId' => $analysisPayload['id'],
             ],
@@ -360,6 +380,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('queued', $programmingPayload['status']);
         self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
         self::assertSame('gymnastics endurance', $programmingPayload['constraints']['goal']);
+        self::assertSame('gymnastics', $programmingPayload['constraints']['programmingFamily']);
         self::assertSame('weakness_accessory', $programmingPayload['constraints']['programmingPurpose']);
         self::assertSame(8, $programmingPayload['constraints']['durationWeeks']);
         self::assertSame(5, $programmingPayload['constraints']['sessionsPerWeek']);
