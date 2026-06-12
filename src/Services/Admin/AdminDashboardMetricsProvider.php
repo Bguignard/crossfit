@@ -11,6 +11,7 @@ use App\Entity\Product\Box;
 use App\Entity\Product\BoxMembership;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
@@ -37,6 +38,7 @@ class AdminDashboardMetricsProvider
      *     performance_profiles: array{total: int},
      *     analysis_requests: array{total: int, by_status: array<string, int>},
      *     programming_requests: array{total: int, by_status: array<string, int>, by_type: array<string, int>},
+     *     ai_usage: array{total_tokens: int, prompt_tokens: int, completion_tokens: int, by_request_type: array<string, array{total_tokens: int, prompt_tokens: int, completion_tokens: int, calls: int}>},
      *     boxes: array{total: int},
      *     box_memberships: array{total: int}
      * }
@@ -98,6 +100,7 @@ class AdminDashboardMetricsProvider
                 'by_status' => $this->countByField(ProgrammingGenerationRequest::class, 'status'),
                 'by_type' => $this->countByField(ProgrammingGenerationRequest::class, 'type'),
             ],
+            'ai_usage' => $this->aiUsageMetrics(),
             'boxes' => [
                 'total' => $this->count(Box::class),
             ],
@@ -118,6 +121,74 @@ class AdminDashboardMetricsProvider
             ->from($entityClass, 'entity')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * @return array{total_tokens: int, prompt_tokens: int, completion_tokens: int, by_request_type: array<string, array{total_tokens: int, prompt_tokens: int, completion_tokens: int, calls: int}>}
+     */
+    private function aiUsageMetrics(): array
+    {
+        $byRequestType = [
+            'analysis' => $this->sumUsageForPayloads(
+                array_map(
+                    static fn (PerformanceAnalysisRequest $request): ?array => $request->getResult(),
+                    $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findAll(),
+                ),
+            ),
+            'programming' => $this->sumUsageForPayloads(
+                array_map(
+                    static fn (ProgrammingGenerationRequest $request): ?array => $request->getGeneratedProgramming(),
+                    $this->entityManager->getRepository(ProgrammingGenerationRequest::class)->findAll(),
+                ),
+            ),
+            'programming_session_details' => $this->sumUsageForPayloads(
+                array_map(
+                    static fn (ProgrammingSessionDetailRequest $request): ?array => $request->getDetailedProgramming(),
+                    $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->findAll(),
+                ),
+            ),
+        ];
+
+        return [
+            'total_tokens' => array_sum(array_column($byRequestType, 'total_tokens')),
+            'prompt_tokens' => array_sum(array_column($byRequestType, 'prompt_tokens')),
+            'completion_tokens' => array_sum(array_column($byRequestType, 'completion_tokens')),
+            'by_request_type' => $byRequestType,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>|null> $payloads
+     *
+     * @return array{total_tokens: int, prompt_tokens: int, completion_tokens: int, calls: int}
+     */
+    private function sumUsageForPayloads(array $payloads): array
+    {
+        $summary = [
+            'total_tokens' => 0,
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'calls' => 0,
+        ];
+
+        foreach ($payloads as $payload) {
+            $usage = $payload['_openai_usage'] ?? null;
+            if (!is_array($usage)) {
+                continue;
+            }
+
+            ++$summary['calls'];
+            $summary['total_tokens'] += $this->intUsageValue($usage['total_tokens'] ?? null);
+            $summary['prompt_tokens'] += $this->intUsageValue($usage['prompt_tokens'] ?? null);
+            $summary['completion_tokens'] += $this->intUsageValue($usage['completion_tokens'] ?? null);
+        }
+
+        return $summary;
+    }
+
+    private function intUsageValue(mixed $value): int
+    {
+        return is_int($value) ? $value : 0;
     }
 
     /**

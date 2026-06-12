@@ -15,6 +15,7 @@ use App\Entity\Product\BoxMembership;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
+use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
@@ -50,6 +51,33 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
 
         $programmingRequest = new ProgrammingGenerationRequest($member, ProgrammingGenerationTypeEnum::BOX);
         $programmingRequest->markRunning();
+        $completedAnalysisRequest = new PerformanceAnalysisRequest($member, $performanceProfile, $athleteProfile);
+        $completedAnalysisRequest->markCompleted([
+            'summary' => 'Completed analysis.',
+            '_openai_usage' => [
+                'prompt_tokens' => 100,
+                'completion_tokens' => 50,
+                'total_tokens' => 150,
+            ],
+        ]);
+        $completedProgrammingRequest = new ProgrammingGenerationRequest($member, ProgrammingGenerationTypeEnum::INDIVIDUAL);
+        $completedProgrammingRequest->markCompleted([
+            'overview' => 'Completed programming.',
+            '_openai_usage' => [
+                'prompt_tokens' => 300,
+                'completion_tokens' => 120,
+                'total_tokens' => 420,
+            ],
+        ]);
+        $completedDetailRequest = new ProgrammingSessionDetailRequest($member, $completedProgrammingRequest);
+        $completedDetailRequest->markCompleted([
+            'overview' => 'Completed session details.',
+            '_openai_usage' => [
+                'prompt_tokens' => 700,
+                'completion_tokens' => 280,
+                'total_tokens' => 980,
+            ],
+        ]);
 
         $box = new Box('MonWod Box');
         $boxMembership = new BoxMembership($member, $box, BoxMembership::ROLE_OWNER);
@@ -66,6 +94,9 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $entityManager->persist($performanceProfile);
         $entityManager->persist($analysisRequest);
         $entityManager->persist($programmingRequest);
+        $entityManager->persist($completedAnalysisRequest);
+        $entityManager->persist($completedProgrammingRequest);
+        $entityManager->persist($completedDetailRequest);
         $entityManager->persist($box);
         $entityManager->persist($boxMembership);
         $entityManager->flush();
@@ -98,6 +129,31 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['analysis_requests']['by_status']['queued']);
         self::assertSame(1, $payload['programming_requests']['by_status']['running']);
         self::assertSame(1, $payload['programming_requests']['by_type']['box']);
+        self::assertSame([
+            'total_tokens' => 1550,
+            'prompt_tokens' => 1100,
+            'completion_tokens' => 450,
+            'by_request_type' => [
+                'analysis' => [
+                    'total_tokens' => 150,
+                    'prompt_tokens' => 100,
+                    'completion_tokens' => 50,
+                    'calls' => 1,
+                ],
+                'programming' => [
+                    'total_tokens' => 420,
+                    'prompt_tokens' => 300,
+                    'completion_tokens' => 120,
+                    'calls' => 1,
+                ],
+                'programming_session_details' => [
+                    'total_tokens' => 980,
+                    'prompt_tokens' => 700,
+                    'completion_tokens' => 280,
+                    'calls' => 1,
+                ],
+            ],
+        ], $payload['ai_usage']);
         self::assertSame(1, $payload['boxes']['total']);
         self::assertSame(1, $payload['box_memberships']['total']);
     }
