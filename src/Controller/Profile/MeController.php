@@ -199,13 +199,20 @@ class MeController extends AbstractController
             ], Response::HTTP_TOO_MANY_REQUESTS);
         }
 
-        $profile = $this->getLatestPerformanceProfile($user);
-        if ($profile === null) {
-            return $this->json(['error' => 'Performance profile is required.'], Response::HTTP_BAD_REQUEST);
-        }
-
         $payload = $this->jsonPayload($request);
         $athleteProfiles = $this->personalAnalysisAthleteProfiles($user);
+        $profile = $this->getLatestPerformanceProfile($user);
+        if ($profile === null) {
+            if ($athleteProfiles === []) {
+                return $this->json(['error' => 'Performance metrics or a linked competition profile are required.'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $profile = new UserPerformanceProfile($user);
+            $this->entityManager->persist($profile);
+        } elseif (!$this->hasAnyProvidedMetric($profile) && $athleteProfiles === []) {
+            return $this->json(['error' => 'Performance metrics or a linked competition profile are required.'], Response::HTTP_BAD_REQUEST);
+        }
+
         $primaryAthleteProfile = $this->primaryAnalysisAthleteProfile($athleteProfiles);
         $parameters = $this->arrayPayload($payload['parameters'] ?? []);
         $analysisRequest = (new PerformanceAnalysisRequest(
@@ -945,6 +952,17 @@ class MeController extends AbstractController
         }
 
         return $metrics;
+    }
+
+    private function hasAnyProvidedMetric(UserPerformanceProfile $profile): bool
+    {
+        foreach ($profile->getMetrics() as $metric) {
+            if ($metric->hasValue()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
