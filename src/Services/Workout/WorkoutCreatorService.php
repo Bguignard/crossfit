@@ -72,6 +72,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->timeCapCalibrationGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
         $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= <<<EOD
@@ -322,6 +323,7 @@ EOD;
         $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovements);
         $promptForChatGPT .= "Use only movements and implement options printed in the pool above. Do not invent unavailable equipment.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
         $promptForChatGPT .= <<<EOD
 
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
@@ -457,6 +459,20 @@ EOD;
         if ($workoutGeneration->isTeamWorkout()) {
             $guidance .= "For team workouts, account for shared reps, split-anyhow work, synchronized reps, partner changes and machine sharing. Shared work often reduces individual fatigue, so increase total team volume or add meaningful synchronization/holding constraints when needed to occupy the requested time cap.\n";
         }
+
+        return $guidance;
+    }
+
+    private function movementDiversityGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        $movementCount = $workoutGeneration->getNumberOfDifferentMovements();
+        $guidance = "Movement diversity guidance: choose movements from the full allowed pool instead of defaulting to the most common CrossFit template movements.\n";
+        $guidance .= "Wall Ball Shot, Chest to Bar Pull Up, Box Jump and Box Jump Over are allowed when they directly serve the requested stimulus, level and equipment, but they must not be used as a default trio simply because they are familiar benchmark movements.\n";
+        $guidance .= "Before finalizing, compare the selected movement mix against the stimulus: include varied movement patterns, implements and interference only when they improve the workout. Avoid repeating the same squat/pull/jump template across generations when other allowed movements would fit equally well.\n";
+
+        $guidance .= $movementCount >= 3
+            ? "When choosing three or more movements, avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n"
+            : "If the structure later expands to three or more movements, avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n";
 
         return $guidance;
     }
