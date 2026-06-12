@@ -118,6 +118,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertNull($dashboard['performanceProfile']);
         self::assertArrayHasKey('strength', $dashboard['performanceMetricCatalog']);
         self::assertArrayHasKey('cardio', $dashboard['performanceMetricCatalog']);
+        self::assertSame('essential', $dashboard['performanceMetricCatalog']['strength'][0]['priority']);
         $wallballsMetric = array_values(array_filter(
             $dashboard['performanceMetricCatalog']['cardio'],
             static fn (array $definition): bool => $definition['key'] === PerformanceMetricKeyEnum::MAX_WALLBALLS_UNBROKEN->value

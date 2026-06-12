@@ -191,6 +191,57 @@ enum PerformanceMetricKeyEnum: string
         };
     }
 
+    public function profilePriority(): string
+    {
+        return match ($this) {
+            self::BACK_SQUAT_1RM,
+            self::FRONT_SQUAT_1RM,
+            self::DEADLIFT_1RM,
+            self::STRICT_PRESS_1RM,
+            self::PUSH_PRESS_1RM,
+            self::POWER_CLEAN_1RM,
+            self::SQUAT_CLEAN_1RM,
+            self::POWER_SNATCH_1RM,
+            self::SQUAT_SNATCH_1RM,
+            self::STRICT_PULL_UP,
+            self::KIPPING_PULL_UP,
+            self::DOUBLE_UNDER,
+            self::ROW_500M_TIME,
+            self::RUN_5KM_TIME,
+            self::BIKE_ERG_20MIN_WATTS,
+            self::ECHO_BIKE_20MIN_WATTS => 'essential',
+            self::BACK_SQUAT_5RM,
+            self::FRONT_SQUAT_5RM,
+            self::OVERHEAD_SQUAT_1RM,
+            self::DEADLIFT_5RM,
+            self::STRICT_PRESS_5RM,
+            self::PUSH_PRESS_5RM,
+            self::THRUSTER_1RM,
+            self::WEIGHTED_PULL_UP_1RM,
+            self::WEIGHTED_DIP_1RM,
+            self::STRICT_HANDSTAND_PUSH_UP,
+            self::KIPPING_HANDSTAND_PUSH_UP,
+            self::KIPPING_BAR_MUSCLE_UP,
+            self::KIPPING_RING_MUSCLE_UP,
+            self::HANDSTAND_RAMP,
+            self::MAX_STRICT_PULL_UPS,
+            self::MAX_CHEST_TO_BAR,
+            self::MAX_BAR_MUSCLE_UPS,
+            self::MAX_RING_MUSCLE_UPS,
+            self::MAX_STRICT_HANDSTAND_PUSH_UPS,
+            self::MAX_KIPPING_HANDSTAND_PUSH_UPS,
+            self::ROW_1KM_TIME,
+            self::ROW_5KM_TIME,
+            self::RUN_1600M_TIME,
+            self::RUN_10KM_TIME,
+            self::ECHO_BIKE_10MIN_WATTS,
+            self::ECHO_BIKE_30MIN_WATTS,
+            self::MAX_UNBROKEN_DOUBLE_UNDERS,
+            self::MAX_WALLBALLS_UNBROKEN => 'useful',
+            default => 'optional',
+        };
+    }
+
     /**
      * @return list<self>
      */
