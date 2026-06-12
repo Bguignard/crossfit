@@ -76,6 +76,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertNull($workout->getNumberOfRounds());
         self::assertStringContainsString('This workout is an AMRAP: create one repeatable movement sequence', $prompt);
         self::assertStringContainsString('Do not impose or mention a fixed number of rounds.', $prompt);
+        self::assertStringContainsString('Time-cap calibration guidance: the requested time cap is 12 minutes.', $prompt);
+        self::assertStringContainsString('usually around 75-95% of the time cap', $prompt);
+        self::assertStringContainsString('one round must not be so tiny that the workout becomes meaningless churn', $prompt);
         self::assertStringNotContainsString('there is only one round', $prompt);
         self::assertStringNotContainsString('there are 1 rounds', $prompt);
         self::assertStringNotContainsString('7 rounds of', $prompt);
@@ -477,6 +480,10 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Avoid long idle partner windows', $chatGpt->prompt);
         self::assertStringContainsString('do not prescribe "you go, I go" chunks where one athlete waits 2-3 minutes', $chatGpt->prompt);
         self::assertStringContainsString('prefer shared reps, split-anyhow work, synchronized work, active holds/carries', $chatGpt->prompt);
+        self::assertStringContainsString('Time-cap calibration guidance: the requested time cap is 24 minutes.', $chatGpt->prompt);
+        self::assertStringContainsString('For-time workouts: calibrate reps, distances, loads, round count and transitions', $chatGpt->prompt);
+        self::assertStringContainsString('For team workouts, account for shared reps, split-anyhow work, synchronized reps, partner changes and machine sharing.', $chatGpt->prompt);
+        self::assertStringContainsString('increase total team volume or add meaningful synchronization/holding constraints', $chatGpt->prompt);
     }
 
     public function testWorkoutFlowDoesNotDuplicateScalingSectionWhenModelUsesShortHeading(): void

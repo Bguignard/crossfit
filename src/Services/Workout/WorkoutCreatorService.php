@@ -71,6 +71,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->teamWorkoutGuidance($workoutGeneration);
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->timeCapCalibrationGuidance($workoutGeneration);
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
         $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= <<<EOD
@@ -431,6 +432,31 @@ EOD;
         }
 
         $guidance .= "- JSON integrity: the movements array must contain exactly the movement names used in the main workout flow, no extra movement and no missing movement.\n";
+
+        return $guidance;
+    }
+
+    private function timeCapCalibrationGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        $timeCap = $workoutGeneration->getTimeCap();
+        $workoutType = $workoutGeneration->getWorkoutType()->getNameAsEnum();
+        $guidance = sprintf(
+            "Time-cap calibration guidance: the requested time cap is %d minutes. Build enough total work for the target level so the expected completion or useful work fills most of that window, usually around 75-95%% of the time cap. Do not create a %d-minute workout that a realistic athlete or team would normally finish in roughly half the requested time.\n",
+            $timeCap,
+            $timeCap
+        );
+
+        if ($workoutType === WorkoutTypeEnum::FOR_TIME) {
+            $guidance .= "For-time workouts: calibrate reps, distances, loads, round count and transitions so the expected finish time sits close to the cap without requiring failure. If the structure is imposed, increase or decrease per-round volume to match the cap.\n";
+        } elseif ($workoutType === WorkoutTypeEnum::AMRAP) {
+            $guidance .= "For AMRAP workouts, the sequence can be repeatable, but one round must not be so tiny that the workout becomes meaningless churn; choose station sizes that create sustained work for the full cap.\n";
+        } elseif ($workoutType === WorkoutTypeEnum::INTERVALS) {
+            $guidance .= "For Intervals workouts, make the total work/rest structure add up coherently with the cap and ensure each interval has enough work to match the intended stimulus.\n";
+        }
+
+        if ($workoutGeneration->isTeamWorkout()) {
+            $guidance .= "For team workouts, account for shared reps, split-anyhow work, synchronized reps, partner changes and machine sharing. Shared work often reduces individual fatigue, so increase total team volume or add meaningful synchronization/holding constraints when needed to occupy the requested time cap.\n";
+        }
 
         return $guidance;
     }
