@@ -79,6 +79,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Time-cap calibration guidance: the requested time cap is 12 minutes.', $prompt);
         self::assertStringContainsString('usually around 75-95% of the time cap', $prompt);
         self::assertStringContainsString('one round must not be so tiny that the workout becomes meaningless churn', $prompt);
+        self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $prompt);
+        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $prompt);
         self::assertStringNotContainsString('there is only one round', $prompt);
         self::assertStringNotContainsString('there are 1 rounds', $prompt);
         self::assertStringNotContainsString('7 rounds of', $prompt);
@@ -121,6 +123,19 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('The workout pattern is an Intervals workout.', $prompt);
         self::assertStringContainsString('choose the number of intervals that best fits the stimulus and time cap', $prompt);
         self::assertStringNotContainsString('with  rounds', $prompt);
+    }
+
+    public function testWorkoutPromptDiscouragesDefaultBenchmarkMovementTrio(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            4,
+        );
+
+        self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $prompt);
+        self::assertStringContainsString('Wall Ball Shot, Chest to Bar Pull Up, Box Jump and Box Jump Over are allowed', $prompt);
+        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $prompt);
+        self::assertStringContainsString('avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern', $prompt);
     }
 
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
@@ -389,6 +404,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Suggest 3 distinct CrossFit workout concepts before generating a final workout.', $chatGpt->prompt);
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
+        self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $chatGpt->prompt);
+        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
     }
 
