@@ -373,6 +373,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             'programming_guidance' => [
                 'weekly_focus' => ['Strict pulling volume', 'Breathing under fatigue'],
             ],
+            '_openai_usage' => [
+                'model' => 'gpt-test-mini',
+                'prompt_tokens' => 120,
+                'completion_tokens' => 45,
+                'total_tokens' => 165,
+            ],
         ]);
         $this->getEntityManager()->flush();
 
@@ -445,6 +451,13 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertCount(1, $requestsPayload['analysisRequests']);
         self::assertCount(1, $requestsPayload['programmingRequests']);
         self::assertCount(0, $requestsPayload['programmingSessionDetailRequests']);
+        self::assertSame([
+            'model' => 'gpt-test-mini',
+            'promptTokens' => 120,
+            'completionTokens' => 45,
+            'totalTokens' => 165,
+        ], $requestsPayload['analysisRequests'][0]['aiUsage']);
+        self::assertNull($requestsPayload['programmingRequests'][0]['aiUsage']);
     }
 
     public function testUserCanValidateProgrammingRequestForDetailedSessions(): void
@@ -580,6 +593,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             inputSnapshot: []
         ))->markCompleted([
             'overview' => 'One-week personal plan.',
+            '_openai_usage' => [
+                'model' => 'gpt-test-mini',
+                'prompt_tokens' => 320,
+                'completion_tokens' => 180,
+                'total_tokens' => 500,
+            ],
             'weeks' => [
                 [
                     'week' => 1,
@@ -604,6 +623,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             ['source_programming_request' => ['id' => 'programming-progress']]
         ))->markCompleted([
             'overview' => 'Detailed sessions.',
+            '_openai_usage' => [
+                'model' => 'gpt-test-mini',
+                'prompt_tokens' => 640,
+                'completion_tokens' => 360,
+                'total_tokens' => 1000,
+            ],
             'weeks' => [
                 [
                     'week' => 1,
@@ -632,7 +657,20 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $this->jsonRequest('GET', '/api/me/requests', [], $token);
 
         self::assertResponseIsSuccessful();
-        $initialPayload = $this->jsonResponse()['programmingSessionDetailRequests'][0];
+        $requestsPayload = $this->jsonResponse();
+        self::assertSame([
+            'model' => 'gpt-test-mini',
+            'promptTokens' => 320,
+            'completionTokens' => 180,
+            'totalTokens' => 500,
+        ], $requestsPayload['programmingRequests'][0]['aiUsage']);
+        $initialPayload = $requestsPayload['programmingSessionDetailRequests'][0];
+        self::assertSame([
+            'model' => 'gpt-test-mini',
+            'promptTokens' => 640,
+            'completionTokens' => 360,
+            'totalTokens' => 1000,
+        ], $initialPayload['aiUsage']);
         self::assertSame(2, $initialPayload['sessionCount']);
         self::assertSame(0, $initialPayload['currentSessionIndex']);
         self::assertSame('Pulling strength', $initialPayload['currentSession']['title']);

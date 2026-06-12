@@ -523,6 +523,7 @@ class MeController extends AbstractController
             'parameters' => $request->getParameters(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'result' => $request->getResult(),
+            'aiUsage' => $this->aiUsage($request->getResult()),
             'errorMessage' => $this->publicAiErrorMessage(
                 $request->getStatus()->value,
                 'analysis'
@@ -551,6 +552,7 @@ class MeController extends AbstractController
             'constraints' => $request->getConstraints(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'generatedProgramming' => $request->getGeneratedProgramming(),
+            'aiUsage' => $this->aiUsage($request->getGeneratedProgramming()),
             'errorMessage' => $this->publicAiErrorMessage(
                 $request->getStatus()->value,
                 'programming'
@@ -580,6 +582,7 @@ class MeController extends AbstractController
             'status' => $request->getStatus()->value,
             'inputSnapshot' => $request->getInputSnapshot(),
             'detailedProgramming' => $request->getDetailedProgramming(),
+            'aiUsage' => $this->aiUsage($request->getDetailedProgramming()),
             'currentSessionIndex' => $currentSessionIndex,
             'currentSession' => $sessions[$currentSessionIndex] ?? null,
             'sessionCount' => count($sessions),
@@ -765,6 +768,36 @@ class MeController extends AbstractController
             'session_details' => 'La génération détaillée des séances a échoué. Tu peux relancer la demande.',
             default => 'La demande IA a échoué. Tu peux réessayer dans quelques instants.',
         };
+    }
+
+    /**
+     * @param array<string, mixed>|null $payload
+     *
+     * @return array<string, mixed>|null
+     */
+    private function aiUsage(?array $payload): ?array
+    {
+        $usage = $payload['_openai_usage'] ?? null;
+        if (!is_array($usage)) {
+            return null;
+        }
+
+        $publicUsage = array_filter(
+            [
+                'model' => is_string($usage['model'] ?? null) ? $usage['model'] : null,
+                'promptTokens' => $this->optionalInt($usage['prompt_tokens'] ?? null),
+                'completionTokens' => $this->optionalInt($usage['completion_tokens'] ?? null),
+                'totalTokens' => $this->optionalInt($usage['total_tokens'] ?? null),
+            ],
+            static fn (mixed $value): bool => $value !== null,
+        );
+
+        return $publicUsage !== [] ? $publicUsage : null;
+    }
+
+    private function optionalInt(mixed $value): ?int
+    {
+        return is_int($value) ? $value : null;
     }
 
     private function programmingSessionDetailRequestForCurrentUser(string $id): ?ProgrammingSessionDetailRequest
