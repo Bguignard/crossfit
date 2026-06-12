@@ -203,6 +203,49 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         );
     }
 
+    public function testAnalysisRequestRequiresAtLeastPerformanceMetricsOrCompetitionProfile(): void
+    {
+        [$token] = $this->createAuthenticatedUser('analysis-without-data@example.com', 'analysis-without-data-token');
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'parameters' => [
+                'goal' => 'identify weaknesses',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(
+            'Performance metrics or a linked competition profile are required.',
+            $this->jsonResponse()['error']
+        );
+    }
+
+    public function testUserCanCreateAnalysisRequestFromCompetitionProfileOnly(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('analysis-competition-only@example.com', 'analysis-competition-only-token');
+        $initialMessengerMessages = $this->messengerMessageCount();
+        $athlete = new Athlete('Competition Only Athlete', 'crossfit_games', 'competition-only-1');
+        $profile = (new UserAthleteProfile($user, $athlete))->setPrimaryProfile(true);
+
+        $this->getEntityManager()->persist($athlete);
+        $this->getEntityManager()->persist($profile);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'parameters' => [
+                'goal' => 'build a programming baseline',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $analysisPayload = $this->jsonResponse()['analysisRequest'];
+        self::assertSame('queued', $analysisPayload['status']);
+        self::assertSame('Competition Only Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
+        self::assertSame([], $analysisPayload['inputSnapshot']['performance_metrics']);
+        self::assertCount(1, $analysisPayload['inputSnapshot']['athlete_profiles']);
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+    }
+
     public function testUserCanCreateAnalysisAndProgrammingRequests(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('requests@example.com', 'requests-token');
