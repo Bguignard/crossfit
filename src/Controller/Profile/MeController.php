@@ -615,6 +615,7 @@ class MeController extends AbstractController
                 'valueType' => $metricKey->valueType()->value,
                 'defaultUnit' => $metricKey->defaultUnit(),
                 'requiredSkill' => $requiredSkill?->value,
+                'priority' => $metricKey->profilePriority(),
                 'available' => $requiredSkill === null || ($profile?->hasPositiveSkill($requiredSkill) ?? false),
             ];
         }
