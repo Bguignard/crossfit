@@ -12,6 +12,7 @@ use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class WorkoutCatalogController extends AbstractController
@@ -21,6 +22,36 @@ final class WorkoutCatalogController extends AbstractController
 
     public function __construct(private readonly EntityManagerInterface $entityManager)
     {
+    }
+
+    #[Route('/api/workout-catalog/random-generated', name: 'workout_catalog_random_generated', methods: ['GET'])]
+    public function randomGenerated(): JsonResponse
+    {
+        $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
+            ->andWhere('workout.workoutGeneration IS NOT NULL');
+        $totalItems = (int) (clone $queryBuilder)
+            ->select('COUNT(workout.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        if ($totalItems === 0) {
+            return $this->json(['error' => 'No generated workout available.'], Response::HTTP_NOT_FOUND);
+        }
+
+        /** @var Workout|null $workout */
+        $workout = $queryBuilder
+            ->select('workout')
+            ->orderBy('workout.createdAt', 'DESC')
+            ->setFirstResult(random_int(0, $totalItems - 1))
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$workout instanceof Workout) {
+            return $this->json(['error' => 'No generated workout available.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($this->serializeWorkout($workout));
     }
 
     #[Route('/api/workout-catalog', name: 'workout_catalog', methods: ['GET'])]
