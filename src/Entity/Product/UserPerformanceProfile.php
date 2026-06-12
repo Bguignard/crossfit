@@ -4,6 +4,7 @@ namespace App\Entity\Product;
 
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
+use App\Entity\Product\Enum\PerformanceMetricValueTypeEnum;
 use App\Entity\Security\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -152,6 +153,56 @@ class UserPerformanceProfile
             && $this->hasAllMetrics(PerformanceMetricKeyEnum::requiredWeightliftingMetrics())
             && $this->hasAllMetrics(PerformanceMetricKeyEnum::gymnasticsSkillMetrics())
             && $this->countProvidedMetrics(PerformanceMetricKeyEnum::cardioMetrics()) >= 3;
+    }
+
+    /**
+     * @return array{level: string, providedMetrics: int, essentialMetrics: int, essentialMetricsTotal: int, loadMetrics: int, categoryCount: int}
+     */
+    public function analysisDataQuality(): array
+    {
+        $providedMetrics = 0;
+        $essentialMetrics = 0;
+        $essentialMetricsTotal = 0;
+        $loadMetrics = 0;
+        $categories = [];
+
+        foreach (PerformanceMetricKeyEnum::cases() as $metricKey) {
+            if ($metricKey->profilePriority() === 'essential') {
+                ++$essentialMetricsTotal;
+            }
+
+            if (!$this->hasProvidedMetric($metricKey)) {
+                continue;
+            }
+
+            ++$providedMetrics;
+            $categories[$metricKey->category()->value] = true;
+
+            if ($metricKey->profilePriority() === 'essential') {
+                ++$essentialMetrics;
+            }
+
+            if ($metricKey->valueType() === PerformanceMetricValueTypeEnum::LOAD) {
+                ++$loadMetrics;
+            }
+        }
+
+        $categoryCount = count($categories);
+        $level = match (true) {
+            $providedMetrics === 0 => 'empty',
+            $essentialMetrics >= 10 && $loadMetrics >= 5 && $categoryCount >= 4 => 'rich',
+            $essentialMetrics >= 4 && $categoryCount >= 2 => 'correct',
+            default => 'weak',
+        };
+
+        return [
+            'level' => $level,
+            'providedMetrics' => $providedMetrics,
+            'essentialMetrics' => $essentialMetrics,
+            'essentialMetricsTotal' => $essentialMetricsTotal,
+            'loadMetrics' => $loadMetrics,
+            'categoryCount' => $categoryCount,
+        ];
     }
 
     /**

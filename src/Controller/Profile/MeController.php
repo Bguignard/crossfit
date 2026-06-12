@@ -484,6 +484,7 @@ class MeController extends AbstractController
             'updatedAt' => $this->date($profile->getUpdatedAt()),
             'completedAt' => $this->date($profile->getCompletedAt()),
             'eligibleForPerformanceAnalysis' => $profile->isEligibleForPerformanceAnalysis(),
+            'analysisDataQuality' => $profile->analysisDataQuality(),
             'missingRequiredMetrics' => $this->missingRequiredMetrics($profile),
             'availableGymnasticsCapacityMetrics' => array_map(
                 static fn (PerformanceMetricKeyEnum $metricKey): string => $metricKey->value,
@@ -849,6 +850,7 @@ class MeController extends AbstractController
 
         return [
             'performance_metrics' => $this->performanceMetricSnapshot($profile),
+            'performance_data_quality' => $profile->analysisDataQuality(),
             'athlete_profile' => $primaryAthleteProfile !== null ? $this->athleteProfileSnapshot($primaryAthleteProfile) : null,
             'athlete_profiles' => array_map(
                 fn (UserAthleteProfile $athleteProfile): array => $this->athleteProfileSnapshot($athleteProfile),

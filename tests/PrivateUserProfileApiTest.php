@@ -145,6 +145,9 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertResponseIsSuccessful();
         $profilePayload = $this->jsonResponse()['performanceProfile'];
         self::assertFalse($profilePayload['eligibleForPerformanceAnalysis']);
+        self::assertSame('weak', $profilePayload['analysisDataQuality']['level']);
+        self::assertSame(2, $profilePayload['analysisDataQuality']['providedMetrics']);
+        self::assertSame(2, $profilePayload['analysisDataQuality']['essentialMetrics']);
         self::assertContains(PerformanceMetricKeyEnum::FRONT_SQUAT_1RM->value, $profilePayload['missingRequiredMetrics']);
         self::assertCount(2, $profilePayload['metrics']);
 
@@ -348,6 +351,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('identify weaknesses', $analysisPayload['parameters']['goal']);
         self::assertSame('Bruno Games', $analysisPayload['athleteProfile']['athlete']['displayName']);
         self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertSame('weak', $analysisPayload['inputSnapshot']['performance_data_quality']['level']);
         self::assertCount(2, $analysisPayload['inputSnapshot']['athlete_profiles']);
         self::assertSame(['crossfit_games', 'competition_corner'], array_values(array_unique(array_column($analysisPayload['inputSnapshot']['athlete_profiles'], 'source_name'))));
         self::assertContains('Open 26.1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
