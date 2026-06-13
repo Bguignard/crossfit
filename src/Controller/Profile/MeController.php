@@ -34,6 +34,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class MeController extends AbstractController
 {
     private const ANALYSIS_REQUEST_COOLDOWN = 'P1D';
+    private const CURRENT_SESSION_EMAIL_COOLDOWN = 'PT15M';
     private const PROGRAMMING_DURATION_WEEKS = ['min' => 4, 'max' => 8, 'default' => 8];
     private const PROGRAMMING_SESSIONS_PER_WEEK = ['min' => 1, 'max' => 6, 'default' => 5];
     private const PROGRAMMING_SESSION_DURATION_MINUTES = ['min' => 30, 'max' => 180, 'default' => 60];
@@ -414,7 +415,18 @@ class MeController extends AbstractController
         }
 
         $currentIndex = min($detailRequest->getCurrentSessionIndex(), count($sessions) - 1);
+        $currentSessionKey = $this->programmingSessionKey($sessions[$currentIndex], $currentIndex);
+        $nextAvailableAt = $this->nextCurrentSessionEmailAvailableAt($detailRequest, $currentSessionKey);
+        if ($nextAvailableAt !== null && $nextAvailableAt > new \DateTimeImmutable()) {
+            return $this->json([
+                'error' => 'La séance du jour a déjà été envoyée récemment.',
+                'nextAvailableAt' => $this->date($nextAvailableAt),
+            ], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
         $this->programmingNotificationSender->sendCurrentSession($detailRequest, $sessions[$currentIndex]);
+        $detailRequest->markCurrentSessionEmailSent($currentSessionKey);
+        $this->entityManager->flush();
 
         return $this->json([
             'programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest),
@@ -615,6 +627,7 @@ class MeController extends AbstractController
             'currentSession' => $sessions[$currentSessionIndex] ?? null,
             'sessionCount' => count($sessions),
             'completedSessionKeys' => $request->getCompletedSessionKeys(),
+            'currentSessionEmailSentAt' => $this->date($this->currentSessionEmailSentAt($request, $sessions, $currentSessionIndex)),
             'errorMessage' => $this->publicAiErrorMessage(
                 $request->getStatus()->value,
                 'session_details'
@@ -898,6 +911,35 @@ class MeController extends AbstractController
         }
 
         return sprintf('session-%d', $fallbackIndex + 1);
+    }
+
+    private function nextCurrentSessionEmailAvailableAt(
+        ProgrammingSessionDetailRequest $request,
+        string $currentSessionKey,
+    ): ?\DateTimeImmutable {
+        $sentAt = $request->getCurrentSessionEmailSentAt($currentSessionKey);
+        if ($sentAt === null) {
+            return null;
+        }
+
+        return $sentAt->add(new \DateInterval(self::CURRENT_SESSION_EMAIL_COOLDOWN));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sessions
+     */
+    private function currentSessionEmailSentAt(
+        ProgrammingSessionDetailRequest $request,
+        array $sessions,
+        int $currentSessionIndex,
+    ): ?\DateTimeImmutable {
+        if (!isset($sessions[$currentSessionIndex])) {
+            return null;
+        }
+
+        return $request->getCurrentSessionEmailSentAt(
+            $this->programmingSessionKey($sessions[$currentSessionIndex], $currentSessionIndex)
+        );
     }
 
     /**
