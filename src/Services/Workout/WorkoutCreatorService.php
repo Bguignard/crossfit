@@ -270,7 +270,8 @@ EOD;
             $WorkoutMovements,
         )
             ->setWorkoutGeneration($workoutGeneration)
-            ->setGenerationPrompt($promptForChatGPT);
+            ->setGenerationPrompt($promptForChatGPT)
+            ->setAiUsage($this->lastOpenAiUsage());
     }
 
     public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
@@ -533,6 +534,18 @@ TXT;
             'scalingOptions' => $scalingOptions,
             'movements' => $movements,
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function lastOpenAiUsage(): ?array
+    {
+        if (!$this->chatGPTApiKey instanceof ChatGPTUsageAwareInterface) {
+            return null;
+        }
+
+        return $this->chatGPTApiKey->getLastUsage();
     }
 
     private function decodeOpenAiJsonObject(string $rawResponse): array
