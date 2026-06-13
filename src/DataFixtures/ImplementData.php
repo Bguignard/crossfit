@@ -50,6 +50,7 @@ class ImplementData extends Fixture implements DependentFixtureInterface
     public const string IMPLEMENT_PADDLE = 'implement-paddle';
     public const string IMPLEMENT_WEIGHTED_VEST = 'implement-weighted-vest';
     public const string IMPLEMENT_PARTNER = 'implement-partner';
+    public const string IMPLEMENT_ABMAT = 'implement-abmat';
 
     public function load(ObjectManager $manager): void
     {
@@ -219,6 +220,10 @@ class ImplementData extends Fixture implements DependentFixtureInterface
             ],
             self::IMPLEMENT_PARTNER => [
                 'name' => ImplementEnum::PARTNER,
+                'typeOfAdjustableMeasure' => null,
+            ],
+            self::IMPLEMENT_ABMAT => [
+                'name' => ImplementEnum::ABMAT,
                 'typeOfAdjustableMeasure' => null,
             ],
         ];

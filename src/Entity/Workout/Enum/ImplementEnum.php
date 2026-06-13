@@ -43,4 +43,5 @@ enum ImplementEnum: string
     case PADDLE = 'paddle';
     case WEIGHTED_VEST = 'weighted vest';
     case PARTNER = 'partner';
+    case ABMAT = 'abmat';
 }
