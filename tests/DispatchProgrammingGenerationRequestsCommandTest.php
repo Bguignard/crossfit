@@ -11,6 +11,7 @@ use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Services\Profile\ProgrammingGenerationRequestProcessor;
+use App\Services\Profile\ProgrammingNotificationSenderInterface;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -26,9 +27,10 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
                 'overview' => 'Eight-week personal plan.',
             ],
         ]);
+        $notificationSender = new FakeProgrammingGenerationNotificationSender();
         $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand(
             $this->getEntityManager(),
-            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker)
+            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker, $notificationSender)
         ));
 
         self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
@@ -43,15 +45,17 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
         self::assertNotNull($storedRequest->getStartedAt());
         self::assertNotNull($storedRequest->getCompletedAt());
         self::assertSame(1, $worker->calls);
+        self::assertSame(1, $notificationSender->programmingReadyCalls);
     }
 
     public function testWorkerFailureMarksProgrammingRequestAsFailed(): void
     {
         $request = $this->persistQueuedProgrammingRequest('programming-dispatch-failure@example.com');
         $worker = new FakeProgrammingGenerationWorker(exception: new \RuntimeException('Python worker timeout'));
+        $notificationSender = new FakeProgrammingGenerationNotificationSender();
         $tester = new CommandTester(new DispatchProgrammingGenerationRequestsCommand(
             $this->getEntityManager(),
-            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker)
+            new ProgrammingGenerationRequestProcessor($this->getEntityManager(), $worker, $notificationSender)
         ));
 
         self::assertSame(Command::FAILURE, $tester->execute(['--limit' => 1]));
@@ -64,6 +68,7 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
         self::assertSame('Python worker timeout', $storedRequest->getErrorMessage());
         self::assertNotNull($storedRequest->getStartedAt());
         self::assertNotNull($storedRequest->getCompletedAt());
+        self::assertSame(0, $notificationSender->programmingReadyCalls);
     }
 
     public function testDispatcherLeavesQueuedBoxProgrammingRequestsUntouched(): void
@@ -122,6 +127,21 @@ class DispatchProgrammingGenerationRequestsCommandTest extends AbstractIntegrati
         $this->getEntityManager()->flush();
 
         return $request;
+    }
+}
+
+final class FakeProgrammingGenerationNotificationSender implements ProgrammingNotificationSenderInterface
+{
+    public int $programmingReadyCalls = 0;
+
+    public function sendProgrammingReady(ProgrammingGenerationRequest $request): void
+    {
+        ++$this->programmingReadyCalls;
+    }
+
+    public function sendSessionDetailsReady(ProgrammingSessionDetailRequest $request): void
+    {
+        throw new \LogicException('Session details notification is not used in this test.');
     }
 }
 
