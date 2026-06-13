@@ -9,6 +9,7 @@ use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
+use App\Services\Profile\ProgrammingNotificationSenderInterface;
 use App\Services\Profile\ProgrammingSessionDetailRequestProcessor;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 
@@ -33,7 +34,8 @@ class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTe
                 ],
             ],
         ]);
-        $processor = new ProgrammingSessionDetailRequestProcessor($this->getEntityManager(), $worker);
+        $notificationSender = new FakeProgrammingSessionDetailNotificationSender();
+        $processor = new ProgrammingSessionDetailRequestProcessor($this->getEntityManager(), $worker, $notificationSender);
 
         self::assertTrue($processor->process($request));
         $this->getEntityManager()->clear();
@@ -47,13 +49,15 @@ class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTe
         self::assertNotNull($storedRequest->getStartedAt());
         self::assertNotNull($storedRequest->getCompletedAt());
         self::assertSame(1, $worker->calls);
+        self::assertSame(1, $notificationSender->sessionDetailsReadyCalls);
     }
 
     public function testWorkerFailureMarksSessionDetailRequestAsFailed(): void
     {
         $request = $this->persistQueuedDetailRequest('programming-detail-failure@example.com');
         $worker = new FakeProgrammingSessionDetailWorker(exception: new \RuntimeException('Python detail worker timeout'));
-        $processor = new ProgrammingSessionDetailRequestProcessor($this->getEntityManager(), $worker);
+        $notificationSender = new FakeProgrammingSessionDetailNotificationSender();
+        $processor = new ProgrammingSessionDetailRequestProcessor($this->getEntityManager(), $worker, $notificationSender);
 
         self::assertFalse($processor->process($request));
         $this->getEntityManager()->clear();
@@ -65,6 +69,7 @@ class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTe
         self::assertSame('Python detail worker timeout', $storedRequest->getErrorMessage());
         self::assertNotNull($storedRequest->getStartedAt());
         self::assertNotNull($storedRequest->getCompletedAt());
+        self::assertSame(0, $notificationSender->sessionDetailsReadyCalls);
     }
 
     private function persistQueuedDetailRequest(string $email): ProgrammingSessionDetailRequest
@@ -98,6 +103,21 @@ class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTe
         $this->getEntityManager()->flush();
 
         return $detailRequest;
+    }
+}
+
+final class FakeProgrammingSessionDetailNotificationSender implements ProgrammingNotificationSenderInterface
+{
+    public int $sessionDetailsReadyCalls = 0;
+
+    public function sendProgrammingReady(ProgrammingGenerationRequest $request): void
+    {
+        throw new \LogicException('Programming notification is not used in this test.');
+    }
+
+    public function sendSessionDetailsReady(ProgrammingSessionDetailRequest $request): void
+    {
+        ++$this->sessionDetailsReadyCalls;
     }
 }
 
