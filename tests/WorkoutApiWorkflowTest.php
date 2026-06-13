@@ -549,6 +549,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $options = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertContains('AMRAP', array_column($options['workoutTypes'], 'name'));
         self::assertContains('barbell', array_column($options['implements'], 'name'));
+        self::assertContains('abmat', array_column($options['implements'], 'name'));
 
         $this->browser()->request(
             'POST',

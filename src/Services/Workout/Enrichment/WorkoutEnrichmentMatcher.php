@@ -210,6 +210,8 @@ final class WorkoutEnrichmentMatcher
             'weighted vest' => 'weighted vest',
             'body armor' => 'weighted vest',
             'plate' => 'plate',
+            'abmat' => 'abmat',
+            'ab mat' => 'abmat',
             'sandbag' => 'sand bag',
         ];
     }
