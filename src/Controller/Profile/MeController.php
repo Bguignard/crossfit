@@ -212,7 +212,7 @@ class MeController extends AbstractController
 
             $profile = new UserPerformanceProfile($user);
             $this->entityManager->persist($profile);
-        } elseif (!$this->hasAnyProvidedMetric($profile) && $athleteProfiles === []) {
+        } elseif (!$profile->hasAnyProvidedMetric() && $athleteProfiles === []) {
             return $this->json(['error' => 'Performance metrics or a linked competition profile are required.'], Response::HTTP_BAD_REQUEST);
         }
 
@@ -463,6 +463,7 @@ class MeController extends AbstractController
     private function buildDashboardPayload(User $user): array
     {
         $profile = $this->getLatestPerformanceProfile($user);
+        $analysisAthleteProfiles = $this->personalAnalysisAthleteProfiles($user);
 
         return [
             'user' => [
@@ -476,7 +477,8 @@ class MeController extends AbstractController
                 fn (UserAthleteProfile $athleteProfile): array => $this->serializeAthleteProfile($athleteProfile),
                 $user->getAthleteProfiles()->toArray()
             ),
-            'performanceProfile' => $profile !== null ? $this->serializePerformanceProfile($profile) : null,
+            'performanceProfile' => $profile !== null ? $this->serializePerformanceProfile($profile, $analysisAthleteProfiles) : null,
+            'performanceAnalysisReadiness' => $this->analysisReadiness($profile, $analysisAthleteProfiles),
             'performanceMetricCatalog' => $this->buildMetricCatalog($profile),
         ];
     }
@@ -511,19 +513,23 @@ class MeController extends AbstractController
     /**
      * @return array<string, mixed>
      */
-    private function serializePerformanceProfile(UserPerformanceProfile $profile): array
+    private function serializePerformanceProfile(UserPerformanceProfile $profile, ?array $analysisAthleteProfiles = null): array
     {
         $providedMetrics = [];
         foreach ($profile->getMetrics() as $metric) {
             $providedMetrics[$metric->getMetricKey()->value] = $this->serializeMetric($metric);
         }
+        $analysisAthleteProfiles ??= $this->personalAnalysisAthleteProfiles($profile->getUser());
+        $analysisReadiness = $this->analysisReadiness($profile, $analysisAthleteProfiles);
 
         return [
             'id' => (string) $profile->getId(),
             'createdAt' => $this->date($profile->getCreatedAt()),
             'updatedAt' => $this->date($profile->getUpdatedAt()),
             'completedAt' => $this->date($profile->getCompletedAt()),
-            'eligibleForPerformanceAnalysis' => $profile->isEligibleForPerformanceAnalysis(),
+            'eligibleForPerformanceAnalysis' => $analysisReadiness['analyzable'],
+            'completePerformanceAnalysisBaseline' => $profile->hasCompletePerformanceAnalysisBaseline(),
+            'analysisReadiness' => $analysisReadiness,
             'analysisDataQuality' => $profile->analysisDataQuality(),
             'missingRequiredMetrics' => $this->missingRequiredMetrics($profile),
             'availableGymnasticsCapacityMetrics' => array_map(
@@ -1060,15 +1066,75 @@ class MeController extends AbstractController
         return $metrics;
     }
 
-    private function hasAnyProvidedMetric(UserPerformanceProfile $profile): bool
+    /**
+     * @param list<UserAthleteProfile> $analysisAthleteProfiles
+     *
+     * @return array<string, mixed>
+     */
+    private function analysisReadiness(?UserPerformanceProfile $profile, array $analysisAthleteProfiles): array
     {
-        foreach ($profile->getMetrics() as $metric) {
-            if ($metric->hasValue()) {
-                return true;
-            }
+        $quality = $profile?->analysisDataQuality() ?? [
+            'level' => 'empty',
+            'providedMetrics' => 0,
+            'essentialMetrics' => 0,
+            'essentialMetricsTotal' => count(array_filter(
+                PerformanceMetricKeyEnum::cases(),
+                static fn (PerformanceMetricKeyEnum $metricKey): bool => $metricKey->profilePriority() === 'essential'
+            )),
+            'loadMetrics' => 0,
+            'categoryCount' => 0,
+        ];
+        $hasPerformanceMetrics = $profile?->hasAnyProvidedMetric() ?? false;
+        $hasCompetitionProfile = $analysisAthleteProfiles !== [];
+        $analyzable = $hasPerformanceMetrics || $hasCompetitionProfile;
+        $sourceTypes = [];
+        if ($hasPerformanceMetrics) {
+            $sourceTypes[] = 'performance_metrics';
+        }
+        if ($hasCompetitionProfile) {
+            $sourceTypes[] = 'competition_profile';
         }
 
-        return false;
+        return [
+            'analyzable' => $analyzable,
+            'confidenceLevel' => $quality['level'] !== 'empty' ? $quality['level'] : ($hasCompetitionProfile ? 'weak' : 'empty'),
+            'sourceTypes' => $sourceTypes,
+            'hasPerformanceMetrics' => $hasPerformanceMetrics,
+            'hasCompetitionProfile' => $hasCompetitionProfile,
+            'providedMetrics' => $quality['providedMetrics'],
+            'essentialMetrics' => $quality['essentialMetrics'],
+            'essentialMetricsTotal' => $quality['essentialMetricsTotal'],
+            'loadMetrics' => $quality['loadMetrics'],
+            'categoryCount' => $quality['categoryCount'],
+            'blockingMissingItems' => $analyzable ? [] : ['performance_metrics_or_competition_profile'],
+            'requiredAnalysisParameters' => ['goal', 'crossfitExperience', 'trainingVolume', 'limitations'],
+            'missingPriorityMetrics' => $this->missingPriorityMetrics($profile),
+        ];
+    }
+
+    /**
+     * @return array{essential: list<string>, useful: list<string>}
+     */
+    private function missingPriorityMetrics(?UserPerformanceProfile $profile): array
+    {
+        $missing = [
+            'essential' => [],
+            'useful' => [],
+        ];
+
+        foreach (PerformanceMetricKeyEnum::cases() as $metricKey) {
+            $priority = $metricKey->profilePriority();
+            if (!isset($missing[$priority])) {
+                continue;
+            }
+            if ($profile?->hasProvidedMetric($metricKey) === true) {
+                continue;
+            }
+
+            $missing[$priority][] = $metricKey->value;
+        }
+
+        return $missing;
     }
 
     /**

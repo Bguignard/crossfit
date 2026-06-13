@@ -149,6 +149,22 @@ class UserPerformanceProfile
 
     public function isEligibleForPerformanceAnalysis(): bool
     {
+        return $this->hasAnyProvidedMetric();
+    }
+
+    public function hasAnyProvidedMetric(): bool
+    {
+        foreach ($this->metrics as $metric) {
+            if ($metric->hasValue()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasCompletePerformanceAnalysisBaseline(): bool
+    {
         return $this->hasAllMetrics(PerformanceMetricKeyEnum::requiredStrengthMetrics())
             && $this->hasAllMetrics(PerformanceMetricKeyEnum::requiredWeightliftingMetrics())
             && $this->hasAllMetrics(PerformanceMetricKeyEnum::gymnasticsSkillMetrics())
