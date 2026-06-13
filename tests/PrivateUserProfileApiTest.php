@@ -116,6 +116,8 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertResponseIsSuccessful();
         $dashboard = $this->jsonResponse();
         self::assertNull($dashboard['performanceProfile']);
+        self::assertFalse($dashboard['performanceAnalysisReadiness']['analyzable']);
+        self::assertSame(['performance_metrics_or_competition_profile'], $dashboard['performanceAnalysisReadiness']['blockingMissingItems']);
         self::assertArrayHasKey('strength', $dashboard['performanceMetricCatalog']);
         self::assertArrayHasKey('cardio', $dashboard['performanceMetricCatalog']);
         self::assertSame('essential', $dashboard['performanceMetricCatalog']['strength'][0]['priority']);
@@ -144,10 +146,15 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         self::assertResponseIsSuccessful();
         $profilePayload = $this->jsonResponse()['performanceProfile'];
-        self::assertFalse($profilePayload['eligibleForPerformanceAnalysis']);
+        self::assertTrue($profilePayload['eligibleForPerformanceAnalysis']);
+        self::assertFalse($profilePayload['completePerformanceAnalysisBaseline']);
+        self::assertTrue($profilePayload['analysisReadiness']['analyzable']);
+        self::assertSame('weak', $profilePayload['analysisReadiness']['confidenceLevel']);
+        self::assertSame(['performance_metrics'], $profilePayload['analysisReadiness']['sourceTypes']);
         self::assertSame('weak', $profilePayload['analysisDataQuality']['level']);
         self::assertSame(2, $profilePayload['analysisDataQuality']['providedMetrics']);
         self::assertSame(2, $profilePayload['analysisDataQuality']['essentialMetrics']);
+        self::assertContains(PerformanceMetricKeyEnum::DEADLIFT_1RM->value, $profilePayload['analysisReadiness']['missingPriorityMetrics']['essential']);
         self::assertContains(PerformanceMetricKeyEnum::FRONT_SQUAT_1RM->value, $profilePayload['missingRequiredMetrics']);
         self::assertCount(2, $profilePayload['metrics']);
 
@@ -234,6 +241,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $this->getEntityManager()->persist($athlete);
         $this->getEntityManager()->persist($profile);
         $this->getEntityManager()->flush();
+
+        $this->jsonRequest('GET', '/api/me', [], $token);
+        $dashboardPayload = $this->jsonResponse();
+        self::assertTrue($dashboardPayload['performanceAnalysisReadiness']['analyzable']);
+        self::assertSame('weak', $dashboardPayload['performanceAnalysisReadiness']['confidenceLevel']);
+        self::assertSame(['competition_profile'], $dashboardPayload['performanceAnalysisReadiness']['sourceTypes']);
 
         $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
             'parameters' => [

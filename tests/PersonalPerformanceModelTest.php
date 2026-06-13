@@ -50,13 +50,19 @@ class PersonalPerformanceModelTest extends AbstractIntegrationTest
         self::assertTrue($storedStrictPullUp->getBooleanValue());
     }
 
-    public function testPerformanceAnalysisRequiresStrengthWeightliftingSkillsAndThreeCardioMetrics(): void
+    public function testPerformanceAnalysisIsAnalyzableWithAnyMetricButTracksCompleteBaseline(): void
     {
         $profile = new UserPerformanceProfile(
             (new User('analysis@example.com'))->setPassword('hashed-password')
         );
 
         self::assertFalse($profile->isEligibleForPerformanceAnalysis());
+        self::assertFalse($profile->hasCompletePerformanceAnalysisBaseline());
+
+        (new UserPerformanceMetric($profile, PerformanceMetricKeyEnum::WEIGHTED_PULL_UP_1RM))->setNumericValue(24.0);
+
+        self::assertTrue($profile->isEligibleForPerformanceAnalysis());
+        self::assertFalse($profile->hasCompletePerformanceAnalysisBaseline());
 
         foreach (PerformanceMetricKeyEnum::requiredStrengthMetrics() as $metricKey) {
             (new UserPerformanceMetric($profile, $metricKey))->setNumericValue(100.0);
@@ -70,11 +76,12 @@ class PersonalPerformanceModelTest extends AbstractIntegrationTest
         (new UserPerformanceMetric($profile, PerformanceMetricKeyEnum::ROW_500M_TIME))->setNumericValue(95.0);
         (new UserPerformanceMetric($profile, PerformanceMetricKeyEnum::RUN_1600M_TIME))->setNumericValue(360.0);
 
-        self::assertFalse($profile->isEligibleForPerformanceAnalysis());
+        self::assertFalse($profile->hasCompletePerformanceAnalysisBaseline());
 
         (new UserPerformanceMetric($profile, PerformanceMetricKeyEnum::BIKE_ERG_20MIN_WATTS))->setNumericValue(245.0);
 
         self::assertTrue($profile->isEligibleForPerformanceAnalysis());
+        self::assertTrue($profile->hasCompletePerformanceAnalysisBaseline());
     }
 
     public function testGymnasticsCapacityMetricsDependOnDeclaredSkills(): void

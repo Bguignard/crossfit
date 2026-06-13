@@ -77,7 +77,7 @@ class PerformanceAnalysisRequest
         $this->athleteProfile = $athleteProfile;
         $this->parameters = $parameters;
         $this->inputSnapshot = $inputSnapshot;
-        $this->eligibleAtCreation = $performanceProfile->isEligibleForPerformanceAnalysis();
+        $this->eligibleAtCreation = $performanceProfile->isEligibleForPerformanceAnalysis() || $athleteProfile !== null;
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
