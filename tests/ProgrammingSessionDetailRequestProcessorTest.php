@@ -119,6 +119,11 @@ final class FakeProgrammingSessionDetailNotificationSender implements Programmin
     {
         ++$this->sessionDetailsReadyCalls;
     }
+
+    public function sendCurrentSession(ProgrammingSessionDetailRequest $request, array $session): void
+    {
+        throw new \LogicException('Current session notification is not used in this test.');
+    }
 }
 
 final class FakeProgrammingSessionDetailWorker implements PythonWorkerClientInterface

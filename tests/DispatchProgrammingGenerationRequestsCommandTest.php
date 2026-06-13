@@ -143,6 +143,11 @@ final class FakeProgrammingGenerationNotificationSender implements ProgrammingNo
     {
         throw new \LogicException('Session details notification is not used in this test.');
     }
+
+    public function sendCurrentSession(ProgrammingSessionDetailRequest $request, array $session): void
+    {
+        throw new \LogicException('Current session notification is not used in this test.');
+    }
 }
 
 final class FakeProgrammingGenerationWorker implements PythonWorkerClientInterface

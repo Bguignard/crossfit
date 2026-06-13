@@ -26,6 +26,14 @@ final readonly class ProgrammingPdfAttachmentBuilder
     }
 
     /**
+     * @param array<string, mixed> $session
+     */
+    public function buildCurrentSessionPdf(array $session): string
+    {
+        return $this->pdfRenderer->render($this->buildDocument('Seance du jour MonWod', $session));
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     private function buildDocument(string $title, array $payload): string

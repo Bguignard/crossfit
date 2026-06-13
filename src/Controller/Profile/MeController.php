@@ -18,6 +18,7 @@ use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Services\Profile\PersonalAnalysisCompetitionSnapshotBuilder;
+use App\Services\Profile\ProgrammingNotificationSenderInterface;
 use App\Services\Profile\QueuedAiRequestMessengerDispatcher;
 use App\Services\Profile\UserAvatarResolver;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,6 +49,7 @@ class MeController extends AbstractController
         private readonly UserAvatarResolver $userAvatarResolver,
         private readonly PersonalAnalysisCompetitionSnapshotBuilder $competitionSnapshotBuilder,
         private readonly QueuedAiRequestMessengerDispatcher $queuedAiRequestDispatcher,
+        private readonly ProgrammingNotificationSenderInterface $programmingNotificationSender,
     ) {
     }
 
@@ -392,6 +394,32 @@ class MeController extends AbstractController
         $this->entityManager->flush();
 
         return $this->json(['programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest)]);
+    }
+
+    #[Route('/programming-session-detail-requests/{id}/current-session/email', name: 'api_me_email_programming_session_detail_current_session', methods: ['POST'])]
+    public function emailProgrammingSessionDetailCurrentSession(string $id): JsonResponse
+    {
+        $detailRequest = $this->programmingSessionDetailRequestForCurrentUser($id);
+        if ($detailRequest === null) {
+            return $this->json(['error' => 'Programming session detail request not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if ($detailRequest->getStatus() !== ProgrammingGenerationRequestStatusEnum::COMPLETED) {
+            return $this->json(['error' => 'Completed session details are required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $sessions = $this->programmingDetailSessions($detailRequest);
+        if ($sessions === []) {
+            return $this->json(['error' => 'No detailed sessions are available.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $currentIndex = min($detailRequest->getCurrentSessionIndex(), count($sessions) - 1);
+        $this->programmingNotificationSender->sendCurrentSession($detailRequest, $sessions[$currentIndex]);
+
+        return $this->json([
+            'programmingSessionDetailRequest' => $this->serializeProgrammingSessionDetailRequest($detailRequest),
+            'emailSent' => true,
+        ]);
     }
 
     #[Route('/performance-profile/metrics/{key}', name: 'api_me_delete_performance_metric', methods: ['DELETE'])]

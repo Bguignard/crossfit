@@ -53,6 +53,22 @@ final readonly class ProgrammingNotificationEmailSender implements ProgrammingNo
         );
     }
 
+    public function sendCurrentSession(ProgrammingSessionDetailRequest $request, array $session): void
+    {
+        $user = $request->getUser();
+        $this->sendEmail(
+            user: $user,
+            subject: 'Ta séance du jour MonWod',
+            text: sprintf(
+                "%s\n\nTa séance du jour est jointe à cet email au format PDF.\n\nTu peux aussi la retrouver dans ton espace MonWod:\n%s\n\nMonWod\n",
+                $this->buildGreeting($user),
+                $this->buildFrontendUrl('/seance-du-jour')
+            ),
+            attachmentBody: $this->pdfAttachmentBuilder->buildCurrentSessionPdf($session),
+            attachmentName: 'seance-du-jour-monwod.pdf',
+        );
+    }
+
     private function buildGreeting(User $user): string
     {
         $displayName = trim((string) $user->getDisplayName());
