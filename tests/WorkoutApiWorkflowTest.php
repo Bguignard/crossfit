@@ -1056,7 +1056,17 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                     $workoutGeneration->getMandatoryMovements()->toArray(),
                 ))
                     ->setWorkoutGeneration($workoutGeneration)
-                    ->setGenerationPrompt('Prompt sent to OpenAI');
+                    ->setGenerationPrompt('Prompt sent to OpenAI')
+                    ->setAiUsage([
+                        'request_type' => 'workout_generation',
+                        'model' => 'gpt-5.4-mini',
+                        'prompt_tokens' => 1200,
+                        'completion_tokens' => 300,
+                        'total_tokens' => 1500,
+                        'duration_ms' => 800,
+                        'status' => 'success',
+                        'estimated_cost_usd' => null,
+                    ]);
             }
 
             public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
@@ -1123,6 +1133,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame($firstWorkout['id'], $adminWorkout['id']);
         self::assertSame('Prompt sent to OpenAI', $adminWorkout['generationPrompt']);
+        self::assertSame(1500, $adminWorkout['aiUsage']['total_tokens']);
     }
 
     public function testFrontendCanRequestWorkoutVariantsForADraft(): void

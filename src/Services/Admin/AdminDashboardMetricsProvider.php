@@ -147,6 +147,12 @@ class AdminDashboardMetricsProvider
                     $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->findAll(),
                 ),
             ),
+            'workout_generation' => $this->sumUsagePayloads(
+                array_map(
+                    static fn (Workout $workout): ?array => $workout->getAiUsage(),
+                    $this->entityManager->getRepository(Workout::class)->findAll(),
+                ),
+            ),
         ];
 
         return [
@@ -164,6 +170,19 @@ class AdminDashboardMetricsProvider
      */
     private function sumUsageForPayloads(array $payloads): array
     {
+        return $this->sumUsagePayloads(array_map(
+            static fn (?array $payload): ?array => is_array($payload['_openai_usage'] ?? null) ? $payload['_openai_usage'] : null,
+            $payloads,
+        ));
+    }
+
+    /**
+     * @param list<array<string, mixed>|null> $payloads
+     *
+     * @return array{total_tokens: int, prompt_tokens: int, completion_tokens: int, calls: int}
+     */
+    private function sumUsagePayloads(array $payloads): array
+    {
         $summary = [
             'total_tokens' => 0,
             'prompt_tokens' => 0,
@@ -171,9 +190,8 @@ class AdminDashboardMetricsProvider
             'calls' => 0,
         ];
 
-        foreach ($payloads as $payload) {
-            $usage = $payload['_openai_usage'] ?? null;
-            if (!is_array($usage)) {
+        foreach ($payloads as $usage) {
+            if ($usage === null) {
                 continue;
             }
 

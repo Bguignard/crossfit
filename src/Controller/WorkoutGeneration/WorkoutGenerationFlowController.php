@@ -171,7 +171,8 @@ class WorkoutGenerationFlowController extends AbstractController
             ->setTimeCap($generatedWorkout->getTimeCap())
             ->setWorkoutType($generatedWorkout->getWorkoutType())
             ->setWorkoutOrigin($generatedWorkout->getWorkoutOrigin())
-            ->setGenerationPrompt($generatedWorkout->getGenerationPrompt());
+            ->setGenerationPrompt($generatedWorkout->getGenerationPrompt())
+            ->setAiUsage($generatedWorkout->getAiUsage());
 
         foreach ($existingWorkout->getImplements()->toArray() as $implement) {
             $existingWorkout->removeImplement($implement);
@@ -539,6 +540,7 @@ class WorkoutGenerationFlowController extends AbstractController
 
         if ($this->isGranted('ROLE_ADMIN')) {
             $payload['generationPrompt'] = $workout->getGenerationPrompt();
+            $payload['aiUsage'] = $workout->getAiUsage();
         }
 
         return $payload;

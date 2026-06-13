@@ -9,17 +9,25 @@ use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
+class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterface
 {
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $lastUsage = null;
+
     public function __construct(
-        public string $chatGPTApiKey,
-        private string $openAiModel,
-        private HttpClientInterface $client,
+        public readonly string $chatGPTApiKey,
+        private readonly string $openAiModel,
+        private readonly HttpClientInterface $client,
     ) {
     }
 
     public function getWorkoutFlowFromPrompt(string $prompt): string
     {
+        $startedAt = microtime(true);
+        $this->lastUsage = null;
+
         if (trim($this->chatGPTApiKey) === '') {
             throw new \RuntimeException('CHAT_GPT_API_KEY is required to generate workouts.');
         }
@@ -61,6 +69,7 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
         TransportExceptionInterface $e) {
             throw new \RuntimeException('OpenAI workout generation failed: '.$this->errorMessage($e), 0, $e);
         }
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
         $content = trim((string) ($data['output_text'] ?? ''));
         if ($content === '') {
@@ -70,7 +79,17 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
             throw new \RuntimeException('OpenAI workout generation returned an empty response.');
         }
 
+        $this->lastUsage = $this->usageFromResponse($data, $durationMs);
+
         return $content;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getLastUsage(): ?array
+    {
+        return $this->lastUsage;
     }
 
     private function errorMessage(\Throwable $exception): string
@@ -112,5 +131,38 @@ readonly class ChatGPTApiKey implements ChatGPTApiKeyInterface
         }
 
         return trim(implode("\n", $parts));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    private function usageFromResponse(array $data, int $durationMs): array
+    {
+        $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
+
+        return [
+            'request_type' => 'workout_generation',
+            'model' => is_string($data['model'] ?? null) ? $data['model'] : $this->openAiModel,
+            'prompt_tokens' => $this->nullableInt($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? null),
+            'completion_tokens' => $this->nullableInt($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null),
+            'total_tokens' => $this->nullableInt($usage['total_tokens'] ?? null),
+            'duration_ms' => $durationMs,
+            'status' => 'success',
+            'estimated_cost_usd' => null,
+        ];
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+        if (is_string($value) && preg_match('/^\d+$/', $value) === 1) {
+            return (int) $value;
+        }
+
+        return null;
     }
 }

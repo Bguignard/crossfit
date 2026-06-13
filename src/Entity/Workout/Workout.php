@@ -74,6 +74,9 @@ class Workout
     #[ORM\OneToOne(targetEntity: WorkoutGeneration::class, cascade: ['remove'])]
     private ?WorkoutGeneration $workoutGeneration = null;
 
+    #[ORM\Column(type: 'json', nullable: true, options: ['jsonb' => true])]
+    private ?array $aiUsage = null;
+
     #[ORM\OneToMany(mappedBy: 'workout', targetEntity: CompetitionEvent::class)]
     private Collection $competitionEvents;
 
@@ -251,6 +254,24 @@ class Workout
     public function setGenerationPrompt(?string $generationPrompt): static
     {
         $this->generationPrompt = $generationPrompt;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getAiUsage(): ?array
+    {
+        return $this->aiUsage;
+    }
+
+    /**
+     * @param array<string, mixed>|null $aiUsage
+     */
+    public function setAiUsage(?array $aiUsage): static
+    {
+        $this->aiUsage = $aiUsage;
 
         return $this;
     }

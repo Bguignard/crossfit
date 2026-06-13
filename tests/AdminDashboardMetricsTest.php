@@ -35,6 +35,16 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         /** @var Workout $fran */
         $fran = $this->getReference(WorkoutData::WORKOUT_FRAN, Workout::class);
         $fran->setSourceName('crossfit_games');
+        $fran->setAiUsage([
+            'prompt_tokens' => 200,
+            'completion_tokens' => 80,
+            'total_tokens' => 280,
+            'model' => 'gpt-5.4-mini',
+            'request_type' => 'workout_generation',
+            'duration_ms' => 1200,
+            'status' => 'success',
+            'estimated_cost_usd' => null,
+        ]);
 
         $athlete = new Athlete('Tia-Clair Toomey', 'crossfit_games', 'tia-clair-toomey');
         $competition = (new Competition('CrossFit Games', 'crossfit_games', 'games-2026'))->setSeason(2026);
@@ -130,9 +140,9 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['programming_requests']['by_status']['running']);
         self::assertSame(1, $payload['programming_requests']['by_type']['box']);
         self::assertSame([
-            'total_tokens' => 1550,
-            'prompt_tokens' => 1100,
-            'completion_tokens' => 450,
+            'total_tokens' => 1830,
+            'prompt_tokens' => 1300,
+            'completion_tokens' => 530,
             'by_request_type' => [
                 'analysis' => [
                     'total_tokens' => 150,
@@ -150,6 +160,12 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
                     'total_tokens' => 980,
                     'prompt_tokens' => 700,
                     'completion_tokens' => 280,
+                    'calls' => 1,
+                ],
+                'workout_generation' => [
+                    'total_tokens' => 280,
+                    'prompt_tokens' => 200,
+                    'completion_tokens' => 80,
                     'calls' => 1,
                 ],
             ],
