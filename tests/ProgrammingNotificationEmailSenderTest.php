@@ -80,6 +80,44 @@ class ProgrammingNotificationEmailSenderTest extends TestCase
         self::assertStringContainsString('application/pdf', $mime);
     }
 
+    public function testCurrentSessionEmailIncludesPdfAttachment(): void
+    {
+        $mailer = new CapturingMailer();
+        $sender = $this->buildSender($mailer);
+        $user = new User('athlete@example.com');
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $user,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+        ))->markCompleted([
+            'overview' => 'Cycle 8 semaines',
+        ]);
+        $detailRequest = (new ProgrammingSessionDetailRequest($user, $programmingRequest))->markCompleted([
+            'weeks' => [
+                [
+                    'week' => 1,
+                    'sessions' => [
+                        [
+                            'title' => 'Pulling endurance',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $sender->sendCurrentSession($detailRequest, [
+            'week' => 1,
+            'session' => 1,
+            'title' => 'Pulling endurance',
+        ]);
+
+        self::assertNotNull($mailer->message);
+        self::assertInstanceOf(Email::class, $mailer->message);
+        self::assertSame('Ta séance du jour MonWod', $mailer->message->getSubject());
+        $mime = $mailer->message->toString();
+        self::assertStringContainsString('seance-du-jour-monwod.pdf', $mime);
+        self::assertStringContainsString('application/pdf', $mime);
+    }
+
     public function testPlainTextPdfRendererProducesPdfDocument(): void
     {
         $pdf = (new PlainTextPdfRenderer())->render("Programmation MonWod\n\nSemaine 1");
