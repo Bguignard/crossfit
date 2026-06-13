@@ -674,6 +674,20 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(2, $initialPayload['sessionCount']);
         self::assertSame(0, $initialPayload['currentSessionIndex']);
         self::assertSame('Pulling strength', $initialPayload['currentSession']['title']);
+        self::assertNull($initialPayload['currentSessionEmailSentAt']);
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/current-session/email', $detailRequest->getId()), [], $token);
+
+        self::assertResponseIsSuccessful();
+        $emailPayload = $this->jsonResponse();
+        self::assertTrue($emailPayload['emailSent']);
+        self::assertNotNull($emailPayload['programmingSessionDetailRequest']['currentSessionEmailSentAt']);
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/current-session/email', $detailRequest->getId()), [], $token);
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame('La séance du jour a déjà été envoyée récemment.', $this->jsonResponse()['error']);
+        self::assertNotNull($this->jsonResponse()['nextAvailableAt']);
 
         $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/complete-current-session', $detailRequest->getId()), [], $token);
 
@@ -683,6 +697,11 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(1, $completedPayload['currentSessionIndex']);
         self::assertSame('Engine day', $completedPayload['currentSession']['title']);
 
+        $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/current-session/email', $detailRequest->getId()), [], $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->jsonResponse()['emailSent']);
+
         $this->jsonRequest('PATCH', sprintf('/api/me/programming-session-detail-requests/%s/current-session', $detailRequest->getId()), [
             'sessionIndex' => 0,
         ], $token);
@@ -691,6 +710,11 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $rewoundPayload = $this->jsonResponse()['programmingSessionDetailRequest'];
         self::assertSame(0, $rewoundPayload['currentSessionIndex']);
         self::assertSame('Pulling strength', $rewoundPayload['currentSession']['title']);
+
+        $this->jsonRequest('POST', sprintf('/api/me/programming-session-detail-requests/%s/current-session/email', $detailRequest->getId()), [], $token);
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame('La séance du jour a déjà été envoyée récemment.', $this->jsonResponse()['error']);
     }
 
     public function testUserCannotDetailIncompleteProgrammingRequest(): void

@@ -40,6 +40,9 @@ class ProgrammingSessionDetailRequest
     #[ORM\Column(type: 'json')]
     private array $completedSessionKeys = [];
 
+    #[ORM\Column(type: 'json')]
+    private array $sessionEmailSentAtByKey = [];
+
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $errorMessage = null;
 
@@ -124,6 +127,28 @@ class ProgrammingSessionDetailRequest
     public function setCompletedSessionKeys(array $completedSessionKeys): self
     {
         $this->completedSessionKeys = array_values(array_filter($completedSessionKeys, is_string(...)));
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCurrentSessionEmailSentAt(string $sessionKey): ?\DateTimeImmutable
+    {
+        $sentAt = $this->sessionEmailSentAtByKey[$sessionKey] ?? null;
+        if (!is_string($sentAt) || trim($sentAt) === '') {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($sentAt);
+        } catch (\Exception) {
+            return null;
+        }
+    }
+
+    public function markCurrentSessionEmailSent(string $sessionKey, ?\DateTimeImmutable $sentAt = null): self
+    {
+        $this->sessionEmailSentAtByKey[$sessionKey] = ($sentAt ?? new \DateTimeImmutable())->format(\DateTimeInterface::ATOM);
         $this->touch();
 
         return $this;
