@@ -165,23 +165,36 @@ final class CompetitionCatalogController extends AbstractController
         $now = new \DateTimeImmutable();
         $currentYear = (int) $now->format('Y');
 
+        $ongoingCondition = '(competition.startsAt <= :orderNow AND competition.endsAt >= :orderNow) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderOngoing)';
+        $upcomingCondition = 'competition.startsAt > :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderUpcoming)';
+        $pastCondition = 'competition.endsAt < :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderPast) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.season < :orderCurrentYear)';
+
         return $queryBuilder
-            ->addSelect(
+            ->addSelect(sprintf(
                 'CASE
-                    WHEN ((competition.startsAt <= :orderNow AND competition.endsAt >= :orderNow) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderOngoing)) THEN 0
-                    WHEN (competition.startsAt > :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderUpcoming)) THEN 1
-                    WHEN (competition.endsAt < :orderNow OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.status = :orderPast) OR (competition.startsAt IS NULL AND competition.endsAt IS NULL AND competition.season < :orderCurrentYear)) THEN 2
+                    WHEN (%s) THEN 0
+                    WHEN (%s) THEN 1
+                    WHEN (%s) THEN 2
                     ELSE 3
-                END AS HIDDEN statusWeight'
-            )
-            ->addSelect('COALESCE(competition.startsAt, competition.endsAt) AS HIDDEN competitionDate')
+                END AS HIDDEN statusWeight',
+                $ongoingCondition,
+                $upcomingCondition,
+                $pastCondition
+            ))
+            ->addSelect(sprintf('CASE WHEN (%s) THEN COALESCE(competition.startsAt, competition.endsAt) ELSE :maxOrderDate END AS HIDDEN ongoingDate', $ongoingCondition))
+            ->addSelect(sprintf('CASE WHEN (%s) THEN COALESCE(competition.startsAt, competition.endsAt) ELSE :maxOrderDate END AS HIDDEN upcomingDate', $upcomingCondition))
+            ->addSelect(sprintf('CASE WHEN (%s) THEN COALESCE(competition.endsAt, competition.startsAt) ELSE :minOrderDate END AS HIDDEN pastDate', $pastCondition))
             ->setParameter('orderNow', $now)
             ->setParameter('orderOngoing', 'ongoing')
             ->setParameter('orderUpcoming', 'upcoming')
             ->setParameter('orderPast', 'past')
             ->setParameter('orderCurrentYear', $currentYear)
+            ->setParameter('minOrderDate', new \DateTimeImmutable('1900-01-01'))
+            ->setParameter('maxOrderDate', new \DateTimeImmutable('9999-12-31'))
             ->orderBy('statusWeight', 'ASC')
-            ->addOrderBy('competitionDate', 'ASC')
+            ->addOrderBy('ongoingDate', 'ASC')
+            ->addOrderBy('upcomingDate', 'ASC')
+            ->addOrderBy('pastDate', 'DESC')
             ->addOrderBy('competition.name', 'ASC');
     }
 
