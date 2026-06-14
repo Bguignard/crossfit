@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Command\DispatchProgrammingGenerationRequestsCommand;
+use App\Entity\Competition\Competition;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
@@ -182,5 +183,10 @@ final class FakeProgrammingGenerationWorker implements PythonWorkerClientInterfa
     public function submitProgrammingSessionDetails(ProgrammingSessionDetailRequest $request): array
     {
         throw new \LogicException('Programming session details are not used in this test.');
+    }
+
+    public function crawlCompetitionResults(Competition $competition): array
+    {
+        throw new \LogicException('Competition result crawling is not used in this test.');
     }
 }

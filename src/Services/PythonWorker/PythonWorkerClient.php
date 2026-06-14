@@ -2,6 +2,7 @@
 
 namespace App\Services\PythonWorker;
 
+use App\Entity\Competition\Competition;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\ProgrammingSessionDetailRequest;
@@ -59,6 +60,19 @@ final class PythonWorkerClient implements PythonWorkerClientInterface
             'constraints' => $programmingRequest->getConstraints(),
             'global_programming' => $programmingRequest->getGeneratedProgramming(),
             'input_snapshot' => $request->getInputSnapshot(),
+        ]);
+    }
+
+    public function crawlCompetitionResults(Competition $competition): array
+    {
+        return $this->postJson('/internal/competition-results/crawl', [
+            'competition_id' => $competition->getId() !== null ? (string) $competition->getId() : null,
+            'source_name' => $competition->getSourceName(),
+            'external_id' => $competition->getExternalId(),
+            'source_url' => $competition->getSourceUrl(),
+            'name' => $competition->getName(),
+            'starts_at' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
+            'ends_at' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
         ]);
     }
 
