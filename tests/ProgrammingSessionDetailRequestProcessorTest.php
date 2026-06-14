@@ -2,6 +2,7 @@
 
 namespace App\Tests;
 
+use App\Entity\Competition\Competition;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
@@ -158,5 +159,10 @@ final class FakeProgrammingSessionDetailWorker implements PythonWorkerClientInte
         }
 
         return $this->response;
+    }
+
+    public function crawlCompetitionResults(Competition $competition): array
+    {
+        throw new \LogicException('Competition result crawling is not used in this test.');
     }
 }

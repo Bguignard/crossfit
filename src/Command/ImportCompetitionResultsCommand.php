@@ -96,14 +96,60 @@ class ImportCompetitionResultsCommand extends Command
             return Command::FAILURE;
         }
 
-        if (($payload['contractVersion'] ?? null) !== self::CONTRACT_VERSION) {
-            $io->error(sprintf('Unsupported contract version "%s".', (string) ($payload['contractVersion'] ?? '')));
+        $batchSize = max(1, (int) $input->getOption('batch-size'));
+        try {
+            $report = $this->importPayload($payload, $batchSize);
+        } catch (\InvalidArgumentException $exception) {
+            $io->error($exception->getMessage());
 
             return Command::FAILURE;
         }
 
+        $io->section('Import summary');
+        $io->table(
+            ['section', 'created', 'updated', 'skipped', 'failed'],
+            array_map(
+                static fn (string $section, array $counts): array => [
+                    $section,
+                    $counts['created'],
+                    $counts['updated'],
+                    $counts['skipped'],
+                    $counts['failed'],
+                ],
+                array_keys($report['summary']),
+                $report['summary'],
+            ),
+        );
+
+        if ($report['errors'] !== []) {
+            $io->warning('Some rows were not imported.');
+            foreach ($report['errors'] as $error) {
+                $io->writeln(sprintf('- %s', $error));
+            }
+        }
+
+        return $report['hasFailures'] ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     *
+     * @return array{
+     *     summary: array<string, array{created: int, updated: int, skipped: int, failed: int}>,
+     *     errors: list<string>,
+     *     hasFailures: bool
+     * }
+     */
+    public function importPayload(array $payload, int $batchSize = 500): array
+    {
+        if (($payload['contractVersion'] ?? null) !== self::CONTRACT_VERSION) {
+            throw new \InvalidArgumentException(sprintf('Unsupported contract version "%s".', (string) ($payload['contractVersion'] ?? '')));
+        }
+
         $sourceName = $this->stringOrNull($payload['source']['name'] ?? null);
-        $batchSize = max(1, (int) $input->getOption('batch-size'));
+        $batchSize = max(1, $batchSize);
+        $this->summary = [];
+        $this->errors = [];
         $this->competitionDivisions = [];
         $this->competitionParticipations = [];
 
@@ -125,30 +171,11 @@ class ImportCompetitionResultsCommand extends Command
         );
         $this->entityManager->flush();
 
-        $io->section('Import summary');
-        $io->table(
-            ['section', 'created', 'updated', 'skipped', 'failed'],
-            array_map(
-                static fn (string $section, array $counts): array => [
-                    $section,
-                    $counts['created'],
-                    $counts['updated'],
-                    $counts['skipped'],
-                    $counts['failed'],
-                ],
-                array_keys($this->summary),
-                $this->summary,
-            ),
-        );
-
-        if ($this->errors !== []) {
-            $io->warning('Some rows were not imported.');
-            foreach ($this->errors as $error) {
-                $io->writeln(sprintf('- %s', $error));
-            }
-        }
-
-        return $this->hasFailures() ? Command::FAILURE : Command::SUCCESS;
+        return [
+            'summary' => $this->summary,
+            'errors' => $this->errors,
+            'hasFailures' => $this->hasFailures(),
+        ];
     }
 
     /**

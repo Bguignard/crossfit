@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Entity\Competition\Athlete;
+use App\Entity\Competition\Competition;
 use App\Entity\Product\Box;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
@@ -150,6 +151,42 @@ class PythonWorkerClientTest extends TestCase
         $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test', 300);
 
         self::assertSame(['job_id' => 'programming-detail-job-1'], $client->submitProgrammingSessionDetails($detailRequest));
+    }
+
+    public function testCrawlCompetitionResultsPostsSourceIdentity(): void
+    {
+        $competition = (new Competition('The Gymnase Contest 26.2', 'competition_corner', '19804'))
+            ->setSourceUrl('https://competitioncorner.net/events/19804')
+            ->setStartsAt(new \DateTimeImmutable('2026-06-06 08:00:00'))
+            ->setEndsAt(new \DateTimeImmutable('2026-06-07 18:00:00'));
+        $this->assignId($competition);
+
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
+            $payload = $this->payloadFromOptions($options);
+
+            self::assertSame('POST', $method);
+            self::assertSame('https://crawler.monwod.test/internal/competition-results/crawl', $url);
+            self::assertSame('competition_corner', $payload['source_name']);
+            self::assertSame('19804', $payload['external_id']);
+            self::assertSame('The Gymnase Contest 26.2', $payload['name']);
+            self::assertSame('https://competitioncorner.net/events/19804', $payload['source_url']);
+            self::assertSame('2026-06-06T08:00:00+00:00', $payload['starts_at']);
+            self::assertSame('2026-06-07T18:00:00+00:00', $payload['ends_at']);
+            self::assertSame(120.0, $options['timeout']);
+            self::assertSame(150.0, $options['max_duration']);
+
+            return new MockResponse(json_encode([
+                'contractVersion' => 'competition-results.v1',
+                'source' => ['name' => 'competition_corner'],
+                'results' => [],
+            ], JSON_THROW_ON_ERROR));
+        });
+        $client = new PythonWorkerClient($httpClient, 'https://crawler.monwod.test', 120);
+
+        self::assertSame(
+            ['contractVersion' => 'competition-results.v1', 'source' => ['name' => 'competition_corner'], 'results' => []],
+            $client->crawlCompetitionResults($competition),
+        );
     }
 
     public function testPythonWorkerHttpErrorsAreReported(): void

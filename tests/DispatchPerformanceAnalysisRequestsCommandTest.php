@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Command\DispatchPerformanceAnalysisRequestsCommand;
+use App\Entity\Competition\Competition;
 use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
@@ -143,5 +144,10 @@ final class FakePerformanceAnalysisWorker implements PythonWorkerClientInterface
     public function submitProgrammingSessionDetails(ProgrammingSessionDetailRequest $request): array
     {
         throw new \LogicException('Programming session details are not used in this test.');
+    }
+
+    public function crawlCompetitionResults(Competition $competition): array
+    {
+        throw new \LogicException('Competition result crawling is not used in this test.');
     }
 }
