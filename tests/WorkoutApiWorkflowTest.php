@@ -164,6 +164,46 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNull($payload['view']['next']);
     }
 
+    public function testCompetitionCatalogSearchesByPartialNameAndSortsPastCompetitionsNewestFirst(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $now = new \DateTimeImmutable();
+        $recentPast = (new Competition('The Marseille Throwdowns 2026', 'competition_corner', 'marseille-recent-past'))
+            ->setStartsAt($now->modify('-10 days'))
+            ->setEndsAt($now->modify('-8 days'))
+            ->setLocationLabel('Marseille, France')
+            ->setCountryName('France')
+            ->setCityName('Marseille');
+        $olderPast = (new Competition('Marseille Winter Classic 2025', 'scoring_fit', 'marseille-older-past'))
+            ->setStartsAt($now->modify('-80 days'))
+            ->setEndsAt($now->modify('-78 days'))
+            ->setLocationLabel('Marseille, France')
+            ->setCountryName('France')
+            ->setCityName('Marseille');
+        $unrelatedPast = (new Competition('Paris Throwdown 2026', 'competition_corner', 'paris-past'))
+            ->setStartsAt($now->modify('-5 days'))
+            ->setEndsAt($now->modify('-3 days'))
+            ->setLocationLabel('Paris, France')
+            ->setCountryName('France')
+            ->setCityName('Paris');
+
+        foreach ([$recentPast, $olderPast, $unrelatedPast] as $competition) {
+            $entityManager->persist($competition);
+        }
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/competition-catalog?q=Marseille&status=past');
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $names = array_map(static fn (array $competition): string => (string) $competition['name'], $payload['member']);
+
+        self::assertGreaterThanOrEqual(2, $payload['totalItems']);
+        self::assertSame('The Marseille Throwdowns 2026', $names[0]);
+        self::assertSame('Marseille Winter Classic 2025', $names[1]);
+        self::assertNotContains('Paris Throwdown 2026', $names);
+    }
+
     public function testFrontendCanListPublicAthletesEvenWhenCatalogIsEmpty(): void
     {
         $this->browser()->request('GET', '/api/athletes');
