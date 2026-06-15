@@ -21,7 +21,11 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
             ->setSourceUrl('https://competitioncorner.net/events/known-contest-262')
             ->setStartsAt(new \DateTimeImmutable('-4 days'))
             ->setEndsAt(new \DateTimeImmutable('-2 days'));
+        $olderCompetition = (new Competition('Old Scoring Event', 'scoring_fit', 'old-scoring-event'))
+            ->setStartsAt(new \DateTimeImmutable('-180 days'))
+            ->setEndsAt(new \DateTimeImmutable('-178 days'));
         $this->getEntityManager()->persist($competition);
+        $this->getEntityManager()->persist($olderCompetition);
         $this->getEntityManager()->flush();
 
         $worker = new FakeKnownCompetitionResultsWorker($this->payloadFor($competition));
@@ -32,7 +36,7 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
         );
         $tester = new CommandTester($command);
 
-        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 10]));
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
         self::assertSame(1, $worker->calls);
         self::assertSame('known-contest-262', $worker->requestedExternalIds[0]);
         $this->getEntityManager()->clear();
@@ -58,7 +62,7 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
             $this->importCommand(),
         ));
 
-        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 10]));
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
         self::assertSame(1, $worker->calls);
         self::assertStringContainsString('already has 1 imported results', $tester->getDisplay());
     }
