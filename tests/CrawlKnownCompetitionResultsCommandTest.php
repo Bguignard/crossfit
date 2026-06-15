@@ -67,6 +67,51 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
         self::assertStringContainsString('already has 1 imported results', $tester->getDisplay());
     }
 
+    public function testRetryRecentIgnoresRecentAttemptButStillSkipsExistingResults(): void
+    {
+        $recentEmptyCompetition = (new Competition('Recent Empty Event', 'competition_corner', 'recent-empty-event'))
+            ->setSourceUrl('https://competitioncorner.net/events/recent-empty-event')
+            ->setStartsAt(new \DateTimeImmutable('-3 days'))
+            ->setEndsAt(new \DateTimeImmutable('-2 days'))
+            ->setMetadata([
+                'postEventResultCrawl' => [
+                    'lastAttemptAt' => (new \DateTimeImmutable('-1 hour'))->format(\DateTimeInterface::ATOM),
+                    'lastStatus' => 'empty',
+                ],
+            ]);
+        $competitionWithResults = (new Competition('Already Imported Event', 'competition_corner', 'already-imported-event'))
+            ->setSourceUrl('https://competitioncorner.net/events/already-imported-event')
+            ->setStartsAt(new \DateTimeImmutable('-4 days'))
+            ->setEndsAt(new \DateTimeImmutable('-2 days'));
+        $this->getEntityManager()->persist($recentEmptyCompetition);
+        $this->getEntityManager()->persist($competitionWithResults);
+        $this->getEntityManager()->flush();
+
+        $worker = new FakeKnownCompetitionResultsWorker($this->payloadFor($competitionWithResults));
+        $tester = new CommandTester(new CrawlKnownCompetitionResultsCommand(
+            $this->getEntityManager(),
+            $worker,
+            $this->importCommand(),
+        ));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 2]));
+        self::assertSame(1, $worker->calls);
+        self::assertSame('already-imported-event', $worker->requestedExternalIds[0]);
+        self::assertStringContainsString('recent attempt at', $tester->getDisplay());
+
+        $worker = new FakeKnownCompetitionResultsWorker($this->payloadFor($recentEmptyCompetition));
+        $tester = new CommandTester(new CrawlKnownCompetitionResultsCommand(
+            $this->getEntityManager(),
+            $worker,
+            $this->importCommand(),
+        ));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 2, '--retry-recent' => true]));
+        self::assertSame(1, $worker->calls);
+        self::assertSame('recent-empty-event', $worker->requestedExternalIds[0]);
+        self::assertStringContainsString('already has 1 imported results', $tester->getDisplay());
+    }
+
     private function importCommand(): ImportCompetitionResultsCommand
     {
         $command = $this->getService(ImportCompetitionResultsCommand::class);

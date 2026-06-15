@@ -212,9 +212,13 @@ cd /var/www/crossfit
 flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20
 ```
 
-Use `--force` only for an explicit manual retry, for example after a worker
-endpoint bug or outage. The regular cron should omit it so recent failed/empty
-attempts are not retried continuously.
+Use `--retry-recent` for an explicit manual retry after a transient worker
+bug, outage or configuration issue. It ignores the recent-attempt cooldown but
+still skips competitions that already have imported results.
+
+Use `--force` only when you intentionally want to recrawl the selected
+competitions even if results already exist. The regular cron should omit both
+options so recent failed/empty attempts are not retried continuously.
 
 Recommended daily cron:
 
