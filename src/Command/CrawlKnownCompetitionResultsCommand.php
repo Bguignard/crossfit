@@ -118,7 +118,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             ->andWhere('competition.endsAt <= :endedBefore')
             ->setParameter('sources', self::SUPPORTED_SOURCES)
             ->setParameter('endedBefore', $endedBefore)
-            ->orderBy('competition.endsAt', 'ASC')
+            ->orderBy('competition.endsAt', 'DESC')
             ->addOrderBy('competition.name', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()
