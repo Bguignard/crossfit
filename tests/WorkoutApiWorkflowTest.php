@@ -415,11 +415,17 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $workout = $this->getReference(WorkoutData::WORKOUT_OPEN_17_5, Workout::class);
         $gamesProfile = new Athlete('Oceane Garat', 'crossfit_games', 'oceane-games');
         $cornerProfile = new Athlete('Océane Garat', 'competition_corner', 'oceane-corner');
+        $reversedScoringProfile = (new Athlete('Garat Océane', 'scoring_fit', 'oceane-scoring'))
+            ->setFirstName('Océane')
+            ->setLastName('Garat');
         $otherAthlete = new Athlete('Other Athlete', 'crossfit_games', 'other-athlete');
         $competition = (new Competition('2019 Games', 'crossfit_games', 'games-2019'))
             ->setSeason(2019);
+        $scoringCompetition = (new Competition('Scoring Event', 'scoring_fit', 'scoring-event'))
+            ->setSeason(2026);
         $event = (new CompetitionEvent($competition, 'Event 1', 'crossfit_games', 'games-2019-event-1'))
             ->setWorkout($workout);
+        $scoringEvent = new CompetitionEvent($scoringCompetition, 'Scoring WOD 1', 'scoring_fit', 'scoring-event-1');
         $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2019-women');
         $gamesResult = (new WorkoutResult($gamesProfile, $event, new Score(ScoreTypeEnum::TIME, '8:21'), 'crossfit_games', 'oceane-games-event-1'))
             ->setCompetitionDivision($division)
@@ -433,17 +439,24 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setCompetitionDivision($division)
             ->setRank(2)
             ->setFieldSize(18);
+        $scoringResult = (new WorkoutResult($reversedScoringProfile, $scoringEvent, new Score(ScoreTypeEnum::REPS, '205'), 'scoring_fit', 'oceane-scoring-event-1'))
+            ->setRank(7)
+            ->setFieldSize(80);
         $otherResult = new WorkoutResult($otherAthlete, $event, new Score(ScoreTypeEnum::TIME, '7:55'), 'crossfit_games', 'other-event-1');
 
         foreach ([
             $gamesProfile,
             $cornerProfile,
+            $reversedScoringProfile,
             $otherAthlete,
             $competition,
+            $scoringCompetition,
             $event,
+            $scoringEvent,
             $division,
             $gamesResult,
             $cornerResult,
+            $scoringResult,
             $otherResult,
         ] as $entity) {
             $entityManager->persist($entity);
@@ -457,21 +470,27 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertSame(2, $payload['totalItems']);
-        self::assertCount(2, $payload['member']);
-        self::assertSame('2019 Games', $payload['member'][0]['competitionDetails']['name']);
-        self::assertArrayHasKey('logoUrl', $payload['member'][0]['competitionDetails']);
-        self::assertSame('Event 1', $payload['member'][0]['eventDetails']['name']);
-        self::assertSame('Open 17.5', $payload['member'][0]['workoutDetails']['name']);
-        self::assertArrayHasKey('scoreDetails', $payload['member'][0]);
+        self::assertSame(3, $payload['totalItems']);
+        self::assertCount(3, $payload['member']);
+        $gamesPayload = array_values(array_filter(
+            $payload['member'],
+            static fn (array $result): bool => $result['externalId'] === 'oceane-games-event-1'
+        ))[0] ?? null;
+        self::assertNotNull($gamesPayload);
+        self::assertSame('2019 Games', $gamesPayload['competitionDetails']['name']);
+        self::assertArrayHasKey('logoUrl', $gamesPayload['competitionDetails']);
+        self::assertSame('Event 1', $gamesPayload['eventDetails']['name']);
+        self::assertSame('Open 17.5', $gamesPayload['workoutDetails']['name']);
+        self::assertArrayHasKey('scoreDetails', $gamesPayload);
         self::assertSame([
             'rank' => '8',
             'division' => 'Women',
             'divisionSourceId' => 'women',
             'format' => 'Individual',
             'formatSlug' => 'individual',
-        ], $payload['member'][0]['participationDetails']);
+        ], $gamesPayload['participationDetails']);
         self::assertContains('/api/athletes/'.$cornerProfile->getId(), array_column($payload['member'], 'athlete'));
+        self::assertContains('/api/athletes/'.$reversedScoringProfile->getId(), array_column($payload['member'], 'athlete'));
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
     }
 
