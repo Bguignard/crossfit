@@ -960,6 +960,7 @@ class MeController extends AbstractController
         return [
             'performance_metrics' => $this->performanceMetricSnapshot($profile),
             'performance_data_quality' => $profile->analysisDataQuality(),
+            'prescription_guidance' => $this->prescriptionGuidance($profile, $athleteProfiles),
             'athlete_profile' => $primaryAthleteProfile !== null ? $this->athleteProfileSnapshot($primaryAthleteProfile) : null,
             'athlete_profiles' => array_map(
                 fn (UserAthleteProfile $athleteProfile): array => $this->athleteProfileSnapshot($athleteProfile),
@@ -1022,6 +1023,8 @@ class MeController extends AbstractController
         return [
             'performance_profile_id' => $profile?->getId() !== null ? (string) $profile->getId() : null,
             'performance_metrics' => $profile !== null ? $this->performanceMetricSnapshot($profile) : [],
+            'performance_data_quality' => $profile?->analysisDataQuality(),
+            'prescription_guidance' => $profile !== null ? $this->prescriptionGuidance($profile, []) : null,
             'source_analysis_request' => [
                 'id' => (string) $sourceAnalysisRequest->getId(),
                 'parameters' => $sourceAnalysisRequest->getParameters(),
@@ -1064,6 +1067,92 @@ class MeController extends AbstractController
         }
 
         return $metrics;
+    }
+
+    /**
+     * @param list<UserAthleteProfile> $analysisAthleteProfiles
+     *
+     * @return array<string, mixed>
+     */
+    private function prescriptionGuidance(UserPerformanceProfile $profile, array $analysisAthleteProfiles): array
+    {
+        $quality = $profile->analysisDataQuality();
+        $knownLoadMetrics = $this->knownLoadMetrics($profile);
+        $hasKnownLoads = $knownLoadMetrics !== [];
+        $confidenceLevel = $quality['level'] !== 'empty'
+            ? $quality['level']
+            : ($analysisAthleteProfiles !== [] ? 'weak' : 'empty');
+
+        return [
+            'confidenceLevel' => $confidenceLevel,
+            'absoluteLoadPolicy' => $hasKnownLoads ? 'known_rms_only' : 'avoid_absolute_loads',
+            'knownLoadMetrics' => $knownLoadMetrics,
+            'missingEssentialLoadMetrics' => $this->missingEssentialLoadMetrics($profile),
+            'loadPrescriptionRules' => $this->loadPrescriptionRules($confidenceLevel, $hasKnownLoads),
+        ];
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function knownLoadMetrics(UserPerformanceProfile $profile): array
+    {
+        $metrics = [];
+
+        foreach ($profile->getMetrics() as $metric) {
+            if ($metric->getValueType() !== PerformanceMetricValueTypeEnum::LOAD || !$metric->hasValue()) {
+                continue;
+            }
+
+            $metrics[$metric->getMetricKey()->value] = (float) $metric->getNumericValue();
+        }
+
+        return $metrics;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function missingEssentialLoadMetrics(UserPerformanceProfile $profile): array
+    {
+        $missingMetrics = [];
+
+        foreach (PerformanceMetricKeyEnum::cases() as $metricKey) {
+            if (
+                $metricKey->profilePriority() !== 'essential'
+                || $metricKey->valueType() !== PerformanceMetricValueTypeEnum::LOAD
+                || $profile->hasProvidedMetric($metricKey)
+            ) {
+                continue;
+            }
+
+            $missingMetrics[] = $metricKey->value;
+        }
+
+        return $missingMetrics;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function loadPrescriptionRules(string $confidenceLevel, bool $hasKnownLoads): array
+    {
+        $rules = [
+            'Use concrete kg loads only for movements with a known matching or safely transferable RM.',
+            'Do not invent absolute loads when the relevant RM is missing.',
+        ];
+
+        if ($hasKnownLoads) {
+            $rules[] = 'When a known RM is relevant, prescribe kg ranges and keep the reference RM visible.';
+        } else {
+            $rules[] = 'Prefer RPE, conservative percentages, technique criteria, or progressive tests until RM data exists.';
+        }
+
+        if (in_array($confidenceLevel, ['empty', 'weak'], true)) {
+            $rules[] = 'Explicitly mention data limits and keep intensity prescriptions conservative.';
+        }
+
+        return $rules;
     }
 
     /**
