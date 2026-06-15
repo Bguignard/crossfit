@@ -27,10 +27,7 @@ final class AthleteResultSummaryController extends AbstractController
             throw new NotFoundHttpException('Athlete not found.');
         }
 
-        $normalizedName = $athlete->getNormalizedName() ?: $athleteNameNormalizer->normalize($athlete->getDisplayName());
-        $relatedAthletes = $entityManager->getRepository(Athlete::class)->findBy([
-            'normalizedName' => $normalizedName,
-        ]);
+        $relatedAthletes = $this->relatedAthletes($athlete, $entityManager, $athleteNameNormalizer);
 
         $results = $entityManager->createQueryBuilder()
             ->select('result', 'score', 'event', 'competition', 'division', 'workout')
@@ -205,5 +202,59 @@ final class AthleteResultSummaryController extends AbstractController
         $flow = trim($workout->getFlow());
 
         return in_array($flow, ['*', '-', '–', '—'], true) ? null : $flow;
+    }
+
+    /**
+     * @return list<Athlete>
+     */
+    private function relatedAthletes(
+        Athlete $athlete,
+        EntityManagerInterface $entityManager,
+        AthleteNameNormalizer $athleteNameNormalizer,
+    ): array {
+        $normalizedNames = array_values(array_unique(array_filter([
+            $athlete->getNormalizedName() ?: $athleteNameNormalizer->normalize($athlete->getDisplayName()),
+            ...$this->reversedNameCandidates($athlete, $athleteNameNormalizer),
+        ])));
+
+        if ($normalizedNames === []) {
+            return [$athlete];
+        }
+
+        /** @var list<Athlete> $athletes */
+        $athletes = $entityManager->getRepository(Athlete::class)->createQueryBuilder('athlete')
+            ->andWhere('athlete.normalizedName IN (:normalizedNames)')
+            ->setParameter('normalizedNames', $normalizedNames)
+            ->getQuery()
+            ->getResult();
+
+        $athletesById = [];
+        foreach ([$athlete, ...$athletes] as $relatedAthlete) {
+            $athletesById[(string) $relatedAthlete->getId()] = $relatedAthlete;
+        }
+
+        return array_values($athletesById);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function reversedNameCandidates(Athlete $athlete, AthleteNameNormalizer $athleteNameNormalizer): array
+    {
+        $candidates = [];
+        $firstName = $athlete->getFirstName();
+        $lastName = $athlete->getLastName();
+
+        if ($firstName !== null && $lastName !== null) {
+            $candidates[] = $athleteNameNormalizer->normalize(sprintf('%s %s', $lastName, $firstName));
+            $candidates[] = $athleteNameNormalizer->normalize(sprintf('%s %s', $firstName, $lastName));
+        }
+
+        $parts = explode(' ', $athlete->getNormalizedName() ?: $athleteNameNormalizer->normalize($athlete->getDisplayName()));
+        if (count($parts) === 2) {
+            $candidates[] = implode(' ', array_reverse($parts));
+        }
+
+        return $candidates;
     }
 }
