@@ -187,6 +187,56 @@ php bin/console app:competitions:geocode --limit=5000 --retry-unresolved --env=p
 php bin/console app:competitions:geocode --limit=5000 --retry-unresolved --write --env=prod
 ```
 
+## Known Competition Results Crawl
+
+Known scoring.fit and Competition Corner competitions are discovered by the
+Python crawler before or during the event. After they have ended, Symfony can
+ask the Python worker to crawl their WODs, athletes and results, then import the
+returned `competition-results.v1` payload.
+
+The command requires the Python worker to be reachable from the Symfony server:
+
+```env
+PYTHON_WORKER_BASE_URL=http://127.0.0.1:8000
+PYTHON_WORKER_TIMEOUT_SECONDS=300
+```
+
+When PHP and Python run on the same server, `http://127.0.0.1:8000` is the
+preferred URL. If Python is hosted elsewhere, override `PYTHON_WORKER_BASE_URL`
+in production `.env.local`.
+
+Manual run:
+
+```bash
+cd /var/www/crossfit
+flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20
+```
+
+Use `--force` only for an explicit manual retry, for example after a worker
+endpoint bug or outage. The regular cron should omit it so recent failed/empty
+attempts are not retried continuously.
+
+Recommended daily cron:
+
+```cron
+25 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20 >> var/log/known-competition-results-crawl.log 2>&1
+```
+
+## Production Cron Schedule
+
+Current recommended production schedule:
+
+```cron
+0 */2 * * * cd /var/www/crossfit-analyser && SYMFONY_SYNC_LOCAL_IMPORT=1 SYMFONY_SYNC_PROJECT_PATH=/var/www/crossfit .venv/bin/python scripts/sync_symfony_after_crawl.py --force-sync -- --skip-scoring-fit --crossfit-games-athlete-batch-size 10 >> logs/symfony-sync.log 2>&1
+45 */2 * * * cd /var/www/crossfit && ./scripts/run_competition_geo_maintenance.sh >> var/log/competition-geo-maintenance.log 2>&1
+20 * * * * cd /var/www/crossfit && APP_DEBUG=0 php bin/console app:athletes:backfill-games-photos --limit=50 --env=prod --no-debug >> var/log/games-photo-backfill.log 2>&1
+15 3 * * * /usr/local/bin/monwod-backup.sh >> /var/log/monwod-backup.log 2>&1
+25 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20 >> var/log/known-competition-results-crawl.log 2>&1
+```
+
+Cron expression warning: `* */2 * * *` means "every minute during every even
+hour", not "every two hours". Use `0 */2 * * *` for once every two hours.
+
 ## Smoke Test
 
 After deployment:
