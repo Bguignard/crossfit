@@ -259,6 +259,9 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('queued', $analysisPayload['status']);
         self::assertSame('Competition Only Athlete', $analysisPayload['athleteProfile']['athlete']['displayName']);
         self::assertSame([], $analysisPayload['inputSnapshot']['performance_metrics']);
+        self::assertSame('weak', $analysisPayload['inputSnapshot']['prescription_guidance']['confidenceLevel']);
+        self::assertSame('avoid_absolute_loads', $analysisPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
+        self::assertSame([], $analysisPayload['inputSnapshot']['prescription_guidance']['knownLoadMetrics']);
         self::assertCount(1, $analysisPayload['inputSnapshot']['athlete_profiles']);
         self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
     }
@@ -365,6 +368,9 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('Bruno Games', $analysisPayload['athleteProfile']['athlete']['displayName']);
         self::assertSame(150, $analysisPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
         self::assertSame('weak', $analysisPayload['inputSnapshot']['performance_data_quality']['level']);
+        self::assertSame('known_rms_only', $analysisPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
+        self::assertEquals(150.0, $analysisPayload['inputSnapshot']['prescription_guidance']['knownLoadMetrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertContains(PerformanceMetricKeyEnum::DEADLIFT_1RM->value, $analysisPayload['inputSnapshot']['prescription_guidance']['missingEssentialLoadMetrics']);
         self::assertCount(2, $analysisPayload['inputSnapshot']['athlete_profiles']);
         self::assertSame(['crossfit_games', 'competition_corner'], array_values(array_unique(array_column($analysisPayload['inputSnapshot']['athlete_profiles'], 'source_name'))));
         self::assertContains('Open 26.1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
@@ -453,6 +459,8 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(5, $programmingPayload['constraints']['sessionsPerWeek']);
         self::assertSame(60, $programmingPayload['constraints']['sessionDurationMinutes']);
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
+        self::assertSame('weak', $programmingPayload['inputSnapshot']['performance_data_quality']['level']);
+        self::assertSame('known_rms_only', $programmingPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
         self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
         self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
         self::assertSame($initialMessengerMessages + 2, $this->messengerMessageCount());
