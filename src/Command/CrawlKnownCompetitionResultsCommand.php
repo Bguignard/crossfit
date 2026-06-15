@@ -38,6 +38,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum ended competitions to inspect.', 20)
             ->addOption('min-ended-hours', null, InputOption::VALUE_REQUIRED, 'Minimum hours since competition end before crawling.', 24)
             ->addOption('retry-after-hours', null, InputOption::VALUE_REQUIRED, 'Minimum hours before retrying a failed or empty crawl.', 24)
+            ->addOption('retry-recent', null, InputOption::VALUE_NONE, 'Ignore the recent-attempt cooldown while still skipping competitions with imported results.')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Crawl even when imported results already exist or a recent attempt was recorded.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Only report eligible competitions without calling the Python worker.');
     }
@@ -49,6 +50,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $minEndedHours = max(1, (int) $input->getOption('min-ended-hours'));
         $retryAfterHours = max(1, (int) $input->getOption('retry-after-hours'));
+        $retryRecent = (bool) $input->getOption('retry-recent');
         $force = (bool) $input->getOption('force');
         $dryRun = (bool) $input->getOption('dry-run');
         $endedBefore = $now->sub(new \DateInterval(sprintf('PT%dH', $minEndedHours)));
@@ -59,7 +61,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         $errors = 0;
 
         foreach ($competitions as $competition) {
-            $decision = $this->skipReason($competition, $now, $retryAfterHours, $force);
+            $decision = $this->skipReason($competition, $now, $retryAfterHours, $force, $retryRecent);
             if ($decision !== null) {
                 $rows[] = $this->reportRow($competition, 'skipped', $decision);
 
@@ -127,8 +129,13 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         return $competitions;
     }
 
-    private function skipReason(Competition $competition, \DateTimeImmutable $now, int $retryAfterHours, bool $force): ?string
-    {
+    private function skipReason(
+        Competition $competition,
+        \DateTimeImmutable $now,
+        int $retryAfterHours,
+        bool $force,
+        bool $retryRecent,
+    ): ?string {
         if ($force) {
             return null;
         }
@@ -136,6 +143,10 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         $resultCount = $this->resultCount($competition);
         if ($resultCount > 0) {
             return sprintf('already has %d imported results', $resultCount);
+        }
+
+        if ($retryRecent) {
+            return null;
         }
 
         $lastAttemptAt = $this->lastAttemptAt($competition);
