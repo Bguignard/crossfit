@@ -9,6 +9,7 @@ use App\Entity\Competition\AthletePublicAnalysis;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\CompetitionOfficialQualification;
 use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
@@ -140,9 +141,14 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setLocationLabel('Paris, France')
             ->setCountryName('France')
             ->setParticipationType('individual');
+        $officialQualification = (new CompetitionOfficialQualification($franceUpcoming, 'crossfit_games', 'semifinals', 'elite'))
+            ->setSeason(2026)
+            ->confirm();
+        $suggestedQualification = (new CompetitionOfficialQualification($staleUpcoming, 'crossfit_games', 'semifinals', 'elite'))
+            ->setSeason(2026);
 
-        foreach ([$franceUpcoming, $usaUpcoming, $pastOpen, $staleUpcoming] as $competition) {
-            $entityManager->persist($competition);
+        foreach ([$franceUpcoming, $usaUpcoming, $pastOpen, $staleUpcoming, $officialQualification, $suggestedQualification] as $entity) {
+            $entityManager->persist($entity);
         }
         $entityManager->flush();
 
@@ -158,6 +164,15 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('FR', $payload['member'][0]['countryCode']);
         self::assertSame('Ile-de-France', $payload['member'][0]['regionName']);
         self::assertSame('Paris', $payload['member'][0]['cityName']);
+        self::assertSame([
+            [
+                'circuit' => 'crossfit_games',
+                'stage' => 'semifinals',
+                'divisionPattern' => 'elite',
+                'season' => 2026,
+                'label' => 'CrossFit Games Semifinal 2026',
+            ],
+        ], $payload['member'][0]['officialQualifications']);
         self::assertContains('France', $payload['countries']);
         self::assertContains('United States', $payload['countries']);
         self::assertSame(['Île-de-France'], $payload['regions']);
@@ -421,6 +436,9 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $otherAthlete = new Athlete('Other Athlete', 'crossfit_games', 'other-athlete');
         $competition = (new Competition('2019 Games', 'crossfit_games', 'games-2019'))
             ->setSeason(2019);
+        $officialQualification = (new CompetitionOfficialQualification($competition, 'crossfit_games', 'semifinals', 'elite'))
+            ->setSeason(2019)
+            ->confirm();
         $scoringCompetition = (new Competition('Scoring Event', 'scoring_fit', 'scoring-event'))
             ->setSeason(2026);
         $event = (new CompetitionEvent($competition, 'Event 1', 'crossfit_games', 'games-2019-event-1'))
@@ -458,6 +476,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             $cornerResult,
             $scoringResult,
             $otherResult,
+            $officialQualification,
         ] as $entity) {
             $entityManager->persist($entity);
         }
@@ -479,6 +498,15 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotNull($gamesPayload);
         self::assertSame('2019 Games', $gamesPayload['competitionDetails']['name']);
         self::assertArrayHasKey('logoUrl', $gamesPayload['competitionDetails']);
+        self::assertSame([
+            [
+                'circuit' => 'crossfit_games',
+                'stage' => 'semifinals',
+                'divisionPattern' => 'elite',
+                'season' => 2019,
+                'label' => 'CrossFit Games Semifinal 2019',
+            ],
+        ], $gamesPayload['competitionDetails']['officialQualifications']);
         self::assertSame('Event 1', $gamesPayload['eventDetails']['name']);
         self::assertSame('Open 17.5', $gamesPayload['workoutDetails']['name']);
         self::assertArrayHasKey('scoreDetails', $gamesPayload);
