@@ -7,6 +7,7 @@ use App\Entity\Competition\CompetitionParticipation;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
 use App\Services\Competition\AthleteNameNormalizer;
+use App\Services\Competition\CompetitionOfficialQualificationPresenter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,6 +16,10 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AthleteResultSummaryController extends AbstractController
 {
+    public function __construct(private readonly CompetitionOfficialQualificationPresenter $qualificationPresenter)
+    {
+    }
+
     #[Route('/api/athletes/{id}/result-summary', name: 'api_athlete_result_summary', methods: ['GET'])]
     public function __invoke(
         string $id,
@@ -133,6 +138,7 @@ final class AthleteResultSummaryController extends AbstractController
                 'externalId' => $competition->getExternalId(),
                 'sourceUrl' => $competition->getSourceUrl(),
                 'logoUrl' => $competition->getLogoUrl(),
+                'officialQualifications' => $this->qualificationPresenter->confirmedPayload($competition),
             ],
             'competitionDivisionDetails' => $division ? [
                 '@id' => '/api/competition_divisions/'.$division->getId(),
@@ -187,6 +193,7 @@ final class AthleteResultSummaryController extends AbstractController
                 'sourceUrl' => $competition->getSourceUrl(),
                 'registrationUrl' => $competition->getRegistrationUrl(),
                 'logoUrl' => $competition->getLogoUrl(),
+                'officialQualifications' => $this->qualificationPresenter->confirmedPayload($competition),
                 'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
                 'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
                 'locationLabel' => $competition->getLocationLabel(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Competition;
 
 use App\Entity\Competition\Competition;
+use App\Services\Competition\CompetitionOfficialQualificationPresenter;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -48,8 +49,10 @@ final class CompetitionCatalogController extends AbstractController
         'reunion' => 'La Réunion',
     ];
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly CompetitionOfficialQualificationPresenter $qualificationPresenter,
+    ) {
     }
 
     #[Route('/api/competition-catalog', name: 'competition_catalog', methods: ['GET'])]
@@ -346,6 +349,7 @@ final class CompetitionCatalogController extends AbstractController
             'externalId' => $competition->getExternalId(),
             'sourceUrl' => $competition->getSourceUrl(),
             'logoUrl' => $competition->getLogoUrl(),
+            'officialQualifications' => $this->qualificationPresenter->confirmedPayload($competition),
             'status' => $competition->getStatus(),
             'startsAt' => $competition->getStartsAt()?->format(DATE_ATOM),
             'endsAt' => $competition->getEndsAt()?->format(DATE_ATOM),
