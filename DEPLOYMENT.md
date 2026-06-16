@@ -226,6 +226,35 @@ Recommended daily cron:
 25 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20 >> var/log/known-competition-results-crawl.log 2>&1
 ```
 
+## Competition Logo Backfill
+
+Competition imports can create future, live or past competitions before their
+logo is known locally. Symfony can enrich missing Competition Corner and
+scoring.fit logos after the competition exists in the database:
+
+```bash
+cd /var/www/crossfit
+php bin/console app:competitions:backfill-logos --env=prod --limit=30
+```
+
+Useful options:
+
+- `--source=competition_corner` or `--source=scoring_fit` limits the source.
+- `--external-id=20465` targets one known competition.
+- `--dry-run` fetches and reports logos without writing.
+- `--force` refreshes existing logos and clears stale ones if the source no
+  longer exposes a logo.
+
+The regular cron should omit `--force` so it only enriches competitions still
+missing a logo. Use a `flock` lock because the command performs external HTTP
+requests.
+
+Recommended daily cron:
+
+```cron
+45 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-backfill-competition-logos.lock php bin/console app:competitions:backfill-logos --env=prod --limit=30 >> var/log/competition-logo-backfill.log 2>&1
+```
+
 ## Production Cron Schedule
 
 Current recommended production schedule:
@@ -236,6 +265,7 @@ Current recommended production schedule:
 20 * * * * cd /var/www/crossfit && APP_DEBUG=0 php bin/console app:athletes:backfill-games-photos --limit=50 --env=prod --no-debug >> var/log/games-photo-backfill.log 2>&1
 15 3 * * * /usr/local/bin/monwod-backup.sh >> /var/log/monwod-backup.log 2>&1
 25 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-crawl-known-results.lock php bin/console app:competitions:crawl-known-results --env=prod --limit=20 >> var/log/known-competition-results-crawl.log 2>&1
+45 5 * * * cd /var/www/crossfit && flock -n /tmp/monwod-backfill-competition-logos.lock php bin/console app:competitions:backfill-logos --env=prod --limit=30 >> var/log/competition-logo-backfill.log 2>&1
 ```
 
 Cron expression warning: `* */2 * * *` means "every minute during every even
