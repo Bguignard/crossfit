@@ -7,6 +7,7 @@ use App\Entity\Competition\Athlete;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionDivision;
 use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\CompetitionOfficialQualification;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
@@ -188,10 +189,90 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testAdminCanManageOfficialCompetitionQualifications(): void
+    {
+        $admin = new User('admin@example.com');
+        $admin->setPassword('test-password');
+        $admin->setRoles(['ROLE_ADMIN']);
+
+        $competition = (new Competition('West Coast Classic', 'competition_corner', 'semifinal-2026'))
+            ->setSeason(2026);
+        $division = new CompetitionDivision($competition, 'Individual Women', 'competition_corner', 'semifinal-2026-women');
+        $suggestedQualification = (new CompetitionOfficialQualification($competition, 'crossfit_games', 'semifinals', 'elite'))
+            ->setSeason(2026)
+            ->suggest();
+
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist($admin);
+        $entityManager->persist($competition);
+        $entityManager->persist($division);
+        $entityManager->persist($suggestedQualification);
+        $entityManager->flush();
+
+        $this->browser()->loginUser($admin);
+        $this->browser()->request('GET', sprintf('/api/admin/official-qualifications/competitions/%s', $competition->getId()));
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('West Coast Classic', $payload['competition']['name']);
+        self::assertSame([
+            [
+                'name' => 'Individual Women',
+                'pattern' => 'Individual Women',
+                'externalId' => 'semifinal-2026-women',
+            ],
+        ], $payload['divisionOptions']);
+        self::assertSame('suggested', $payload['qualifications'][0]['status']);
+        self::assertSame('elite', $payload['qualifications'][0]['divisionPattern']);
+
+        $this->browser()->jsonRequest('POST', sprintf('/api/admin/official-qualifications/competitions/%s', $competition->getId()), [
+            'action' => 'confirm',
+            'divisionPattern' => 'Individual Women',
+            'season' => 2026,
+            'notes' => 'Manual Semifinal confirmation.',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $confirmed = $this->qualificationByPattern($payload['qualifications'], 'Individual Women');
+        self::assertSame('confirmed', $confirmed['status']);
+        self::assertSame('CrossFit Games Semifinal 2026', $confirmed['label']);
+        self::assertSame('Manual Semifinal confirmation.', $confirmed['notes']);
+        self::assertNotNull($confirmed['confirmedAt']);
+
+        $this->browser()->jsonRequest('POST', sprintf('/api/admin/official-qualifications/competitions/%s', $competition->getId()), [
+            'action' => 'dismiss',
+            'divisionPattern' => 'Individual Women',
+            'season' => 2026,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $dismissed = $this->qualificationByPattern($payload['qualifications'], 'Individual Women');
+        self::assertSame('dismissed', $dismissed['status']);
+        self::assertNotNull($dismissed['dismissedAt']);
+    }
+
     public function testAnonymousUsersCannotReadAdminMetrics(): void
     {
         $this->browser()->request('GET', '/api/admin/metrics');
 
         self::assertContains($this->browser()->getResponse()->getStatusCode(), [401, 403]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $qualifications
+     *
+     * @return array<string, mixed>
+     */
+    private function qualificationByPattern(array $qualifications, string $divisionPattern): array
+    {
+        foreach ($qualifications as $qualification) {
+            if (($qualification['divisionPattern'] ?? null) === $divisionPattern) {
+                return $qualification;
+            }
+        }
+
+        self::fail(sprintf('Qualification "%s" not found.', $divisionPattern));
     }
 }
