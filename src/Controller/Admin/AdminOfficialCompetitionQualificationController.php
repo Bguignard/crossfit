@@ -22,6 +22,30 @@ final class AdminOfficialCompetitionQualificationController extends AbstractCont
     {
     }
 
+    #[Route('/api/admin/official-qualifications', name: 'api_admin_official_qualifications_index', methods: ['GET'])]
+    public function index(Request $request): JsonResponse
+    {
+        $statuses = $this->statusValues($request->query->all('status'));
+        $limit = $this->limit($request->query->get('limit'));
+
+        /** @var list<CompetitionOfficialQualification> $qualifications */
+        $qualifications = $this->entityManager->getRepository(CompetitionOfficialQualification::class)
+            ->createQueryBuilder('qualification')
+            ->innerJoin('qualification.competition', 'competition')
+            ->addSelect('competition')
+            ->andWhere('qualification.status IN (:statuses)')
+            ->setParameter('statuses', $statuses)
+            ->orderBy('qualification.updatedAt', 'DESC')
+            ->addOrderBy('competition.name', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $this->json([
+            'qualifications' => array_map(fn (CompetitionOfficialQualification $qualification): array => $this->qualificationPayload($qualification, true), $qualifications),
+        ]);
+    }
+
     #[Route('/api/admin/official-qualifications/competitions/{id}', name: 'api_admin_official_qualifications_competition', methods: ['GET'])]
     public function show(string $id): JsonResponse
     {
@@ -93,16 +117,7 @@ final class AdminOfficialCompetitionQualificationController extends AbstractCont
     private function payload(Competition $competition): array
     {
         return [
-            'competition' => [
-                'id' => (string) $competition->getId(),
-                'name' => $competition->getName(),
-                'season' => $competition->getSeason(),
-                'sourceName' => $competition->getSourceName(),
-                'externalId' => $competition->getExternalId(),
-                'logoUrl' => $competition->getLogoUrl(),
-                'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
-                'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
-            ],
+            'competition' => $this->competitionPayload($competition),
             'divisionOptions' => $this->divisionOptions($competition),
             'qualifications' => $this->qualifications($competition),
         ];
@@ -150,7 +165,32 @@ final class AdminOfficialCompetitionQualificationController extends AbstractCont
             ->getQuery()
             ->getResult();
 
-        return array_map(fn (CompetitionOfficialQualification $qualification): array => [
+        return array_map(fn (CompetitionOfficialQualification $qualification): array => $this->qualificationPayload($qualification), $qualifications);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function competitionPayload(Competition $competition): array
+    {
+        return [
+            'id' => (string) $competition->getId(),
+            'name' => $competition->getName(),
+            'season' => $competition->getSeason(),
+            'sourceName' => $competition->getSourceName(),
+            'externalId' => $competition->getExternalId(),
+            'logoUrl' => $competition->getLogoUrl(),
+            'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
+            'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function qualificationPayload(CompetitionOfficialQualification $qualification, bool $includeCompetition = false): array
+    {
+        $payload = [
             'id' => (string) $qualification->getId(),
             'circuit' => $qualification->getCircuit(),
             'stage' => $qualification->getStage(),
@@ -162,7 +202,13 @@ final class AdminOfficialCompetitionQualificationController extends AbstractCont
             'label' => $this->label($qualification),
             'confirmedAt' => $qualification->getConfirmedAt()?->format(\DateTimeInterface::ATOM),
             'dismissedAt' => $qualification->getDismissedAt()?->format(\DateTimeInterface::ATOM),
-        ], $qualifications);
+        ];
+
+        if ($includeCompetition) {
+            $payload['competition'] = $this->competitionPayload($qualification->getCompetition());
+        }
+
+        return $payload;
     }
 
     private function findQualification(
@@ -224,6 +270,42 @@ final class AdminOfficialCompetitionQualificationController extends AbstractCont
         }
 
         return (int) $season;
+    }
+
+    /**
+     * @param list<mixed> $values
+     *
+     * @return non-empty-list<string>
+     */
+    private function statusValues(array $values): array
+    {
+        $allowedStatuses = [
+            CompetitionOfficialQualification::STATUS_CONFIRMED,
+            CompetitionOfficialQualification::STATUS_SUGGESTED,
+            CompetitionOfficialQualification::STATUS_DISMISSED,
+        ];
+        $statuses = [];
+
+        foreach ($values as $value) {
+            foreach (explode(',', (string) $value) as $status) {
+                $status = trim($status);
+                if (in_array($status, $allowedStatuses, true)) {
+                    $statuses[$status] = $status;
+                }
+            }
+        }
+
+        return array_values($statuses) ?: [
+            CompetitionOfficialQualification::STATUS_CONFIRMED,
+            CompetitionOfficialQualification::STATUS_SUGGESTED,
+        ];
+    }
+
+    private function limit(mixed $value): int
+    {
+        $limit = (int) $this->stringValue($value);
+
+        return min(100, max(1, $limit ?: 50));
     }
 
     private function adminUser(): ?User

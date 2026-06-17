@@ -240,6 +240,15 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertSame('Manual Semifinal confirmation.', $confirmed['notes']);
         self::assertNotNull($confirmed['confirmedAt']);
 
+        $this->browser()->request('GET', '/api/admin/official-qualifications');
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $listedQualification = $this->qualificationByPattern($payload['qualifications'], 'Individual Women');
+        self::assertSame('West Coast Classic', $listedQualification['competition']['name']);
+        self::assertSame((string) $competition->getId(), $listedQualification['competition']['id']);
+        self::assertSame('confirmed', $listedQualification['status']);
+
         $this->browser()->jsonRequest('POST', sprintf('/api/admin/official-qualifications/competitions/%s', $competition->getId()), [
             'action' => 'dismiss',
             'divisionPattern' => 'Individual Women',
