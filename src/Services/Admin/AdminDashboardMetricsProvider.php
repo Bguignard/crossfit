@@ -130,28 +130,16 @@ class AdminDashboardMetricsProvider
     {
         $byRequestType = [
             'analysis' => $this->sumUsageForPayloads(
-                array_map(
-                    static fn (PerformanceAnalysisRequest $request): ?array => $request->getResult(),
-                    $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findAll(),
-                ),
+                $this->jsonPayloads(PerformanceAnalysisRequest::class, 'result'),
             ),
             'programming' => $this->sumUsageForPayloads(
-                array_map(
-                    static fn (ProgrammingGenerationRequest $request): ?array => $request->getGeneratedProgramming(),
-                    $this->entityManager->getRepository(ProgrammingGenerationRequest::class)->findAll(),
-                ),
+                $this->jsonPayloads(ProgrammingGenerationRequest::class, 'generatedProgramming'),
             ),
             'programming_session_details' => $this->sumUsageForPayloads(
-                array_map(
-                    static fn (ProgrammingSessionDetailRequest $request): ?array => $request->getDetailedProgramming(),
-                    $this->entityManager->getRepository(ProgrammingSessionDetailRequest::class)->findAll(),
-                ),
+                $this->jsonPayloads(ProgrammingSessionDetailRequest::class, 'detailedProgramming'),
             ),
             'workout_generation' => $this->sumUsagePayloads(
-                array_map(
-                    static fn (Workout $workout): ?array => $workout->getAiUsage(),
-                    $this->entityManager->getRepository(Workout::class)->findAll(),
-                ),
+                $this->jsonPayloads(Workout::class, 'aiUsage'),
             ),
         ];
 
@@ -161,6 +149,27 @@ class AdminDashboardMetricsProvider
             'completion_tokens' => array_sum(array_column($byRequestType, 'completion_tokens')),
             'by_request_type' => $byRequestType,
         ];
+    }
+
+    /**
+     * @param class-string $entityClass
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function jsonPayloads(string $entityClass, string $field): array
+    {
+        /** @var list<array{payload: array<string, mixed>|null}> $rows */
+        $rows = $this->entityManager
+            ->createQueryBuilder()
+            ->select(sprintf('entity.%s AS payload', $field))
+            ->from($entityClass, 'entity')
+            ->andWhere(sprintf('entity.%s IS NOT NULL', $field))
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_values(array_filter(
+            array_map(static fn (array $row): ?array => is_array($row['payload'] ?? null) ? $row['payload'] : null, $rows),
+        ));
     }
 
     /**
