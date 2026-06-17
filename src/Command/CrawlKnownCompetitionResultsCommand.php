@@ -82,16 +82,17 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             try {
                 $response = $this->pythonWorkerClient->crawlCompetitionResults($competition);
                 $payload = $this->competitionResultsPayload($response);
+                $crawlSummary = $this->crawlSummary($response);
                 $report = $this->importCommand->importPayload($payload);
                 $changes = $this->importedChanges($report['summary']);
                 $status = $report['hasFailures'] ? 'failed' : ($changes > 0 ? 'imported' : 'empty');
                 $details = $report['hasFailures']
                     ? implode('; ', $report['errors'])
-                    : sprintf('%d imported changes', $changes);
+                    : $this->crawlDetails($changes, $crawlSummary);
                 if ($report['hasFailures']) {
                     ++$errors;
                 }
-                $this->markAttempt($competition, $attemptedAt, $status, $details, $changes);
+                $this->markAttempt($competition, $attemptedAt, $status, $details, $changes, $crawlSummary);
                 $rows[] = $this->reportRow($competition, $status, $details);
             } catch (\Throwable $exception) {
                 ++$errors;
@@ -199,6 +200,18 @@ final class CrawlKnownCompetitionResultsCommand extends Command
     }
 
     /**
+     * @param array<string, mixed> $response
+     *
+     * @return array<string, mixed>|null
+     */
+    private function crawlSummary(array $response): ?array
+    {
+        $summary = $response['crawl_summary'] ?? null;
+
+        return is_array($summary) ? $summary : null;
+    }
+
+    /**
      * @param array<string, array{created: int, updated: int, skipped: int, failed: int}> $summary
      */
     private function importedChanges(array $summary): int
@@ -211,12 +224,75 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         return $changes;
     }
 
+    /**
+     * @param array<string, mixed>|null $crawlSummary
+     */
+    private function crawlDetails(int $importedChanges, ?array $crawlSummary): string
+    {
+        $details = [sprintf('%d imported changes', $importedChanges)];
+        if ($crawlSummary === null) {
+            return $details[0];
+        }
+
+        $summaryParts = [];
+        foreach ([
+            'requested' => 'requested',
+            'indexed_competitions' => 'indexed',
+            'discovered_profiles' => 'profiles',
+            'imported_workouts' => 'workouts',
+            'imported_results' => 'results',
+        ] as $key => $label) {
+            $value = $this->summaryInt($crawlSummary, $key);
+            if ($value !== null) {
+                $summaryParts[] = sprintf('%s %d', $label, $value);
+            }
+        }
+
+        foreach ([
+            'skipped_existing' => 'skipped',
+            'missing_or_unavailable' => 'missing',
+            'missing_competitions' => 'missing',
+        ] as $key => $label) {
+            $count = $this->summaryListCount($crawlSummary, $key);
+            if ($count > 0) {
+                $summaryParts[] = sprintf('%s %d', $label, $count);
+            }
+        }
+
+        if ($summaryParts !== []) {
+            $details[] = 'crawl '.implode(', ', $summaryParts);
+        }
+
+        return implode('; ', $details);
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     */
+    private function summaryInt(array $summary, string $key): ?int
+    {
+        $value = $summary[$key] ?? null;
+
+        return is_int($value) ? $value : null;
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     */
+    private function summaryListCount(array $summary, string $key): int
+    {
+        $value = $summary[$key] ?? null;
+
+        return is_array($value) ? count($value) : 0;
+    }
+
     private function markAttempt(
         Competition $competition,
         \DateTimeImmutable $attemptedAt,
         string $status,
         ?string $details = null,
         ?int $importedChanges = null,
+        ?array $crawlSummary = null,
     ): void {
         $metadata = $competition->getMetadata() ?? [];
         $metadata['postEventResultCrawl'] = array_filter([
@@ -225,6 +301,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             'lastStatus' => $status,
             'lastDetails' => $details,
             'lastImportedChanges' => $importedChanges,
+            'lastCrawlSummary' => $crawlSummary,
         ], static fn (mixed $value): bool => $value !== null);
         $competition->setMetadata($metadata);
     }
