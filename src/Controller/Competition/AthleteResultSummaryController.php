@@ -95,6 +95,7 @@ final class AthleteResultSummaryController extends AbstractController
             'score' => '/api/scores/'.$score->getId(),
             'rank' => $result->getRank(),
             'fieldSize' => $result->getFieldSize(),
+            'rankContext' => $this->rankContext($result),
             'division' => $divisionName,
             'participationDetails' => [
                 'rank' => $result->getCompetitionRank(),
@@ -125,6 +126,7 @@ final class AthleteResultSummaryController extends AbstractController
                 'competition' => '/api/competitions/'.$competition->getId(),
                 'workout' => $workout instanceof Workout ? '/api/workouts/'.$workout->getId() : null,
                 'name' => $event->getName(),
+                'eventOrder' => $event->getEventOrder(),
                 'sourceName' => $event->getSourceName(),
                 'externalId' => $event->getExternalId(),
                 'sourceUrl' => $event->getSourceUrl(),
@@ -134,10 +136,16 @@ final class AthleteResultSummaryController extends AbstractController
                 'id' => (string) $competition->getId(),
                 'name' => $competition->getName(),
                 'season' => $competition->getSeason(),
+                'status' => $competition->getStatus(),
                 'sourceName' => $competition->getSourceName(),
                 'externalId' => $competition->getExternalId(),
                 'sourceUrl' => $competition->getSourceUrl(),
                 'logoUrl' => $competition->getLogoUrl(),
+                'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
+                'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
+                'locationLabel' => $competition->getLocationLabel(),
+                'competitionType' => $competition->getCompetitionType(),
+                'participationType' => $competition->getParticipationType(),
                 'officialQualifications' => $this->qualificationPresenter->confirmedPayload($competition),
             ],
             'competitionDivisionDetails' => $division ? [
@@ -209,6 +217,39 @@ final class AthleteResultSummaryController extends AbstractController
         $flow = trim($workout->getFlow());
 
         return in_array($flow, ['*', '-', '–', '—'], true) ? null : $flow;
+    }
+
+    /**
+     * @return array{
+     *     rank: ?int,
+     *     fieldSize: ?int,
+     *     label: ?string,
+     *     rankPercent: ?float,
+     *     percentile: ?float
+     * }
+     */
+    private function rankContext(WorkoutResult $result): array
+    {
+        $rank = $result->getRank();
+        $fieldSize = $result->getFieldSize();
+
+        if ($rank === null || $fieldSize === null || $rank <= 0 || $fieldSize <= 0) {
+            return [
+                'rank' => $rank,
+                'fieldSize' => $fieldSize,
+                'label' => null,
+                'rankPercent' => null,
+                'percentile' => null,
+            ];
+        }
+
+        return [
+            'rank' => $rank,
+            'fieldSize' => $fieldSize,
+            'label' => sprintf('%d / %d', $rank, $fieldSize),
+            'rankPercent' => round(($rank / $fieldSize) * 100, 2),
+            'percentile' => round((($fieldSize - $rank) / $fieldSize) * 100, 2),
+        ];
     }
 
     /**
