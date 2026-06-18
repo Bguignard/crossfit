@@ -92,7 +92,15 @@ final class CrawlKnownCompetitionResultsCommand extends Command
                 if ($report['hasFailures']) {
                     ++$errors;
                 }
-                $this->markAttempt($competition, $attemptedAt, $status, $details, $changes, $crawlSummary);
+                $this->markAttempt(
+                    $competition,
+                    $attemptedAt,
+                    $status,
+                    $details,
+                    $changes,
+                    $crawlSummary,
+                    $this->crawlEventStatusCounts($crawlSummary),
+                );
                 $rows[] = $this->reportRow($competition, $status, $details);
             } catch (\Throwable $exception) {
                 ++$errors;
@@ -263,7 +271,43 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             $details[] = 'crawl '.implode(', ', $summaryParts);
         }
 
+        $eventStatusParts = [];
+        foreach ($this->crawlEventStatusCounts($crawlSummary) as $status => $count) {
+            $eventStatusParts[] = sprintf('%s %d', $status, $count);
+        }
+
+        if ($eventStatusParts !== []) {
+            $details[] = 'events '.implode(', ', $eventStatusParts);
+        }
+
         return implode('; ', $details);
+    }
+
+    /**
+     * @param array<string, mixed>|null $crawlSummary
+     *
+     * @return array<string, int>
+     */
+    private function crawlEventStatusCounts(?array $crawlSummary): array
+    {
+        $events = $crawlSummary['events'] ?? null;
+        if (!is_array($events)) {
+            return [];
+        }
+
+        $counts = [];
+        foreach ($events as $event) {
+            if (!is_array($event) || !is_string($event['status'] ?? null)) {
+                continue;
+            }
+
+            $status = $event['status'];
+            $counts[$status] = ($counts[$status] ?? 0) + 1;
+        }
+
+        ksort($counts);
+
+        return $counts;
     }
 
     /**
@@ -293,6 +337,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
         ?string $details = null,
         ?int $importedChanges = null,
         ?array $crawlSummary = null,
+        ?array $crawlEventStatusCounts = null,
     ): void {
         $metadata = $competition->getMetadata() ?? [];
         $metadata['postEventResultCrawl'] = array_filter([
@@ -302,6 +347,7 @@ final class CrawlKnownCompetitionResultsCommand extends Command
             'lastDetails' => $details,
             'lastImportedChanges' => $importedChanges,
             'lastCrawlSummary' => $crawlSummary,
+            'lastCrawlEventStatuses' => $crawlEventStatusCounts === [] ? null : $crawlEventStatusCounts,
         ], static fn (mixed $value): bool => $value !== null);
         $competition->setMetadata($metadata);
     }
