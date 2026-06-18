@@ -435,13 +435,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setLastName('Garat');
         $otherAthlete = new Athlete('Other Athlete', 'crossfit_games', 'other-athlete');
         $competition = (new Competition('2019 Games', 'crossfit_games', 'games-2019'))
-            ->setSeason(2019);
+            ->setSeason(2019)
+            ->setStatus('past')
+            ->setStartsAt(new \DateTimeImmutable('2019-08-01T09:00:00+00:00'))
+            ->setEndsAt(new \DateTimeImmutable('2019-08-04T18:00:00+00:00'))
+            ->setLocationLabel('Madison, Wisconsin')
+            ->setCompetitionType('functional_fitness')
+            ->setParticipationType('individual');
         $officialQualification = (new CompetitionOfficialQualification($competition, 'crossfit_games', 'semifinals', 'elite'))
             ->setSeason(2019)
             ->confirm();
         $scoringCompetition = (new Competition('Scoring Event', 'scoring_fit', 'scoring-event'))
             ->setSeason(2026);
         $event = (new CompetitionEvent($competition, 'Event 1', 'crossfit_games', 'games-2019-event-1'))
+            ->setEventOrder(1)
             ->setWorkout($workout);
         $scoringEvent = new CompetitionEvent($scoringCompetition, 'Scoring WOD 1', 'scoring_fit', 'scoring-event-1');
         $division = new CompetitionDivision($competition, 'Women', 'crossfit_games', 'games-2019-women');
@@ -498,6 +505,12 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotNull($gamesPayload);
         self::assertSame('2019 Games', $gamesPayload['competitionDetails']['name']);
         self::assertArrayHasKey('logoUrl', $gamesPayload['competitionDetails']);
+        self::assertSame('past', $gamesPayload['competitionDetails']['status']);
+        self::assertSame('2019-08-01T09:00:00+00:00', $gamesPayload['competitionDetails']['startsAt']);
+        self::assertSame('2019-08-04T18:00:00+00:00', $gamesPayload['competitionDetails']['endsAt']);
+        self::assertSame('Madison, Wisconsin', $gamesPayload['competitionDetails']['locationLabel']);
+        self::assertSame('functional_fitness', $gamesPayload['competitionDetails']['competitionType']);
+        self::assertSame('individual', $gamesPayload['competitionDetails']['participationType']);
         self::assertSame([
             [
                 'circuit' => 'crossfit_games',
@@ -508,7 +521,15 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ],
         ], $gamesPayload['competitionDetails']['officialQualifications']);
         self::assertSame('Event 1', $gamesPayload['eventDetails']['name']);
+        self::assertSame(1, $gamesPayload['eventDetails']['eventOrder']);
         self::assertSame('Open 17.5', $gamesPayload['workoutDetails']['name']);
+        self::assertSame([
+            'rank' => 12,
+            'fieldSize' => 40,
+            'label' => '12 / 40',
+            'rankPercent' => 30,
+            'percentile' => 70,
+        ], $gamesPayload['rankContext']);
         self::assertArrayHasKey('scoreDetails', $gamesPayload);
         self::assertSame([
             'rank' => '8',
