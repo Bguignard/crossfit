@@ -59,7 +59,12 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
             'crawl requested 1, indexed 1, profiles 1, results 1',
             $storedCompetition->getMetadata()['postEventResultCrawl']['lastDetails'] ?? '',
         );
+        self::assertStringContainsString(
+            'events imported 1',
+            $storedCompetition->getMetadata()['postEventResultCrawl']['lastDetails'] ?? '',
+        );
         self::assertSame(1, $storedCompetition->getMetadata()['postEventResultCrawl']['lastCrawlSummary']['requested'] ?? null);
+        self::assertSame(1, $storedCompetition->getMetadata()['postEventResultCrawl']['lastCrawlEventStatuses']['imported'] ?? null);
 
         $tester = new CommandTester(new CrawlKnownCompetitionResultsCommand(
             $this->getEntityManager(),
@@ -138,6 +143,16 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
                 'missing_or_unavailable' => [],
                 'discovered_profiles' => 1,
                 'imported_results' => 1,
+                'events' => [
+                    [
+                        'event_id' => $competition->getExternalId(),
+                        'status' => 'imported',
+                        'competition_name' => $competition->getName(),
+                        'profiles' => 1,
+                        'participations' => 1,
+                        'results' => 1,
+                    ],
+                ],
                 'competitions' => [
                     [
                         'event_id' => $competition->getExternalId(),
