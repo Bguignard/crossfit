@@ -55,6 +55,11 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
         ]);
         self::assertNotNull($storedCompetition);
         self::assertSame('imported', $storedCompetition->getMetadata()['postEventResultCrawl']['lastStatus'] ?? null);
+        self::assertStringContainsString(
+            'crawl requested 1, indexed 1, profiles 1, results 1',
+            $storedCompetition->getMetadata()['postEventResultCrawl']['lastDetails'] ?? '',
+        );
+        self::assertSame(1, $storedCompetition->getMetadata()['postEventResultCrawl']['lastCrawlSummary']['requested'] ?? null);
 
         $tester = new CommandTester(new CrawlKnownCompetitionResultsCommand(
             $this->getEntityManager(),
@@ -126,6 +131,23 @@ class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
     private function payloadFor(Competition $competition): array
     {
         return [
+            'crawl_summary' => [
+                'requested' => 1,
+                'indexed_competitions' => 1,
+                'skipped_existing' => [],
+                'missing_or_unavailable' => [],
+                'discovered_profiles' => 1,
+                'imported_results' => 1,
+                'competitions' => [
+                    [
+                        'event_id' => $competition->getExternalId(),
+                        'competition_name' => $competition->getName(),
+                        'profiles' => 1,
+                        'participations' => 1,
+                        'results' => 1,
+                    ],
+                ],
+            ],
             'competition_results' => [
                 'contractVersion' => 'competition-results.v1',
                 'source' => ['name' => 'competition_corner'],
