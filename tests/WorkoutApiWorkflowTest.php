@@ -65,6 +65,43 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotContains('Fran', $names);
     }
 
+    public function testFrontendCanSearchWorkoutCatalogWithAdvancedFiltersAndMatchDetails(): void
+    {
+        $this->browser()->request(
+            'GET',
+            '/api/workout-catalog?q=double&workoutType=For%20time&movement=Double%20Under&implement=Jump%20Rope&timeCapMin=30&timeCapMax=45&itemsPerPage=1000',
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Open 17.5', $names);
+        self::assertNotContains('Fran', $names);
+
+        $openWorkout = null;
+        foreach ($workouts as $workout) {
+            if (($workout['name'] ?? null) === 'Open 17.5') {
+                $openWorkout = $workout;
+                break;
+            }
+        }
+
+        self::assertIsArray($openWorkout);
+        self::assertSame(['flow'], $openWorkout['matchDetails']['query']['fields']);
+        self::assertSame('For time', $openWorkout['matchDetails']['workoutType']);
+        self::assertSame([
+            'value' => 40,
+            'requested' => null,
+            'min' => 30,
+            'max' => 45,
+        ], $openWorkout['matchDetails']['timeCap']);
+        self::assertSame(['Double Under'], $openWorkout['matchDetails']['movements']);
+        self::assertSame(['jump rope'], $openWorkout['matchDetails']['implements']);
+    }
+
     public function testFrontendCanReadWorkoutCompetitionContext(): void
     {
         $entityManager = $this->getEntityManager();
