@@ -282,7 +282,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         $detected = [];
 
         foreach ($workouts as $workout) {
-            $movements = $this->detectMovementsInFlow((string) $workout['flow'], $catalog);
+            $movements = $this->detectMovementsInFlow($this->prescriptionTextForDetection((string) $workout['flow']), $catalog);
 
             if ($movements === []) {
                 continue;
@@ -336,14 +336,84 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
     private function movementAliases(string $movement): array
     {
         $normalized = $this->normalizeSearchText($movement);
-        $aliases = [$normalized];
+        $aliases = [$normalized, ...$this->commonMovementAliases($normalized)];
         $compact = str_replace(' ', '', $normalized);
 
         if ($compact !== $normalized && strlen($compact) >= 5) {
             $aliases[] = $compact;
         }
 
+        foreach ($aliases as $alias) {
+            $plural = $this->pluralAlias($alias);
+
+            if ($plural !== null) {
+                $aliases[] = $plural;
+            }
+        }
+
         return array_values(array_unique(array_filter($aliases)));
+    }
+
+    private function prescriptionTextForDetection(string $flow): string
+    {
+        $lines = preg_split('/\R/', $flow) ?: [$flow];
+        $keptLines = [];
+
+        foreach ($lines as $line) {
+            $normalizedLine = $this->normalizeSearchText($line);
+
+            if ($normalizedLine !== '' && preg_match(
+                '/^(scaling|scaling options|scale|scaled|adaptation|adaptations|strategy|strategies|notes?|standards?|scorecards?|tiebreak|tie break|rx|intermediate|beginner|debutant|intermediaire|option|options)\b/',
+                $normalizedLine,
+            )) {
+                break;
+            }
+
+            $keptLines[] = $line;
+        }
+
+        return trim(implode("\n", $keptLines));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function commonMovementAliases(string $normalizedMovement): array
+    {
+        return match ($normalizedMovement) {
+            'wall ball shot' => ['wall ball', 'wall balls', 'wallball', 'wallballs'],
+            'chest to bar pull up' => ['chest to bar', 'chest to bars', 'c2b', 'ctb', 'chest2bar'],
+            'toes to bar' => ['toe to bar', 't2b', 'ttb', 'toes2bar'],
+            'handstand push up' => ['hspu', 'handstand pushup', 'handstand push ups', 'handstand pushups'],
+            'double under' => ['double unders', 'du', 'dus', 'dubs'],
+            'single under' => ['single unders', 'su', 'sus'],
+            'muscle up' => ['muscle ups', 'mu', 'muscleup', 'muscleups'],
+            'bar muscle up' => ['bar muscle ups', 'bmu', 'bar mu', 'bar mus'],
+            'ring muscle up' => ['ring muscle ups', 'rmu', 'ring mu', 'ring mus'],
+            'clean and jerk' => ['clean jerk', 'clean jerks', 'clean and jerks', 'c j'],
+            'shoulder to overhead' => ['shoulder overhead', 's2oh', 'sto', 'stoh'],
+            'burpee box jump over' => ['bbjo', 'burpee box jump overs'],
+            'box jump over' => ['box jump overs', 'bjo'],
+            'ski erg' => ['skierg', 'ski'],
+            'bike erg' => ['bikeerg'],
+            'assault bike' => ['air bike'],
+            'echo bike' => ['rogue echo bike'],
+            'ghd sit up' => ['ghd situp', 'ghd sit ups', 'ghd situps'],
+            default => [],
+        };
+    }
+
+    private function pluralAlias(string $alias): ?string
+    {
+        if (strlen($alias) < 4 || str_ends_with($alias, 's')) {
+            return null;
+        }
+
+        if (str_ends_with($alias, 'y')) {
+            return substr($alias, 0, -1).'ies';
+        }
+
+        return $alias.'s';
     }
 
     /**
