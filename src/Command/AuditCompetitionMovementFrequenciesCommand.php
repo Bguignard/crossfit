@@ -337,11 +337,6 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
     {
         $normalized = $this->normalizeSearchText($movement);
         $aliases = [$normalized, ...$this->commonMovementAliases($normalized)];
-        $compact = str_replace(' ', '', $normalized);
-
-        if ($compact !== $normalized && strlen($compact) >= 5) {
-            $aliases[] = $compact;
-        }
 
         foreach ($aliases as $alias) {
             $plural = $this->pluralAlias($alias);
