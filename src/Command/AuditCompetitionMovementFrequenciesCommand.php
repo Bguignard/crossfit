@@ -452,9 +452,59 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             }
         }
 
+        $detected = $this->suppressGenericDetectedMovements($detected);
         uasort($detected, static fn (array $left, array $right): int => $left['name'] <=> $right['name']);
 
         return array_values($detected);
+    }
+
+    /**
+     * @param array<string, array{id: string, name: string, movementType: ?string}> $detected
+     *
+     * @return array<string, array{id: string, name: string, movementType: ?string}>
+     */
+    private function suppressGenericDetectedMovements(array $detected): array
+    {
+        $detectedByName = [];
+
+        foreach ($detected as $movementId => $movement) {
+            $detectedByName[$movement['name']] = $movementId;
+        }
+
+        foreach ($this->genericMovementSuppressions() as $specificMovement => $genericMovements) {
+            if (!isset($detectedByName[$specificMovement])) {
+                continue;
+            }
+
+            foreach ($genericMovements as $genericMovement) {
+                if (!isset($detectedByName[$genericMovement])) {
+                    continue;
+                }
+
+                unset($detected[$detectedByName[$genericMovement]]);
+            }
+        }
+
+        return $detected;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function genericMovementSuppressions(): array
+    {
+        return [
+            'Bar Muscle Up' => ['Muscle Up', 'Pull Up'],
+            'Burpee Box Jump Over' => ['Burpee Box Jump', 'Box Jump Over', 'Box Jump', 'Burpee Over'],
+            'Burpee Box Jump' => ['Box Jump'],
+            'Chest to Bar Pull Up' => ['Pull Up'],
+            'Double Under' => ['Single Under'],
+            'Handstand Push Up' => ['Push Up'],
+            'Hang Power Clean' => ['Hang Clean', 'Power Clean'],
+            'Hang Power Snatch' => ['Hang Snatch', 'Power Snatch'],
+            'Ring Muscle Up' => ['Muscle Up', 'Pull Up'],
+            'Wall Walk' => ['Handstand Walk'],
+        ];
     }
 
     /**
