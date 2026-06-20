@@ -497,6 +497,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             'Bar Muscle Up' => ['Muscle Up', 'Pull Up'],
             'Burpee Box Jump Over' => ['Burpee Box Jump', 'Box Jump Over', 'Box Jump', 'Burpee Over'],
             'Burpee Box Jump' => ['Box Jump'],
+            'Box Jump Over' => ['Box Jump'],
             'Chest to Bar Pull Up' => ['Pull Up'],
             'Double Under' => ['Single Under'],
             'Handstand Push Up' => ['Push Up'],
