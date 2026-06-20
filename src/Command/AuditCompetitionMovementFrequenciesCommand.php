@@ -24,6 +24,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
     protected function configure(): void
     {
         $this
+            ->addOption('detection', null, InputOption::VALUE_REQUIRED, 'Movement detection mode: auto, structured or flow.', 'auto')
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Filter by competition source_name.')
             ->addOption('participation-type', null, InputOption::VALUE_REQUIRED, 'Filter by competition participation_type, for example individual or team.')
             ->addOption('format', null, InputOption::VALUE_REQUIRED, 'Filter by workout type name, for example "For time" or AMRAP.')
@@ -42,13 +43,20 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         [$filters, $whereSql, $parameters] = $this->filters($input);
 
         $summary = $this->summary($whereSql, $parameters);
-        $structuredWorkoutCount = max(0, (int) $summary['structuredWorkoutCount']);
-        $movements = $this->movementFrequencies($whereSql, $parameters, $structuredWorkoutCount, $limit);
-        $pairs = $this->pairFrequencies($whereSql, $parameters, $structuredWorkoutCount, $pairLimit);
+        $detection = $this->detectionMode($input, (int) $summary['structuredWorkoutCount']);
+        $detectedWorkoutMovements = $detection === 'flow'
+            ? $this->flowDetectedWorkoutMovements($whereSql, $parameters)
+            : $this->structuredWorkoutMovements($whereSql, $parameters);
+        $analyzedWorkoutCount = count($detectedWorkoutMovements);
+        $summary['flowMatchedWorkoutCount'] = $detection === 'flow' ? $analyzedWorkoutCount : null;
+        $summary['analyzedWorkoutCount'] = $analyzedWorkoutCount;
+        $movements = $this->movementFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount, $limit);
+        $pairs = $this->pairFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount, $pairLimit);
 
         $report = [
             'kind' => 'competition_movement_frequency_audit_v1',
             'filters' => $filters,
+            'detection' => $detection,
             'summary' => $summary,
             'movements' => $movements,
             'pairs' => $pairs,
@@ -66,18 +74,21 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ['Events' => $summary['eventCount']],
             ['Workouts' => $summary['workoutCount']],
             ['Structured workouts' => $summary['structuredWorkoutCount']],
+            ['Flow-matched workouts' => $summary['flowMatchedWorkoutCount'] ?? '-'],
+            ['Analyzed workouts' => $summary['analyzedWorkoutCount']],
+            ['Detection' => $detection],
             ['Filters' => $this->formatFilters($filters)],
         );
 
-        if ($structuredWorkoutCount === 0) {
-            $io->warning('No filtered competition workout has structured movements yet.');
+        if ($analyzedWorkoutCount === 0) {
+            $io->warning('No filtered competition workout has detectable movements yet.');
 
             return Command::SUCCESS;
         }
 
         $io->section('Movement frequencies');
         $io->table(
-            ['Movement', 'Type', 'Workouts', '% structured workouts'],
+            ['Movement', 'Type', 'Workouts', '% analyzed workouts'],
             array_map(
                 static fn (array $movement): array => [
                     $movement['movement'],
@@ -91,7 +102,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
 
         $io->section('Movement pair frequencies');
         $io->table(
-            ['Movement A', 'Movement B', 'Workouts', '% structured workouts'],
+            ['Movement A', 'Movement B', 'Workouts', '% analyzed workouts'],
             array_map(
                 static fn (array $pair): array => [
                     $pair['movementA'],
@@ -103,9 +114,24 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ),
         );
 
-        $io->note('Percentages use only competition workouts with structured movement links as denominator.');
+        $io->note('Percentages use only analyzed competition workouts as denominator. In flow mode, movement detection is approximate and should guide, not replace, later structured enrichment.');
 
         return Command::SUCCESS;
+    }
+
+    private function detectionMode(InputInterface $input, int $structuredWorkoutCount): string
+    {
+        $detection = $this->normalizedStringOrNull($input->getOption('detection')) ?? 'auto';
+
+        if (!in_array($detection, ['auto', 'structured', 'flow'], true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported detection mode "%s". Use auto, structured or flow.', $detection));
+        }
+
+        if ($detection === 'auto') {
+            return $structuredWorkoutCount > 0 ? 'structured' : 'flow';
+        }
+
+        return $detection;
     }
 
     /**
@@ -194,9 +220,9 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
     /**
      * @param array<string, mixed> $parameters
      *
-     * @return list<array{movement: string, movementType: ?string, workoutCount: int, percentage: float}>
+     * @return array<string, list<array{id: string, name: string, movementType: ?string}>>
      */
-    private function movementFrequencies(string $whereSql, array $parameters, int $structuredWorkoutCount, int $limit): array
+    private function structuredWorkoutMovements(string $whereSql, array $parameters): array
     {
         $rows = $this->connection->fetchAllAssociative(
             sprintf(
@@ -210,81 +236,277 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                         WHERE %s
                     )
                     SELECT
+                        bw.id::TEXT AS workout_id,
+                        m.id::TEXT AS movement_id,
                         m.name AS movement,
-                        mt.name AS movement_type,
-                        COUNT(DISTINCT bw.id) AS workout_count
+                        mt.name AS movement_type
                     FROM base_workouts bw
                     INNER JOIN workout_movement wm ON wm.workout_id = bw.id
                     INNER JOIN movement m ON m.id = wm.movement_id
                     LEFT JOIN movement_type mt ON mt.id = m.movement_type_id
-                    GROUP BY m.id, m.name, mt.name
-                    ORDER BY COUNT(DISTINCT bw.id) DESC, m.name ASC
-                    LIMIT %d
+                    ORDER BY bw.id::TEXT ASC, m.name ASC
                     SQL,
                 $whereSql,
-                $limit,
             ),
             $parameters,
         );
 
-        return array_map(
-            fn (array $row): array => [
-                'movement' => (string) $row['movement'],
-                'movementType' => $row['movement_type'] === null ? null : (string) $row['movement_type'],
-                'workoutCount' => (int) $row['workout_count'],
-                'percentage' => $this->percentage((int) $row['workout_count'], $structuredWorkoutCount),
-            ],
-            $rows,
-        );
+        return $this->groupDetectedRows($rows);
     }
 
     /**
      * @param array<string, mixed> $parameters
      *
-     * @return list<array{movementA: string, movementB: string, workoutCount: int, percentage: float}>
+     * @return array<string, list<array{id: string, name: string, movementType: ?string}>>
      */
-    private function pairFrequencies(string $whereSql, array $parameters, int $structuredWorkoutCount, int $limit): array
+    private function flowDetectedWorkoutMovements(string $whereSql, array $parameters): array
     {
-        $rows = $this->connection->fetchAllAssociative(
+        $catalog = $this->movementCatalog();
+        $workouts = $this->connection->fetchAllAssociative(
             sprintf(
                 <<<'SQL'
-                    WITH base_workouts AS (
-                        SELECT DISTINCT w.id
-                        FROM competition_event ce
-                        INNER JOIN competition c ON c.id = ce.competition_id
-                        INNER JOIN workout w ON w.id = ce.workout_id
-                        LEFT JOIN workout_type wt ON wt.id = w.workout_type_id
-                        WHERE %s
-                    )
                     SELECT
-                        m1.name AS movement_a,
-                        m2.name AS movement_b,
-                        COUNT(DISTINCT bw.id) AS workout_count
-                    FROM base_workouts bw
-                    INNER JOIN workout_movement wm1 ON wm1.workout_id = bw.id
-                    INNER JOIN workout_movement wm2 ON wm2.workout_id = bw.id
-                        AND wm1.movement_id::TEXT < wm2.movement_id::TEXT
-                    INNER JOIN movement m1 ON m1.id = wm1.movement_id
-                    INNER JOIN movement m2 ON m2.id = wm2.movement_id
-                    GROUP BY m1.id, m1.name, m2.id, m2.name
-                    ORDER BY COUNT(DISTINCT bw.id) DESC, m1.name ASC, m2.name ASC
-                    LIMIT %d
+                        w.id::TEXT AS workout_id,
+                        w.flow
+                    FROM competition_event ce
+                    INNER JOIN competition c ON c.id = ce.competition_id
+                    INNER JOIN workout w ON w.id = ce.workout_id
+                    LEFT JOIN workout_type wt ON wt.id = w.workout_type_id
+                    WHERE %s
+                    ORDER BY w.id::TEXT ASC
                     SQL,
                 $whereSql,
-                $limit,
             ),
             $parameters,
         );
+        $detected = [];
 
-        return array_map(
+        foreach ($workouts as $workout) {
+            $movements = $this->detectMovementsInFlow((string) $workout['flow'], $catalog);
+
+            if ($movements === []) {
+                continue;
+            }
+
+            $detected[(string) $workout['workout_id']] = $movements;
+        }
+
+        return $detected;
+    }
+
+    /**
+     * @return list<array{id: string, name: string, movementType: ?string, aliases: list<string>}>
+     */
+    private function movementCatalog(): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            <<<'SQL'
+                SELECT
+                    m.id::TEXT AS movement_id,
+                    m.name AS movement,
+                    mt.name AS movement_type
+                FROM movement m
+                LEFT JOIN movement_type mt ON mt.id = m.movement_type_id
+                ORDER BY LENGTH(m.name) DESC, m.name ASC
+                SQL,
+        );
+
+        $catalog = array_map(
             fn (array $row): array => [
-                'movementA' => (string) $row['movement_a'],
-                'movementB' => (string) $row['movement_b'],
-                'workoutCount' => (int) $row['workout_count'],
-                'percentage' => $this->percentage((int) $row['workout_count'], $structuredWorkoutCount),
+                'id' => (string) $row['movement_id'],
+                'name' => (string) $row['movement'],
+                'movementType' => $row['movement_type'] === null ? null : (string) $row['movement_type'],
+                'aliases' => $this->movementAliases((string) $row['movement']),
             ],
             $rows,
         );
+
+        usort(
+            $catalog,
+            static fn (array $left, array $right): int => max(array_map('strlen', $right['aliases']))
+                <=> max(array_map('strlen', $left['aliases'])),
+        );
+
+        return $catalog;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementAliases(string $movement): array
+    {
+        $normalized = $this->normalizeSearchText($movement);
+        $aliases = [$normalized];
+        $compact = str_replace(' ', '', $normalized);
+
+        if ($compact !== $normalized && strlen($compact) >= 5) {
+            $aliases[] = $compact;
+        }
+
+        return array_values(array_unique(array_filter($aliases)));
+    }
+
+    /**
+     * @param list<array{id: string, name: string, movementType: ?string, aliases: list<string>}> $catalog
+     *
+     * @return list<array{id: string, name: string, movementType: ?string}>
+     */
+    private function detectMovementsInFlow(string $flow, array $catalog): array
+    {
+        $normalizedFlow = ' '.$this->normalizeSearchText($flow).' ';
+        $compactFlow = str_replace(' ', '', $normalizedFlow);
+        $occupiedSpans = [];
+        $detected = [];
+
+        foreach ($catalog as $movement) {
+            foreach ($movement['aliases'] as $alias) {
+                $haystack = str_contains($alias, ' ') ? $normalizedFlow : $compactFlow;
+                $pattern = '/(?<![a-z0-9])'.preg_quote($alias, '/').'(?![a-z0-9])/';
+
+                if (!preg_match_all($pattern, $haystack, $matches, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+
+                foreach ($matches[0] as $match) {
+                    $start = (int) $match[1];
+                    $end = $start + strlen((string) $match[0]);
+
+                    if ($this->overlapsAnySpan($start, $end, $occupiedSpans)) {
+                        continue;
+                    }
+
+                    $occupiedSpans[] = [$start, $end];
+                    $detected[$movement['id']] = [
+                        'id' => $movement['id'],
+                        'name' => $movement['name'],
+                        'movementType' => $movement['movementType'],
+                    ];
+
+                    break 2;
+                }
+            }
+        }
+
+        uasort($detected, static fn (array $left, array $right): int => $left['name'] <=> $right['name']);
+
+        return array_values($detected);
+    }
+
+    /**
+     * @param list<array{0: int, 1: int}> $spans
+     */
+    private function overlapsAnySpan(int $start, int $end, array $spans): bool
+    {
+        foreach ($spans as [$spanStart, $spanEnd]) {
+            if ($start < $spanEnd && $end > $spanStart) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return array<string, list<array{id: string, name: string, movementType: ?string}>>
+     */
+    private function groupDetectedRows(array $rows): array
+    {
+        $detected = [];
+
+        foreach ($rows as $row) {
+            $workoutId = (string) $row['workout_id'];
+            $detected[$workoutId] ??= [];
+            $detected[$workoutId][] = [
+                'id' => (string) $row['movement_id'],
+                'name' => (string) $row['movement'],
+                'movementType' => $row['movement_type'] === null ? null : (string) $row['movement_type'],
+            ];
+        }
+
+        return $detected;
+    }
+
+    /**
+     * @param array<string, list<array{id: string, name: string, movementType: ?string}>> $detectedWorkoutMovements
+     *
+     * @return list<array{movement: string, movementType: ?string, workoutCount: int, percentage: float}>
+     */
+    private function movementFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount, int $limit): array
+    {
+        $frequencies = [];
+
+        foreach ($detectedWorkoutMovements as $movements) {
+            foreach ($movements as $movement) {
+                $frequencies[$movement['id']] ??= [
+                    'movement' => $movement['name'],
+                    'movementType' => $movement['movementType'],
+                    'workoutCount' => 0,
+                    'percentage' => 0.0,
+                ];
+                ++$frequencies[$movement['id']]['workoutCount'];
+            }
+        }
+
+        foreach ($frequencies as &$frequency) {
+            $frequency['percentage'] = $this->percentage($frequency['workoutCount'], $analyzedWorkoutCount);
+        }
+        unset($frequency);
+
+        usort(
+            $frequencies,
+            static fn (array $left, array $right): int => [$right['workoutCount'], $left['movement']]
+                <=> [$left['workoutCount'], $right['movement']],
+        );
+
+        return array_slice($frequencies, 0, $limit);
+    }
+
+    /**
+     * @param array<string, list<array{id: string, name: string, movementType: ?string}>> $detectedWorkoutMovements
+     *
+     * @return list<array{movementA: string, movementB: string, workoutCount: int, percentage: float}>
+     */
+    private function pairFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount, int $limit): array
+    {
+        $frequencies = [];
+
+        foreach ($detectedWorkoutMovements as $movements) {
+            $movementCount = count($movements);
+
+            for ($leftIndex = 0; $leftIndex < $movementCount; ++$leftIndex) {
+                for ($rightIndex = $leftIndex + 1; $rightIndex < $movementCount; ++$rightIndex) {
+                    $left = $movements[$leftIndex];
+                    $right = $movements[$rightIndex];
+                    $key = $left['name'] < $right['name']
+                        ? $left['id'].'|'.$right['id']
+                        : $right['id'].'|'.$left['id'];
+                    $movementA = $left['name'] < $right['name'] ? $left['name'] : $right['name'];
+                    $movementB = $left['name'] < $right['name'] ? $right['name'] : $left['name'];
+                    $frequencies[$key] ??= [
+                        'movementA' => $movementA,
+                        'movementB' => $movementB,
+                        'workoutCount' => 0,
+                        'percentage' => 0.0,
+                    ];
+                    ++$frequencies[$key]['workoutCount'];
+                }
+            }
+        }
+
+        foreach ($frequencies as &$frequency) {
+            $frequency['percentage'] = $this->percentage($frequency['workoutCount'], $analyzedWorkoutCount);
+        }
+        unset($frequency);
+
+        usort(
+            $frequencies,
+            static fn (array $left, array $right): int => [$right['workoutCount'], $left['movementA'], $left['movementB']]
+                <=> [$left['workoutCount'], $right['movementA'], $right['movementB']],
+        );
+
+        return array_slice($frequencies, 0, $limit);
     }
 
     private function percentage(int $count, int $total): float
@@ -339,5 +561,22 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         }
 
         return (int) $value;
+    }
+
+    private function normalizeSearchText(string $value): string
+    {
+        $value = preg_replace('/([a-z])([A-Z])/', '$1 $2', $value) ?? $value;
+        $value = str_replace(['’', '\''], '', $value);
+        $transliterated = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+
+        if (is_string($transliterated) && $transliterated !== '') {
+            $value = $transliterated;
+        }
+
+        $value = mb_strtolower($value);
+        $value = preg_replace('/[^a-z0-9]+/', ' ', $value) ?? $value;
+        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
+
+        return trim($value);
     }
 }
