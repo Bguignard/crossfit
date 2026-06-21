@@ -11,6 +11,29 @@ use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
 readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 {
+    private const COMPETITION_MOVEMENT_FREQUENCY_BANDS = [
+        'very frequent' => ['Toes to Bar', 'Double Under', 'Front Squat', 'Pull Up', 'Wall Ball Shot', 'Muscle Up', 'Clean and Jerk'],
+        'regular' => ['Chest to Bar Pull Up', 'Shoulder To Overhead', 'Box Jump Over', 'Hang Clean', 'Squat Clean', 'Rope Climb', 'Power Clean', 'Wall Walk', 'Ski Erg', 'Shuttle Run', 'Overhead Squat', 'Handstand Walk', 'Walking Lunge', 'Burpee Box Jump Over', 'Handstand Push Up', 'Assault Bike'],
+        'occasional' => ['Box Jump', 'Sit Up', 'Bike Erg', 'Hang Power Clean', 'Burpee Over', 'Push Press', 'Push Up', 'Power Snatch', 'Bench Press', 'Sled Push', 'Back Squat', 'Air Squat', 'Squat Snatch', 'Single Under', 'Hang Squat Clean', 'Push Jerk', 'Sled Pull', 'Burpee Broad Jump', 'Split Jerk', 'Box Step Up'],
+    ];
+
+    private const COMPETITION_FREQUENT_MOVEMENT_PAIRS = [
+        ['Chest to Bar Pull Up', 'Muscle Up'],
+        ['Muscle Up', 'Toes to Bar'],
+        ['Front Squat', 'Shoulder To Overhead'],
+        ['Chest to Bar Pull Up', 'Toes to Bar'],
+        ['Double Under', 'Toes to Bar'],
+        ['Front Squat', 'Hang Clean'],
+        ['Muscle Up', 'Pull Up'],
+        ['Front Squat', 'Power Clean'],
+        ['Toes to Bar', 'Wall Ball Shot'],
+        ['Double Under', 'Muscle Up'],
+        ['Pull Up', 'Toes to Bar'],
+        ['Front Squat', 'Squat Clean'],
+        ['Chest to Bar Pull Up', 'Thruster'],
+        ['Thruster', 'Wall Ball Shot'],
+    ];
+
     public function __construct(
         public MovementServiceInterface $movementService,
         public ChatGPTApiKeyInterface $chatGPTApiKey,
@@ -73,6 +96,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->timeCapCalibrationGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
         $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
         $promptForChatGPT .= <<<EOD
@@ -325,6 +349,7 @@ EOD;
         $promptForChatGPT .= "Use only movements and implement options printed in the pool above. Do not invent unavailable equipment.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, $allowedMovements);
         $promptForChatGPT .= <<<EOD
 
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
@@ -468,14 +493,105 @@ EOD;
     {
         $movementCount = $workoutGeneration->getNumberOfDifferentMovements();
         $guidance = "Movement diversity guidance: choose movements from the full allowed pool instead of defaulting to the most common CrossFit template movements.\n";
-        $guidance .= "Wall Ball Shot, Chest to Bar Pull Up, Box Jump and Box Jump Over are allowed when they directly serve the requested stimulus, level and equipment, but they must not be used as a default trio simply because they are familiar benchmark movements.\n";
+        $guidance .= "Wall Ball Shot, Chest to Bar Pull Up, Thruster, Box Jump and Box Jump Over are allowed when they directly serve the requested stimulus, level and equipment, but they must not be used as a default group simply because they are familiar benchmark movements.\n";
         $guidance .= "Before finalizing, compare the selected movement mix against the stimulus: include varied movement patterns, implements and interference only when they improve the workout. Avoid repeating the same squat/pull/jump template across generations when other allowed movements would fit equally well.\n";
 
         $guidance .= $movementCount >= 3
-            ? "When choosing three or more movements, avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n"
-            : "If the structure later expands to three or more movements, avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n";
+            ? "When choosing three or more movements, avoid building the whole workout around only the classic wall-ball / thruster / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n"
+            : "If the structure later expands to three or more movements, avoid building the whole workout around only the classic wall-ball / thruster / pull-up-bar / box-jump pattern unless the user explicitly forced those movements.\n";
 
         return $guidance;
+    }
+
+    /**
+     * @param Movement[] $allowedMovements
+     */
+    private function competitionMovementFrequencyGuidance(WorkoutGeneration $workoutGeneration, array $allowedMovements): string
+    {
+        if (!$this->isCompetitionStimulus($workoutGeneration)) {
+            return '';
+        }
+
+        $allowedMovementNames = [];
+        foreach ($allowedMovements as $movement) {
+            $allowedMovementNames[$this->normalizeMovementName($movement->getName())] = $movement->getName();
+        }
+
+        $bandLines = [];
+        foreach (self::COMPETITION_MOVEMENT_FREQUENCY_BANDS as $band => $movementNames) {
+            $availableMovementNames = $this->availableGuidanceMovementNames($movementNames, $allowedMovementNames);
+
+            if ($availableMovementNames === []) {
+                continue;
+            }
+
+            $bandLines[] = sprintf('- %s available movements: %s.', $band, implode(', ', $availableMovementNames));
+        }
+
+        $availablePairs = [];
+        foreach (self::COMPETITION_FREQUENT_MOVEMENT_PAIRS as [$movementA, $movementB]) {
+            $normalizedMovementA = $this->normalizeMovementName($movementA);
+            $normalizedMovementB = $this->normalizeMovementName($movementB);
+
+            if (!isset($allowedMovementNames[$normalizedMovementA], $allowedMovementNames[$normalizedMovementB])) {
+                continue;
+            }
+
+            $availablePairs[] = sprintf('%s + %s', $allowedMovementNames[$normalizedMovementA], $allowedMovementNames[$normalizedMovementB]);
+        }
+
+        if ($bandLines === [] && $availablePairs === []) {
+            return '';
+        }
+
+        $guidance = "Competition movement recurrence guidance:\n";
+        $guidance .= "- Use real competition frequency as distribution guidance, not as hard rules. Do not ban common movements; rotate them across generations.\n";
+        $guidance .= "- Prefer a balanced mix of very frequent, regular and occasional available movements when that still respects the stimulus, level and equipment.\n";
+        $guidance .= "- Do not default to Thruster + Chest to Bar Pull Up, Wall Ball Shot + Chest to Bar Pull Up, or the same squat/pull/barbell core unless the user forced those movements or the stimulus clearly needs them.\n";
+
+        foreach ($bandLines as $bandLine) {
+            $guidance .= $bandLine."\n";
+        }
+
+        if ($availablePairs !== []) {
+            $guidance .= sprintf("- Frequent pairs available in this pool: %s. Avoid repeating these pairings by default; use them only when they are the best fit for the requested stimulus or mandatory movements.\n", implode('; ', $availablePairs));
+        }
+
+        return $guidance;
+    }
+
+    /**
+     * @param list<string>          $movementNames
+     * @param array<string, string> $allowedMovementNames
+     *
+     * @return list<string>
+     */
+    private function availableGuidanceMovementNames(array $movementNames, array $allowedMovementNames): array
+    {
+        $availableMovementNames = [];
+
+        foreach ($movementNames as $movementName) {
+            $normalizedMovementName = $this->normalizeMovementName($movementName);
+
+            if (!isset($allowedMovementNames[$normalizedMovementName])) {
+                continue;
+            }
+
+            $availableMovementNames[] = $allowedMovementNames[$normalizedMovementName];
+        }
+
+        return $availableMovementNames;
+    }
+
+    private function isCompetitionStimulus(WorkoutGeneration $workoutGeneration): bool
+    {
+        $stimulus = strtolower((string) $workoutGeneration->getStimulus());
+        $stimulusIntent = strtolower((string) $workoutGeneration->getStimulusIntent());
+
+        return str_contains($stimulus, 'competition')
+            || str_contains($stimulus, 'compétition')
+            || str_contains($stimulusIntent, 'competition')
+            || str_contains($stimulusIntent, 'compétition');
     }
 
     private function isFullHyroxStimulus(string $stimulus): bool
