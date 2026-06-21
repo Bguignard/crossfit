@@ -34,6 +34,14 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         ['Thruster', 'Wall Ball Shot'],
     ];
 
+    private const RECENT_GENERATED_COMPETITION_TEMPLATE_MOVEMENTS = [
+        'Power Clean',
+        'Wall Ball Shot',
+        'Box Jump Over',
+        'Row',
+        'Chest to Bar Pull Up',
+    ];
+
     public function __construct(
         public MovementServiceInterface $movementService,
         public ChatGPTApiKeyInterface $chatGPTApiKey,
@@ -153,38 +161,38 @@ EOD;
             $promptForChatGPT .= <<<EOD
             -Example 1 :
             AMRAP 20 minutes
-            -5 Pull-ups
-            -10 Push-ups
-            -15 Air squats
+            -Movement A
+            -Movement B
+            -Movement C
             
             -Example 2 :
             Team Workout (team of 2) :
             AMRAP 20 minutes
-            Split reps anyhow, except burpees synchronized
-            -40 Wall balls
-            -30 Thrusters
-            -20 Burpee box jump overs
-            -400m row, split in short 100m switches
+            Split reps anyhow, except Movement D synchronized
+            -Movement A
+            -Movement B
+            -Movement C
+            -Movement D
             EOD;
         } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::INTERVALS) {
             $promptForChatGPT .= <<<EOD
             -Example 1 :
             EMOM 20 minutes
-            -5 Pull-ups
-            -10 Push-ups
-            -15 Air squats
+            -Movement A
+            -Movement B
+            -Movement C
             
             -Example 2 :
             Intervals 2 minutes on / 1 minute off for 20 minutes
-            -250m row
-            -5 Thrusters (40 kg men / 30 kg women)
-            -3 rings muscle-ups
+            -Movement A
+            -Movement B
+            -Movement C
             
             -Example 3 :
             For Time (Intervals 2 minutes on / 1 minute off)
-            -1500m row
-            -52 Thrusters (40 kg men / 30 kg women)
-            -30 rings muscle-ups
+            -Movement A
+            -Movement B
+            -Movement C
             Time cap : 20 minutes.
             EOD;
         } elseif ($workoutGeneration->getWorkoutType()->getNameAsEnum() === WorkoutTypeEnum::FOR_TIME) {
@@ -192,36 +200,36 @@ EOD;
             -Example 1 :
             For time:
             50-40-30-20-10
-            -Double-Unders
-            -Sit-Ups
+            -Movement A
+            -Movement B
             Time cap : 20 minutes.
             
             -Example 2 :
             5 rounds for time:
-            -25 Pull-Ups
-            -50 Push-Ups
-            -75 Squats
-            -100 m Sprint
+            -Movement A
+            -Movement B
+            -Movement C
+            -Movement D
             Time cap : 25 minutes.
             
             -Example 3 :
             3 rounds for time:
-            -21 Deadlifts (83 kg men / 61 kg women)
-            -15 Pull-Ups
-            -9 Front Squats (83 kg men / 61 kg women)
+            -Movement A
+            -Movement B
+            -Movement C
             Time cap : 10 minutes.
             
             -Example 4 :
             For time: 
             5 rounds of:     
-                10 thrusters (43 kg men / 29 kg women)
-                10 chest-to-bar pull-ups 
+                Movement A
+                Movement B
             
             Rest 1 minute, then:
             
             5 rounds of: 
-                7 thrusters (61 kg men / 43 kg women)
-                7 bar muscle-ups 
+                Movement C
+                Movement D
             
             Time cap : 15 minutes
             EOD;
@@ -253,11 +261,12 @@ EOD;
 
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
 {
-  "flow": "The complete workout text displayed to the athlete",
+  "flow": "The main workout text displayed to the athlete, without scaling options",
   "scalingOptions": "A short Scaling options section with RX, Intermediate and Scaled adaptations",
   "movements": ["Exact movement name from the allowed lists"]
 }
-The flow should include the scaling options at the end. The movements array must contain exactly {$workoutGeneration->getNumberOfDifferentMovements()} unique movement name(s), with no duplicates, using only exact names from the allowed lists, and every listed movement must appear in the main flow.
+The flow field must contain only the main workout prescription. Do not include scaling options, substitutions, adaptations, RX/Intermediate/Scaled paragraphs or alternative movement names inside flow. Put all substitutions and adaptations only in scalingOptions.
+The movements array must contain exactly {$workoutGeneration->getNumberOfDifferentMovements()} unique movement name(s), with no duplicates, using only exact names from the allowed lists, and every listed movement must appear in the main flow.
 EOD;
 
         $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
@@ -548,6 +557,7 @@ EOD;
         $guidance .= "- Use real competition frequency as distribution guidance, not as hard rules. Do not ban common movements; rotate them across generations.\n";
         $guidance .= "- Prefer a balanced mix of very frequent, regular and occasional available movements when that still respects the stimulus, level and equipment.\n";
         $guidance .= "- Do not default to Thruster + Chest to Bar Pull Up, Wall Ball Shot + Chest to Bar Pull Up, or the same squat/pull/barbell core unless the user forced those movements or the stimulus clearly needs them.\n";
+        $guidance .= $this->recentGeneratedCompetitionTemplateGuidance($allowedMovementNames);
 
         foreach ($bandLines as $bandLine) {
             $guidance .= $bandLine."\n";
@@ -558,6 +568,23 @@ EOD;
         }
 
         return $guidance;
+    }
+
+    /**
+     * @param array<string, string> $allowedMovementNames
+     */
+    private function recentGeneratedCompetitionTemplateGuidance(array $allowedMovementNames): string
+    {
+        $availableTemplateMovements = $this->availableGuidanceMovementNames(self::RECENT_GENERATED_COMPETITION_TEMPLATE_MOVEMENTS, $allowedMovementNames);
+
+        if (count($availableTemplateMovements) < 3) {
+            return '';
+        }
+
+        return sprintf(
+            "- Recent generated competition workouts are overusing this cluster: %s. These movements remain allowed, but for this generation choose at most two from that cluster unless one of them is mandatory; fill the remaining slots with other coherent movements from the allowed pool.\n",
+            implode(', ', $availableTemplateMovements),
+        );
     }
 
     /**
