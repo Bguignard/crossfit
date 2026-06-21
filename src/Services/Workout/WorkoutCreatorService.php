@@ -42,6 +42,13 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         'Chest to Bar Pull Up',
     ];
 
+    private const RECENT_GENERATED_COMPETITION_OVERUSED_ANCHORS = [
+        'Power Clean',
+        'Chest to Bar Pull Up',
+        'Wall Ball Shot',
+        'Thruster',
+    ];
+
     public function __construct(
         public MovementServiceInterface $movementService,
         public ChatGPTApiKeyInterface $chatGPTApiKey,
@@ -78,6 +85,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
             throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($mandatoryMovements) + count($candidateMovements), count($mandatoryMovements) + count($candidateMovements) > 1 ? 's' : ''));
         }
 
+        $candidateMovementsForPrompt = $this->candidateMovementsForPrompt($workoutGeneration, $candidateMovements);
         $workoutType = $workoutGeneration->getWorkoutType()->getNameAsEnum();
         $imposedNumberOfRounds = $workoutType === WorkoutTypeEnum::AMRAP ? null : $workoutGeneration->getNumberOfRounds();
 
@@ -104,9 +112,9 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->timeCapCalibrationGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
-        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
+        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovementsForPrompt));
         $promptForChatGPT .= $this->levelPrescriptionGuidance($workoutGeneration);
-        $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovements));
+        $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovementsForPrompt));
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
 Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
@@ -151,7 +159,7 @@ EOD;
         }
         // - Mouvements possibles du workout avec seulement les implements disponibles
         $promptForChatGPT .= "Candidate movement pool. Pick the best movements for the stimulus from this complete pool:\n";
-        $promptForChatGPT .= $this->formatMovementPromptSection($candidateMovements);
+        $promptForChatGPT .= $this->formatMovementPromptSection($candidateMovementsForPrompt);
         // - Type d'entrainement (AMRAP, EMOM/Intervals, For time, etc.)
         $promptForChatGPT .= 'The workout must be in the following format :'.$workoutGeneration->getWorkoutType()->getName()."\n";
 
@@ -273,10 +281,10 @@ EOD;
         $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
         $this->assertSelectedMovementNamesAppearInFlow(
             $generatedWorkout['movements'],
-            array_merge($mandatoryMovements, $candidateMovements),
+            array_merge($mandatoryMovements, $candidateMovementsForPrompt),
             $generatedWorkout['flow']
         );
-        $allowedMovements = array_merge($mandatoryMovements, $candidateMovements);
+        $allowedMovements = array_merge($mandatoryMovements, $candidateMovementsForPrompt);
         $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
         $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
         $WorkoutMovements = $this->resolveSelectedMovements(
@@ -331,6 +339,7 @@ EOD;
             $possibleMovements
         );
         $allowedMovements = array_merge($mandatoryMovements, $candidateMovements);
+        $allowedMovementsForPrompt = array_merge($mandatoryMovements, $this->candidateMovementsForPrompt($workoutGeneration, $candidateMovements));
 
         if (count($allowedMovements) < $workoutGeneration->getNumberOfDifferentMovements()) {
             throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($allowedMovements), count($allowedMovements) > 1 ? 's' : ''));
@@ -354,11 +363,11 @@ EOD;
             $promptForChatGPT .= $this->formatMovementPromptSection($mandatoryMovements);
         }
         $promptForChatGPT .= "Candidate movement pool. Use only exact names from this pool:\n";
-        $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovements);
+        $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovementsForPrompt);
         $promptForChatGPT .= "Use only movements and implement options printed in the pool above. Do not invent unavailable equipment.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
-        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, $allowedMovements);
+        $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, $allowedMovementsForPrompt);
         $promptForChatGPT .= <<<EOD
 
 Return only valid JSON, with no markdown and no explanation, using this exact shape:
@@ -513,6 +522,43 @@ EOD;
     }
 
     /**
+     * @param Movement[] $candidateMovements
+     *
+     * @return Movement[]
+     */
+    private function candidateMovementsForPrompt(WorkoutGeneration $workoutGeneration, array $candidateMovements): array
+    {
+        if (!$this->isCompetitionStimulus($workoutGeneration) || count($candidateMovements) < 2) {
+            return $candidateMovements;
+        }
+
+        $orderedMovements = $candidateMovements;
+        usort(
+            $orderedMovements,
+            fn (Movement $left, Movement $right): int => strcmp(
+                hash('sha256', implode('|', [
+                    (string) $workoutGeneration->getName(),
+                    (string) $workoutGeneration->getStimulus(),
+                    (string) $workoutGeneration->getStimulusIntent(),
+                    (string) $workoutGeneration->getTimeCap(),
+                    (string) $workoutGeneration->getNumberOfDifferentMovements(),
+                    $left->getName(),
+                ])),
+                hash('sha256', implode('|', [
+                    (string) $workoutGeneration->getName(),
+                    (string) $workoutGeneration->getStimulus(),
+                    (string) $workoutGeneration->getStimulusIntent(),
+                    (string) $workoutGeneration->getTimeCap(),
+                    (string) $workoutGeneration->getNumberOfDifferentMovements(),
+                    $right->getName(),
+                ])),
+            )
+        );
+
+        return $orderedMovements;
+    }
+
+    /**
      * @param Movement[] $allowedMovements
      */
     private function competitionMovementFrequencyGuidance(WorkoutGeneration $workoutGeneration, array $allowedMovements): string
@@ -557,7 +603,7 @@ EOD;
         $guidance .= "- Use real competition frequency as distribution guidance, not as hard rules. Do not ban common movements; rotate them across generations.\n";
         $guidance .= "- Prefer a balanced mix of very frequent, regular and occasional available movements when that still respects the stimulus, level and equipment.\n";
         $guidance .= "- Do not default to Thruster + Chest to Bar Pull Up, Wall Ball Shot + Chest to Bar Pull Up, or the same squat/pull/barbell core unless the user forced those movements or the stimulus clearly needs them.\n";
-        $guidance .= $this->recentGeneratedCompetitionTemplateGuidance($allowedMovementNames);
+        $guidance .= $this->recentGeneratedCompetitionTemplateGuidance($workoutGeneration, $allowedMovementNames);
 
         foreach ($bandLines as $bandLine) {
             $guidance .= $bandLine."\n";
@@ -573,18 +619,42 @@ EOD;
     /**
      * @param array<string, string> $allowedMovementNames
      */
-    private function recentGeneratedCompetitionTemplateGuidance(array $allowedMovementNames): string
+    private function recentGeneratedCompetitionTemplateGuidance(WorkoutGeneration $workoutGeneration, array $allowedMovementNames): string
     {
         $availableTemplateMovements = $this->availableGuidanceMovementNames(self::RECENT_GENERATED_COMPETITION_TEMPLATE_MOVEMENTS, $allowedMovementNames);
+        $availableOverusedAnchors = $this->availableGuidanceMovementNames(self::RECENT_GENERATED_COMPETITION_OVERUSED_ANCHORS, $allowedMovementNames);
 
-        if (count($availableTemplateMovements) < 3) {
+        if (count($availableTemplateMovements) < 3 && count($availableOverusedAnchors) < 2) {
             return '';
         }
 
-        return sprintf(
-            "- Recent generated competition workouts are overusing this cluster: %s. These movements remain allowed, but for this generation choose at most two from that cluster unless one of them is mandatory; fill the remaining slots with other coherent movements from the allowed pool.\n",
-            implode(', ', $availableTemplateMovements),
-        );
+        $guidance = '';
+
+        if (count($availableTemplateMovements) >= 3) {
+            $guidance .= sprintf(
+                "- Recent generated competition workouts are overusing this cluster: %s. These movements remain allowed, but for this generation choose at most two from that cluster unless one of them is mandatory; fill the remaining slots with other coherent movements from the allowed pool.\n",
+                implode(', ', $availableTemplateMovements),
+            );
+        }
+
+        if (count($availableOverusedAnchors) >= 2 && count($workoutGeneration->getMandatoryMovements()) === 0) {
+            $guidance .= sprintf(
+                "- Strong rotation rule for this generation: no movement is mandatory, so choose at most one from these currently overused generated anchors: %s. This is a per-generation rotation rule, not a permanent ban; common competition movements should reappear in other generations, just not together by default here.\n",
+                implode(', ', $availableOverusedAnchors),
+            );
+        }
+
+        if (
+            isset(
+                $allowedMovementNames[$this->normalizeMovementName('Power Clean')],
+                $allowedMovementNames[$this->normalizeMovementName('Chest to Bar Pull Up')]
+            )
+            && count($workoutGeneration->getMandatoryMovements()) === 0
+        ) {
+            $guidance .= "- Current audit shows Power Clean + Chest to Bar Pull Up is recurring too often. Do not select both together unless the user explicitly forced both movements.\n";
+        }
+
+        return $guidance;
     }
 
     /**
