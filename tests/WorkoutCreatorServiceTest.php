@@ -80,7 +80,7 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('usually around 75-95% of the time cap', $prompt);
         self::assertStringContainsString('one round must not be so tiny that the workout becomes meaningless churn', $prompt);
         self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $prompt);
-        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $prompt);
+        self::assertStringContainsString('must not be used as a default group simply because they are familiar benchmark movements', $prompt);
         self::assertStringNotContainsString('there is only one round', $prompt);
         self::assertStringNotContainsString('there are 1 rounds', $prompt);
         self::assertStringNotContainsString('7 rounds of', $prompt);
@@ -133,9 +133,109 @@ class WorkoutCreatorServiceTest extends TestCase
         );
 
         self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $prompt);
-        self::assertStringContainsString('Wall Ball Shot, Chest to Bar Pull Up, Box Jump and Box Jump Over are allowed', $prompt);
-        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $prompt);
-        self::assertStringContainsString('avoid building the whole workout around only the classic wall-ball / pull-up-bar / box-jump pattern', $prompt);
+        self::assertStringContainsString('Wall Ball Shot, Chest to Bar Pull Up, Thruster, Box Jump and Box Jump Over are allowed', $prompt);
+        self::assertStringContainsString('must not be used as a default group simply because they are familiar benchmark movements', $prompt);
+        self::assertStringContainsString('avoid building the whole workout around only the classic wall-ball / thruster / pull-up-bar / box-jump pattern', $prompt);
+    }
+
+    public function testCompetitionPromptUsesMovementFrequencyGuidanceFilteredByAllowedPool(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $chestToBarPullUp = new Movement('Chest to Bar Pull Up', $difficulty, $gymnastic);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastic);
+        $doubleUnder = new Movement('Double Under', $difficulty, $cardio);
+        $wallBallShot = new Movement('Wall Ball Shot', $difficulty, $cardio);
+        $thruster = new Movement('Thruster', $difficulty, $weightlifting);
+        $skiErg = new Movement('Ski Erg', $difficulty, $cardio);
+
+        $movementService = new class([$chestToBarPullUp, $toesToBar, $doubleUnder, $wallBallShot, $thruster, $skiErg]) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public string $prompt = '';
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompt = $prompt;
+
+                return json_encode([
+                    'flow' => "For time:\n21-15-9\nDouble Under\nToes to Bar\nSki Erg",
+                    'scalingOptions' => "RX: as written\nIntermediate: reduce T2B volume\nScaled: knees raises",
+                    'movements' => ['Double Under', 'Toes to Bar', 'Ski Erg'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutOriginService = new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Competition guidance test')
+            ->setStimulus('Competition')
+            ->setStimulusIntent('Tester plusieurs qualités avec une vraie gestion de compétition.')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastic, $weightlifting, $cardio])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(false);
+
+        (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+
+        self::assertStringContainsString('Competition movement recurrence guidance:', $chatGpt->prompt);
+        self::assertStringContainsString('very frequent available movements: Toes to Bar, Double Under, Wall Ball Shot.', $chatGpt->prompt);
+        self::assertStringContainsString('regular available movements: Chest to Bar Pull Up, Ski Erg.', $chatGpt->prompt);
+        self::assertStringContainsString('Do not default to Thruster + Chest to Bar Pull Up', $chatGpt->prompt);
+        self::assertStringContainsString('Chest to Bar Pull Up + Thruster', $chatGpt->prompt);
+        self::assertStringContainsString('Double Under + Toes to Bar', $chatGpt->prompt);
+        self::assertStringNotContainsString('Muscle Up + Toes to Bar', $chatGpt->prompt);
+        self::assertStringNotContainsString('regular available movements: Chest to Bar Pull Up, Box Jump Over', $chatGpt->prompt);
+        self::assertStringNotContainsString('Box Jump Over +', $chatGpt->prompt);
     }
 
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
@@ -405,7 +505,7 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
         self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $chatGpt->prompt);
-        self::assertStringContainsString('must not be used as a default trio simply because they are familiar benchmark movements', $chatGpt->prompt);
+        self::assertStringContainsString('must not be used as a default group simply because they are familiar benchmark movements', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
     }
 
