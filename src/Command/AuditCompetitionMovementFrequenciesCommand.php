@@ -32,6 +32,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ->addOption('time-cap-max', null, InputOption::VALUE_REQUIRED, 'Filter workouts with a time cap lower than or equal to this value.')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum movements to display.', 30)
             ->addOption('pair-limit', null, InputOption::VALUE_REQUIRED, 'Maximum movement pairs to display.', 30)
+            ->addOption('generation-guidance', null, InputOption::VALUE_NONE, 'Include movement frequency bands and pair warnings for workout generation prompts.')
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output the report as JSON.');
     }
 
@@ -50,8 +51,13 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         $analyzedWorkoutCount = count($detectedWorkoutMovements);
         $summary['flowMatchedWorkoutCount'] = $detection === 'flow' ? $analyzedWorkoutCount : null;
         $summary['analyzedWorkoutCount'] = $analyzedWorkoutCount;
-        $movements = $this->movementFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount, $limit);
-        $pairs = $this->pairFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount, $pairLimit);
+        $allMovements = $this->movementFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount);
+        $allPairs = $this->pairFrequencies($detectedWorkoutMovements, $analyzedWorkoutCount);
+        $movements = array_slice($allMovements, 0, $limit);
+        $pairs = array_slice($allPairs, 0, $pairLimit);
+        $generationGuidance = (bool) $input->getOption('generation-guidance')
+            ? $this->generationGuidance($allMovements, $allPairs)
+            : null;
 
         $report = [
             'kind' => 'competition_movement_frequency_audit_v1',
@@ -61,6 +67,10 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             'movements' => $movements,
             'pairs' => $pairs,
         ];
+
+        if ($generationGuidance !== null) {
+            $report['generationGuidance'] = $generationGuidance;
+        }
 
         if ((bool) $input->getOption('json')) {
             $output->writeln(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -115,6 +125,32 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         );
 
         $io->note('Percentages use only analyzed competition workouts as denominator. In flow mode, movement detection is approximate and should guide, not replace, later structured enrichment.');
+
+        if ($generationGuidance !== null) {
+            $io->section('Generation guidance');
+            $io->text($generationGuidance['promptNotes']);
+            $io->table(
+                ['Band', 'Movements'],
+                array_map(
+                    fn (string $band, array $entries): array => [
+                        $band,
+                        $this->formatGuidanceEntries($entries),
+                    ],
+                    array_keys($generationGuidance['movementBands']),
+                    $generationGuidance['movementBands'],
+                ),
+            );
+            $io->table(
+                ['Frequent pair', '% analyzed workouts'],
+                array_map(
+                    static fn (array $pair): array => [
+                        sprintf('%s / %s', $pair['movementA'], $pair['movementB']),
+                        sprintf('%.2f%%', $pair['percentage']),
+                    ],
+                    $generationGuidance['pairWarnings'],
+                ),
+            );
+        }
 
         return Command::SUCCESS;
     }
@@ -549,7 +585,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
      *
      * @return list<array{movement: string, movementType: ?string, workoutCount: int, percentage: float}>
      */
-    private function movementFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount, int $limit): array
+    private function movementFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount): array
     {
         $frequencies = [];
 
@@ -576,7 +612,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                 <=> [$left['workoutCount'], $right['movement']],
         );
 
-        return array_slice($frequencies, 0, $limit);
+        return $frequencies;
     }
 
     /**
@@ -584,7 +620,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
      *
      * @return list<array{movementA: string, movementB: string, workoutCount: int, percentage: float}>
      */
-    private function pairFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount, int $limit): array
+    private function pairFrequencies(array $detectedWorkoutMovements, int $analyzedWorkoutCount): array
     {
         $frequencies = [];
 
@@ -622,7 +658,113 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                 <=> [$left['workoutCount'], $right['movementA'], $right['movementB']],
         );
 
-        return array_slice($frequencies, 0, $limit);
+        return $frequencies;
+    }
+
+    /**
+     * @param list<array{movement: string, movementType: ?string, workoutCount: int, percentage: float}> $movements
+     * @param list<array{movementA: string, movementB: string, workoutCount: int, percentage: float}>    $pairs
+     *
+     * @return array{
+     *     movementBands: array{
+     *         veryFrequent: list<array{movement: string, percentage: float}>,
+     *         regular: list<array{movement: string, percentage: float}>,
+     *         occasional: list<array{movement: string, percentage: float}>
+     *     },
+     *     pairWarnings: list<array{movementA: string, movementB: string, percentage: float}>,
+     *     promptNotes: list<string>
+     * }
+     */
+    private function generationGuidance(array $movements, array $pairs): array
+    {
+        return [
+            'movementBands' => [
+                'veryFrequent' => $this->movementBand($movements, 8.0, null, 12),
+                'regular' => $this->movementBand($movements, 3.0, 8.0, 20),
+                'occasional' => $this->movementBand($movements, 1.0, 3.0, 20),
+            ],
+            'pairWarnings' => $this->pairWarnings($pairs, 1.2, 12),
+            'promptNotes' => [
+                'Use these frequencies as distribution guidance, not as hard rules.',
+                'Do not ban very frequent movements: they are common in competitions, but rotate them across generated workouts.',
+                'Avoid repeatedly combining the frequent pairs unless the user explicitly requests one movement or the stimulus strongly justifies the pair.',
+                'Prefer mixing very frequent, regular and occasional movements instead of always selecting the same competitive core.',
+            ],
+        ];
+    }
+
+    /**
+     * @param list<array{movement: string, movementType: ?string, workoutCount: int, percentage: float}> $movements
+     *
+     * @return list<array{movement: string, percentage: float}>
+     */
+    private function movementBand(array $movements, float $minPercentage, ?float $maxPercentage, int $limit): array
+    {
+        $band = [];
+
+        foreach ($movements as $movement) {
+            if ($movement['percentage'] < $minPercentage) {
+                continue;
+            }
+
+            if ($maxPercentage !== null && $movement['percentage'] >= $maxPercentage) {
+                continue;
+            }
+
+            $band[] = [
+                'movement' => $movement['movement'],
+                'percentage' => $movement['percentage'],
+            ];
+
+            if (count($band) >= $limit) {
+                break;
+            }
+        }
+
+        return $band;
+    }
+
+    /**
+     * @param list<array{movementA: string, movementB: string, workoutCount: int, percentage: float}> $pairs
+     *
+     * @return list<array{movementA: string, movementB: string, percentage: float}>
+     */
+    private function pairWarnings(array $pairs, float $minPercentage, int $limit): array
+    {
+        $warnings = [];
+
+        foreach ($pairs as $pair) {
+            if ($pair['percentage'] < $minPercentage) {
+                continue;
+            }
+
+            $warnings[] = [
+                'movementA' => $pair['movementA'],
+                'movementB' => $pair['movementB'],
+                'percentage' => $pair['percentage'],
+            ];
+
+            if (count($warnings) >= $limit) {
+                break;
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * @param list<array{movement: string, percentage: float}> $entries
+     */
+    private function formatGuidanceEntries(array $entries): string
+    {
+        if ($entries === []) {
+            return '-';
+        }
+
+        return implode(', ', array_map(
+            static fn (array $entry): string => sprintf('%s (%.2f%%)', $entry['movement'], $entry['percentage']),
+            $entries,
+        ));
     }
 
     private function percentage(int $count, int $total): float
