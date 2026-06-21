@@ -150,8 +150,10 @@ class WorkoutCreatorServiceTest extends TestCase
         $wallBallShot = new Movement('Wall Ball Shot', $difficulty, $cardio);
         $thruster = new Movement('Thruster', $difficulty, $weightlifting);
         $skiErg = new Movement('Ski Erg', $difficulty, $cardio);
+        $powerClean = new Movement('Power Clean', $difficulty, $weightlifting);
+        $row = new Movement('Row', $difficulty, $cardio);
 
-        $movementService = new class([$chestToBarPullUp, $toesToBar, $doubleUnder, $wallBallShot, $thruster, $skiErg]) implements MovementServiceInterface {
+        $movementService = new class([$chestToBarPullUp, $toesToBar, $doubleUnder, $wallBallShot, $thruster, $skiErg, $powerClean, $row]) implements MovementServiceInterface {
             /**
              * @param list<Movement> $possibleMovements
              */
@@ -229,8 +231,10 @@ class WorkoutCreatorServiceTest extends TestCase
 
         self::assertStringContainsString('Competition movement recurrence guidance:', $chatGpt->prompt);
         self::assertStringContainsString('very frequent available movements: Toes to Bar, Double Under, Wall Ball Shot.', $chatGpt->prompt);
-        self::assertStringContainsString('regular available movements: Chest to Bar Pull Up, Ski Erg.', $chatGpt->prompt);
+        self::assertStringContainsString('regular available movements: Chest to Bar Pull Up, Power Clean, Ski Erg.', $chatGpt->prompt);
         self::assertStringContainsString('Do not default to Thruster + Chest to Bar Pull Up', $chatGpt->prompt);
+        self::assertStringContainsString('Recent generated competition workouts are overusing this cluster: Power Clean, Wall Ball Shot, Row, Chest to Bar Pull Up.', $chatGpt->prompt);
+        self::assertStringContainsString('choose at most two from that cluster unless one of them is mandatory', $chatGpt->prompt);
         self::assertStringContainsString('Chest to Bar Pull Up + Thruster', $chatGpt->prompt);
         self::assertStringContainsString('Double Under + Toes to Bar', $chatGpt->prompt);
         self::assertStringNotContainsString('Muscle Up + Toes to Bar', $chatGpt->prompt);
@@ -339,14 +343,19 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Do not choose Wall Ball Shot, sled, sandbag, dumbbell or other equipment-specific movements unless their required implement is explicitly printed under that exact movement', $chatGpt->prompt);
         self::assertStringContainsString('always include level-appropriate male/female loads in kg', $chatGpt->prompt);
         self::assertStringContainsString('Every loaded movement written in the main workout flow must include either kg loads', $chatGpt->prompt);
-        self::assertStringContainsString('83 kg men / 61 kg women', $chatGpt->prompt);
         self::assertStringNotContainsString('185/135 lb', $chatGpt->prompt);
         self::assertStringContainsString('Scaling options', $chatGpt->prompt);
         self::assertStringContainsString('"scalingOptions"', $chatGpt->prompt);
         self::assertStringContainsString('The movements array must contain exactly 2 unique movement name(s)', $chatGpt->prompt);
         self::assertStringContainsString('with no duplicates, using only exact names from the allowed lists', $chatGpt->prompt);
+        self::assertStringContainsString('The flow field must contain only the main workout prescription', $chatGpt->prompt);
+        self::assertStringContainsString('Put all substitutions and adaptations only in scalingOptions', $chatGpt->prompt);
         self::assertStringContainsString('the movements array must contain exactly the movement names used in the main workout flow', strtolower($chatGpt->prompt));
         self::assertStringContainsString('Team workout guidance: this is an individual workout', $chatGpt->prompt);
+        self::assertStringContainsString('Movement A', $chatGpt->prompt);
+        self::assertStringNotContainsString('25 Pull-Ups', $chatGpt->prompt);
+        self::assertStringNotContainsString('10 thrusters', $chatGpt->prompt);
+        self::assertStringNotContainsString('10 chest-to-bar pull-ups', $chatGpt->prompt);
         self::assertStringContainsString("Scaling options:\nRX: as written", $workout->getFlow());
         self::assertSame(['Run', 'Burpee'], array_map(
             static fn (Movement $movement): ?string => $movement->getName(),
