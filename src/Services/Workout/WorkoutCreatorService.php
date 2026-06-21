@@ -279,20 +279,21 @@ EOD;
 
         $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
         $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
-        $this->assertSelectedMovementNamesAppearInFlow(
-            $generatedWorkout['movements'],
-            array_merge($mandatoryMovements, $candidateMovementsForPrompt),
-            $generatedWorkout['flow']
-        );
         $allowedMovements = array_merge($mandatoryMovements, $candidateMovementsForPrompt);
-        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
-        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
         $WorkoutMovements = $this->resolveSelectedMovements(
             $generatedWorkout['movements'],
             $mandatoryMovements,
             $candidateMovements,
             $workoutGeneration->getNumberOfDifferentMovements()
         );
+        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
+        $WorkoutMovements = $this->reconcileSelectedMovementsWithFlow(
+            $WorkoutMovements,
+            $allowedMovements,
+            $generatedWorkout['flow'],
+            $workoutGeneration->getNumberOfDifferentMovements()
+        );
+        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
         $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
 
@@ -946,29 +947,6 @@ TXT;
     }
 
     /**
-     * @param list<string> $selectedMovementNames
-     * @param Movement[]   $allowedMovements
-     */
-    private function assertSelectedMovementNamesAppearInFlow(array $selectedMovementNames, array $allowedMovements, string $flow): void
-    {
-        $allowedMovementsByName = $this->movementsBySearchText($allowedMovements);
-
-        $mainFlow = $this->flowWithoutScalingOptions($flow);
-
-        foreach ($selectedMovementNames as $selectedMovementName) {
-            $movement = $allowedMovementsByName[$this->normalizeMovementSearchText($selectedMovementName)] ?? null;
-            if (!$movement instanceof Movement) {
-                continue;
-            }
-
-            $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
-            if (!$this->normalizedFlowContainsMovement($normalizedFlow, $movement)) {
-                throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $movement->getName()));
-            }
-        }
-    }
-
-    /**
      * @param Movement[] $selectedMovements
      * @param Movement[] $allowedMovements
      */
@@ -994,6 +972,68 @@ TXT;
                 throw new \RuntimeException(sprintf('OpenAI workout generation included movement "%s" in the flow but did not list it in movements.', $movement->getName()));
             }
         }
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     * @param Movement[] $allowedMovements
+     *
+     * @return Movement[]
+     */
+    private function reconcileSelectedMovementsWithFlow(array $selectedMovements, array $allowedMovements, string $flow, int $targetCount): array
+    {
+        $missingMovement = null;
+        foreach ($selectedMovements as $movement) {
+            if (!$this->flowContainsAllowedMovement($flow, $allowedMovements, $movement)) {
+                $missingMovement = $movement;
+                break;
+            }
+        }
+
+        if (!$missingMovement instanceof Movement) {
+            return $selectedMovements;
+        }
+
+        $flowMovements = $this->resolveAllowedMovementsFromFlow($allowedMovements, $flow, $targetCount);
+        if ($flowMovements !== null) {
+            return $flowMovements;
+        }
+
+        throw new \RuntimeException(sprintf('OpenAI workout generation listed movement "%s" but did not include it in the workout flow.', $missingMovement->getName()));
+    }
+
+    /**
+     * @param Movement[] $allowedMovements
+     *
+     * @return Movement[]|null
+     */
+    private function resolveAllowedMovementsFromFlow(array $allowedMovements, string $flow, int $targetCount): ?array
+    {
+        $flowMovementsByName = [];
+        foreach ($allowedMovements as $movement) {
+            if (!$this->flowContainsAllowedMovement($flow, $allowedMovements, $movement)) {
+                continue;
+            }
+
+            $flowMovementsByName[$this->normalizeMovementName($movement->getName())] = $movement;
+        }
+
+        if (count($flowMovementsByName) !== $targetCount) {
+            return null;
+        }
+
+        return array_values($flowMovementsByName);
+    }
+
+    /**
+     * @param Movement[] $allowedMovements
+     */
+    private function flowContainsAllowedMovement(string $flow, array $allowedMovements, Movement $movement): bool
+    {
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedFlow = $this->normalizedFlowWithoutOtherMovementNames($mainFlow, $allowedMovements, $movement);
+
+        return $this->normalizedFlowContainsMovement($normalizedFlow, $movement);
     }
 
     /**
