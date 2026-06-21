@@ -235,6 +235,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Do not default to Thruster + Chest to Bar Pull Up', $chatGpt->prompt);
         self::assertStringContainsString('Recent generated competition workouts are overusing this cluster: Power Clean, Wall Ball Shot, Row, Chest to Bar Pull Up.', $chatGpt->prompt);
         self::assertStringContainsString('choose at most two from that cluster unless one of them is mandatory', $chatGpt->prompt);
+        self::assertStringContainsString('Strong rotation rule for this generation: no movement is mandatory, so choose at most one from these currently overused generated anchors: Power Clean, Chest to Bar Pull Up, Wall Ball Shot, Thruster.', $chatGpt->prompt);
+        self::assertStringContainsString('Power Clean + Chest to Bar Pull Up is recurring too often', $chatGpt->prompt);
+        self::assertStringContainsString('Do not select both together unless the user explicitly forced both movements.', $chatGpt->prompt);
         self::assertStringContainsString('Chest to Bar Pull Up + Thruster', $chatGpt->prompt);
         self::assertStringContainsString('Double Under + Toes to Bar', $chatGpt->prompt);
         self::assertStringNotContainsString('Muscle Up + Toes to Bar', $chatGpt->prompt);
