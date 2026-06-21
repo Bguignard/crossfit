@@ -118,9 +118,10 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
 Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
-Add a short "Scaling options" section at the end of the flow with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
+Create a short "Scaling options" section in the JSON scalingOptions field with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
-The Scaling options section is mandatory. Also return it separately in the JSON "scalingOptions" field.
+The Scaling options section is mandatory in the JSON "scalingOptions" field. Do not duplicate the Scaling options heading in the flow field.
+If the exact selected movement name is Assault Bike, write Echo Bike in the athlete-facing flow for modern WODs while keeping Assault Bike as the exact movement name in the JSON movements array.
 
 EOD;
         if ($workoutType === WorkoutTypeEnum::AMRAP) {
@@ -884,7 +885,7 @@ TXT;
     private function scalingOptionsFromPayload(mixed $scalingOptions): string
     {
         if (is_string($scalingOptions)) {
-            return trim($scalingOptions);
+            return $this->normalizeScalingOptionsText($scalingOptions);
         }
 
         if (!is_array($scalingOptions)) {
@@ -899,7 +900,7 @@ TXT;
             }
         }
 
-        return trim(implode("\n", $lines));
+        return $this->normalizeScalingOptionsText(implode("\n", $lines));
     }
 
     private function scalingOptionLineFromPayloadItem(mixed $option, ?string $fallbackLevel): ?string
@@ -934,16 +935,41 @@ TXT;
             return '';
         }
 
-        return trim((string) $matches['scaling']);
+        return $this->normalizeScalingOptionsText((string) $matches['scaling']);
     }
 
     private function flowWithScalingOptions(string $flow, string $scalingOptions): string
     {
         if (preg_match('/^\s*scaling(?: options)?\s*:/mi', $flow) === 1) {
-            return $flow;
+            return $this->normalizeScalingOptionsHeadingsInFlow($flow);
         }
 
-        return rtrim($flow)."\n\nScaling options:\n".trim($scalingOptions);
+        return rtrim($flow)."\n\nScaling options:\n".$this->normalizeScalingOptionsText($scalingOptions);
+    }
+
+    private function normalizeScalingOptionsText(string $scalingOptions): string
+    {
+        $normalized = trim($scalingOptions);
+        while (preg_match('/^\s*scaling(?: options)?\s*:/i', $normalized) === 1) {
+            $normalized = trim(preg_replace('/^\s*scaling(?: options)?\s*:/i', '', $normalized, 1) ?? $normalized);
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeScalingOptionsHeadingsInFlow(string $flow): string
+    {
+        $normalized = $flow;
+        do {
+            $previous = $normalized;
+            $normalized = preg_replace(
+                '/(^\s*scaling(?: options)?\s*:\s*)\R+\s*scaling(?: options)?\s*:\s*/mi',
+                '$1'."\n",
+                $normalized
+            ) ?? $normalized;
+        } while ($normalized !== $previous);
+
+        return $normalized;
     }
 
     /**
@@ -1144,6 +1170,7 @@ TXT;
     private function movementSearchAliases(string $movementName): array
     {
         return match ($this->normalizeMovementName($movementName)) {
+            'assault bike' => ['Echo Bike', 'Rogue Echo Bike'],
             'bike erg' => ['BikeErg', 'Bike Erg Calories', 'Bike Erg Calorie'],
             'box jump over' => ['Box Jump-Over', 'Box Jump-Overs', 'Box Jump Overs'],
             'box step up' => ['Box Step-Up', 'Box Step-Ups', 'Box Step Ups'],
