@@ -1124,10 +1124,12 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
             'parameters' => [
                 'goal' => 'first pass',
+                'triggeredBy' => 'programming_generation',
             ],
         ], $token);
 
         self::assertResponseStatusCodeSame(201);
+        self::assertArrayNotHasKey('triggeredBy', $this->jsonResponse()['analysisRequest']['parameters']);
 
         $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
             'parameters' => [

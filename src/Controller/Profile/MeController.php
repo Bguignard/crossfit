@@ -378,6 +378,7 @@ class MeController extends AbstractController
 
         $primaryAthleteProfile = $this->primaryAnalysisAthleteProfile($athleteProfiles);
         $parameters = $this->arrayPayload($payload['parameters'] ?? []);
+        unset($parameters['triggeredBy']);
         $analysisRequest = (new PerformanceAnalysisRequest(
             $user,
             $profile,
