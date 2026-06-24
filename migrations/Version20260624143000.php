@@ -17,7 +17,7 @@ final class Version20260624143000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE TABLE coached_client (id UUID NOT NULL, coach_id UUID NOT NULL, display_name VARCHAR(255) NOT NULL, email VARCHAR(180) DEFAULT NULL, phone VARCHAR(64) DEFAULT NULL, notes VARCHAR(2048) DEFAULT NULL, performance_snapshot JSON NOT NULL, archived_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE INDEX IDX_COACHED_CLIENT_COACH ON coached_client (coach_id)');
+        $this->addSql('CREATE INDEX IDX_513B1E863C105691 ON coached_client (coach_id)');
         $this->addSql('COMMENT ON COLUMN coached_client.id IS \'(DC2Type:uuid)\'');
         $this->addSql('COMMENT ON COLUMN coached_client.coach_id IS \'(DC2Type:uuid)\'');
         $this->addSql('COMMENT ON COLUMN coached_client.archived_at IS \'(DC2Type:datetime_immutable)\'');
