@@ -49,6 +49,12 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         'Thruster',
     ];
 
+    private const GENERATED_COMPETITION_REJECTED_MOVEMENT_CLUSTERS = [
+        ['Chest to Bar Pull Up', 'Thruster', 'Row'],
+        ['Chest to Bar Pull Up', 'Thruster', 'Power Clean'],
+        ['Chest to Bar Pull Up', 'Thruster', 'Wall Ball Shot'],
+    ];
+
     public function __construct(
         public MovementServiceInterface $movementService,
         public ChatGPTApiKeyInterface $chatGPTApiKey,
@@ -278,24 +284,51 @@ The flow field must contain only the main workout prescription. Do not include s
 The movements array must contain exactly {$workoutGeneration->getNumberOfDifferentMovements()} unique movement name(s), with no duplicates, using only exact names from the allowed lists, and every listed movement must appear in the main flow.
 EOD;
 
-        $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT);
-        $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
         $allowedMovements = array_merge($mandatoryMovements, $candidateMovementsForPrompt);
-        $WorkoutMovements = $this->resolveSelectedMovements(
-            $generatedWorkout['movements'],
-            $mandatoryMovements,
-            $candidateMovements,
-            $workoutGeneration->getNumberOfDifferentMovements()
-        );
-        $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
-        $WorkoutMovements = $this->reconcileSelectedMovementsWithFlow(
-            $WorkoutMovements,
-            $allowedMovements,
-            $generatedWorkout['flow'],
-            $workoutGeneration->getNumberOfDifferentMovements()
-        );
-        $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
-        $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
+        $generatedWorkout = null;
+        $WorkoutMovements = null;
+        $clusterRejection = null;
+        for ($attempt = 0; $attempt < 2; ++$attempt) {
+            $attemptPrompt = $promptForChatGPT;
+            if ($clusterRejection instanceof \RuntimeException) {
+                $attemptPrompt .= "\nPrevious generation rejected: ".$clusterRejection->getMessage()."\n";
+                $attemptPrompt .= "Generate a different valid movement mix now. Keep common competition movements available, but do not return the rejected cluster again.\n";
+            }
+
+            $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($attemptPrompt);
+            $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
+            $WorkoutMovements = $this->resolveSelectedMovements(
+                $generatedWorkout['movements'],
+                $mandatoryMovements,
+                $candidateMovements,
+                $workoutGeneration->getNumberOfDifferentMovements()
+            );
+            $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
+            $WorkoutMovements = $this->reconcileSelectedMovementsWithFlow(
+                $WorkoutMovements,
+                $allowedMovements,
+                $generatedWorkout['flow'],
+                $workoutGeneration->getNumberOfDifferentMovements()
+            );
+            $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
+            $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
+
+            try {
+                $this->assertNoRejectedCompetitionMovementCluster($workoutGeneration, $WorkoutMovements);
+                $clusterRejection = null;
+                break;
+            } catch (\RuntimeException $exception) {
+                $clusterRejection = $exception;
+                if ($attempt === 1) {
+                    throw $exception;
+                }
+            }
+        }
+
+        if ($generatedWorkout === null || $WorkoutMovements === null) {
+            throw new \RuntimeException('OpenAI workout generation did not return a usable workout.');
+        }
+
         $flow = $this->flowWithScalingOptions($generatedWorkout['flow'], $generatedWorkout['scalingOptions']);
 
         // Création de l'entité Workout avec les données reçues
@@ -1100,6 +1133,35 @@ TXT;
             if ($this->normalizedFlowContainsMovement($normalizedFlow, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation included banned movement "%s" in the workout flow.', $movement->getName()));
             }
+        }
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function assertNoRejectedCompetitionMovementCluster(WorkoutGeneration $workoutGeneration, array $selectedMovements): void
+    {
+        if (!$this->isCompetitionStimulus($workoutGeneration) || count($workoutGeneration->getMandatoryMovements()) > 0) {
+            return;
+        }
+
+        $selectedMovementNames = [];
+        foreach ($selectedMovements as $movement) {
+            $selectedMovementNames[$this->normalizeMovementName($movement->getName())] = $movement->getName();
+        }
+
+        foreach (self::GENERATED_COMPETITION_REJECTED_MOVEMENT_CLUSTERS as $cluster) {
+            $matchedCluster = [];
+            foreach ($cluster as $movementName) {
+                $normalizedMovementName = $this->normalizeMovementName($movementName);
+                if (!isset($selectedMovementNames[$normalizedMovementName])) {
+                    continue 2;
+                }
+
+                $matchedCluster[] = $selectedMovementNames[$normalizedMovementName];
+            }
+
+            throw new \RuntimeException(sprintf('Generated Competition workout selected an overused movement cluster (%s) without mandatory movements.', implode(' + ', $matchedCluster)));
         }
     }
 

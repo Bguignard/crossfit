@@ -245,6 +245,114 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringNotContainsString('Box Jump Over +', $chatGpt->prompt);
     }
 
+    public function testCompetitionGenerationRetriesRejectedOpenStyleCluster(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $chestToBarPullUp = new Movement('Chest to Bar Pull Up', $difficulty, $gymnastic);
+        $thruster = new Movement('Thruster', $difficulty, $weightlifting);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastic);
+        $powerSnatch = new Movement('Power Snatch', $difficulty, $weightlifting);
+
+        $chatGpt = new class([['flow' => "For time:\n3 rounds of:\n- 15/12 cal Row\n- 12 Chest to Bar Pull Up\n- 9 Thruster (61/43 kg)", 'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: jumping pull-ups and light thrusters", 'movements' => ['Row', 'Chest to Bar Pull Up', 'Thruster']], ['flow' => "For time:\n3 rounds of:\n- 15/12 cal Row\n- 12 Toes to Bar\n- 9 Power Snatch (43/30 kg)", 'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: knees raises and hang power snatches", 'movements' => ['Row', 'Toes to Bar', 'Power Snatch']]]) implements ChatGPTApiKeyInterface {
+            public int $calls = 0;
+            public array $prompts = [];
+
+            public function __construct(private readonly array $responses)
+            {
+            }
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompts[] = $prompt;
+
+                return json_encode($this->responses[$this->calls++], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Competition rejected cluster retry')
+            ->setStimulus('Competition')
+            ->setStimulusIntent('Tester plusieurs qualités simultanément.')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastic, $weightlifting, $cardio])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService(
+            $this->movementServiceReturning([$row, $chestToBarPullUp, $thruster, $toesToBar, $powerSnatch]),
+            $chatGpt,
+            $this->workoutOriginService(),
+        ))->createWorkout($workoutGeneration);
+
+        self::assertSame(2, $chatGpt->calls);
+        self::assertStringContainsString('Previous generation rejected', $chatGpt->prompts[1]);
+        self::assertStringContainsString('Chest to Bar Pull Up + Thruster + Row', $chatGpt->prompts[1]);
+        self::assertSame(['Row', 'Toes to Bar', 'Power Snatch'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
+    public function testCompetitionGenerationAllowsRejectedClusterWhenUserForcedMovements(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $chestToBarPullUp = new Movement('Chest to Bar Pull Up', $difficulty, $gymnastic);
+        $thruster = new Movement('Thruster', $difficulty, $weightlifting);
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public int $calls = 0;
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                ++$this->calls;
+
+                return json_encode([
+                    'flow' => "For time:\n3 rounds of:\n- 15/12 cal Row\n- 12 Chest to Bar Pull Up\n- 9 Thruster (61/43 kg)",
+                    'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: jumping pull-ups and light thrusters",
+                    'movements' => ['Row', 'Chest to Bar Pull Up', 'Thruster'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Competition forced cluster')
+            ->setStimulus('Competition')
+            ->setStimulusIntent('Tester plusieurs qualités simultanément.')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$gymnastic, $weightlifting, $cardio])
+            ->setMandatoryMovements([$row, $chestToBarPullUp, $thruster])
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService(
+            $this->movementServiceReturning([$row, $chestToBarPullUp, $thruster]),
+            $chatGpt,
+            $this->workoutOriginService(),
+        ))->createWorkout($workoutGeneration);
+
+        self::assertSame(1, $chatGpt->calls);
+        self::assertSame(['Row', 'Chest to Bar Pull Up', 'Thruster'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -3520,5 +3628,60 @@ class WorkoutCreatorServiceTest extends TestCase
             'workout' => $workout,
             'prompt' => $chatGpt->prompt,
         ];
+    }
+
+    /**
+     * @param list<Movement> $possibleMovements
+     */
+    private function movementServiceReturning(array $possibleMovements): MovementServiceInterface
+    {
+        return new class($possibleMovements) implements MovementServiceInterface {
+            /**
+             * @param list<Movement> $possibleMovements
+             */
+            public function __construct(private readonly array $possibleMovements)
+            {
+            }
+
+            public function getWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleWorkoutMovementsFromWorkoutGeneration(WorkoutGeneration $workoutGeneration): array
+            {
+                return $this->possibleMovements;
+            }
+
+            public function removeNotAvailableImplementsFromMovementsOfWorkout(Collection $possibleImplements, array $movements): array
+            {
+                return $movements;
+            }
+
+            public function getMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getPossibleMovementsFromMuscles(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getWorkoutMovementsFromPossibleMovements(array $possibleMovements, WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+        };
+    }
+
+    private function workoutOriginService(): WorkoutOriginServiceInterface
+    {
+        return new class implements WorkoutOriginServiceInterface {
+            public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
+            {
+                return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
+            }
+        };
     }
 }
