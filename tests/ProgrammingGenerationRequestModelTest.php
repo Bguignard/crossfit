@@ -7,6 +7,7 @@ use App\Entity\Product\CoachedClient;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
+use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
@@ -19,6 +20,10 @@ class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
         $user = (new User('programming@example.com'))->setPassword('hashed-password');
         $profile = new UserPerformanceProfile($user);
         (new UserPerformanceMetric($profile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150.0);
+        $analysisRequest = (new PerformanceAnalysisRequest($user, $profile))
+            ->markQueued()
+            ->markRunning()
+            ->markCompleted(['summary' => 'Strength baseline ready.']);
         $request = (new ProgrammingGenerationRequest(
             $user,
             ProgrammingGenerationTypeEnum::INDIVIDUAL,
@@ -34,10 +39,12 @@ class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
                 ],
             ],
         ))->setPerformanceProfile($profile);
+        $request->setSourceAnalysisRequest($analysisRequest);
 
         $em = $this->getEntityManager();
         $em->persist($user);
         $em->persist($profile);
+        $em->persist($analysisRequest);
         $em->persist($request);
         $em->flush();
         $em->clear();
@@ -56,6 +63,7 @@ class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
         self::assertSame('improve gymnastics endurance', $storedRequest->getConstraints()['goal']);
         self::assertSame(150, $storedRequest->getInputSnapshot()['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
         self::assertNotNull($storedRequest->getPerformanceProfile());
+        self::assertSame('Strength baseline ready.', $storedRequest->getSourceAnalysisRequest()?->getResult()['summary']);
     }
 
     public function testBoxProgrammingRequestCanTargetABox(): void

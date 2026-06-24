@@ -51,9 +51,32 @@ Private endpoints require an authenticated user and should cover user-owned data
   `{"programmingRequest": {...}}`, including `programmingRequest.coachedClient`
   and a frozen `programmingRequest.inputSnapshot.coach_client` context for the
   Python worker;
-- future performance analysis requests;
-- future programming generation requests;
+- `POST /api/me/performance-analysis-requests`: create a standalone personal
+  performance analysis request. Analysis snapshots expose
+  `analysisRequest.freshness.inputHash`, `freshness.version`,
+  `freshness.freshnessWindowDays`, and source timestamps. The default freshness
+  window is 30 days;
+- `POST /api/me/programming-generation-requests`: create an individual
+  programming generation request. The endpoint still accepts
+  `{"type":"individual","constraints":{...}}`. If `constraints.sourceAnalysisRequestId`
+  references a completed analysis that is fresh and compatible with the current
+  athlete data snapshot, the programming request is created with
+  `status: "queued"` and `analysisDependency.mode: "reused"`. If no fresh
+  compatible analysis exists, the backend creates a new performance analysis
+  request, returns the programming request with `status: "waiting_analysis"`,
+  `analysisDependency.mode: "generated"`, and `sourceAnalysisRequest.status:
+  "queued"`. When the source analysis completes, the programming request is
+  moved to `queued` automatically and then dispatched to the programming worker;
+- `GET /api/me/requests`: lists analysis requests, programming requests, and
+  programming session detail requests. Programming requests may include
+  `sourceAnalysisRequest` and `analysisDependency` to expose whether generation
+  is waiting for analysis refresh;
 - future saved or favorite WODs.
+
+Deployment note: run Doctrine migrations before enabling this contract in
+production so `programming_generation_request.source_analysis_request_id` exists.
+No new environment variable or command is required; existing Messenger workers
+and `app:ai-requests:enqueue` continue to dispatch queued AI work.
 
 ## Admin API
 

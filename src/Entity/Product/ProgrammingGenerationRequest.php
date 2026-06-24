@@ -29,6 +29,10 @@ class ProgrammingGenerationRequest
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?UserPerformanceProfile $performanceProfile = null;
 
+    #[ORM\ManyToOne(targetEntity: PerformanceAnalysisRequest::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?PerformanceAnalysisRequest $sourceAnalysisRequest = null;
+
     #[ORM\ManyToOne(targetEntity: Box::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Box $box = null;
@@ -112,6 +116,19 @@ class ProgrammingGenerationRequest
         return $this;
     }
 
+    public function getSourceAnalysisRequest(): ?PerformanceAnalysisRequest
+    {
+        return $this->sourceAnalysisRequest;
+    }
+
+    public function setSourceAnalysisRequest(?PerformanceAnalysisRequest $sourceAnalysisRequest): self
+    {
+        $this->sourceAnalysisRequest = $sourceAnalysisRequest;
+        $this->touch();
+
+        return $this;
+    }
+
     public function getBox(): ?Box
     {
         return $this->box;
@@ -183,6 +200,16 @@ class ProgrammingGenerationRequest
     {
         $this->status = ProgrammingGenerationRequestStatusEnum::QUEUED;
         $this->queuedAt = $queuedAt ?? new \DateTimeImmutable();
+        $this->touch();
+
+        return $this;
+    }
+
+    public function markWaitingAnalysis(): self
+    {
+        $this->status = ProgrammingGenerationRequestStatusEnum::WAITING_ANALYSIS;
+        $this->queuedAt = null;
+        $this->messengerEnqueuedAt = null;
         $this->touch();
 
         return $this;

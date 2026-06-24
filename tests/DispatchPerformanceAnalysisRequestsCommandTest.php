@@ -6,6 +6,8 @@ use App\Command\DispatchPerformanceAnalysisRequestsCommand;
 use App\Entity\Competition\Competition;
 use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
+use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
+use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\ProgrammingSessionDetailRequest;
@@ -47,6 +49,55 @@ class DispatchPerformanceAnalysisRequestsCommandTest extends AbstractIntegration
         self::assertSame(1, $worker->calls);
     }
 
+    public function testCompletedAnalysisQueuesDependentProgrammingRequest(): void
+    {
+        $request = $this->persistQueuedAnalysisRequest('dispatch-dependent-success@example.com');
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $request->getUser(),
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            ['durationWeeks' => 8],
+            [
+                'analysis_dependency' => [
+                    'mode' => 'generated',
+                    'status' => 'waiting_analysis',
+                    'source_analysis_request_id' => (string) $request->getId(),
+                ],
+                'source_analysis_request' => [
+                    'id' => (string) $request->getId(),
+                    'status' => AnalysisRequestStatusEnum::QUEUED->value,
+                ],
+            ]
+        ))
+            ->setPerformanceProfile($request->getPerformanceProfile())
+            ->setSourceAnalysisRequest($request)
+            ->markWaitingAnalysis();
+
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->flush();
+
+        $worker = new FakePerformanceAnalysisWorker([
+            'analysis' => [
+                'kind' => 'personal_performance_analysis_v1',
+                'summary' => 'Fresh limiter analysis.',
+            ],
+        ]);
+        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand(
+            $this->getEntityManager(),
+            new PerformanceAnalysisRequestProcessor($this->getEntityManager(), $worker)
+        ));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--limit' => 1]));
+        $this->getEntityManager()->clear();
+
+        /** @var ProgrammingGenerationRequest|null $storedProgrammingRequest */
+        $storedProgrammingRequest = $this->getRepository(ProgrammingGenerationRequest::class)->find($programmingRequest->getId());
+
+        self::assertNotNull($storedProgrammingRequest);
+        self::assertSame(ProgrammingGenerationRequestStatusEnum::QUEUED, $storedProgrammingRequest->getStatus());
+        self::assertSame('completed', $storedProgrammingRequest->getInputSnapshot()['analysis_dependency']['status']);
+        self::assertSame('Fresh limiter analysis.', $storedProgrammingRequest->getInputSnapshot()['source_analysis_request']['result']['summary']);
+    }
+
     public function testWorkerFailureMarksAnalysisRequestAsFailed(): void
     {
         $request = $this->persistQueuedAnalysisRequest('dispatch-failure@example.com');
@@ -66,6 +117,39 @@ class DispatchPerformanceAnalysisRequestsCommandTest extends AbstractIntegration
         self::assertSame('Python worker timeout', $storedRequest->getErrorMessage());
         self::assertNotNull($storedRequest->getStartedAt());
         self::assertNotNull($storedRequest->getCompletedAt());
+    }
+
+    public function testFailedAnalysisFailsDependentProgrammingRequest(): void
+    {
+        $request = $this->persistQueuedAnalysisRequest('dispatch-dependent-failure@example.com');
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $request->getUser(),
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            ['durationWeeks' => 8],
+            []
+        ))
+            ->setPerformanceProfile($request->getPerformanceProfile())
+            ->setSourceAnalysisRequest($request)
+            ->markWaitingAnalysis();
+
+        $this->getEntityManager()->persist($programmingRequest);
+        $this->getEntityManager()->flush();
+
+        $worker = new FakePerformanceAnalysisWorker(exception: new \RuntimeException('Python worker timeout'));
+        $tester = new CommandTester(new DispatchPerformanceAnalysisRequestsCommand(
+            $this->getEntityManager(),
+            new PerformanceAnalysisRequestProcessor($this->getEntityManager(), $worker)
+        ));
+
+        self::assertSame(Command::FAILURE, $tester->execute(['--limit' => 1]));
+        $this->getEntityManager()->clear();
+
+        /** @var ProgrammingGenerationRequest|null $storedProgrammingRequest */
+        $storedProgrammingRequest = $this->getRepository(ProgrammingGenerationRequest::class)->find($programmingRequest->getId());
+
+        self::assertNotNull($storedProgrammingRequest);
+        self::assertSame(ProgrammingGenerationRequestStatusEnum::FAILED, $storedProgrammingRequest->getStatus());
+        self::assertSame('Required performance analysis failed before programming generation.', $storedProgrammingRequest->getErrorMessage());
     }
 
     private function persistQueuedAnalysisRequest(string $email): PerformanceAnalysisRequest

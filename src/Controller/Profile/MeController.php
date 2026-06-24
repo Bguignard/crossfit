@@ -35,6 +35,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class MeController extends AbstractController
 {
     private const ANALYSIS_REQUEST_COOLDOWN = 'P1D';
+    private const ANALYSIS_FRESHNESS_WINDOW = 'P30D';
+    private const ANALYSIS_FRESHNESS_WINDOW_DAYS = 30;
+    private const ANALYSIS_INPUT_SNAPSHOT_VERSION = 1;
     private const CURRENT_SESSION_EMAIL_COOLDOWN = 'PT15M';
     private const PROGRAMMING_DURATION_WEEKS = ['min' => 4, 'max' => 8, 'default' => 8];
     private const PROGRAMMING_SESSIONS_PER_WEEK = ['min' => 1, 'max' => 6, 'default' => 5];
@@ -413,7 +416,6 @@ class MeController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $profile = $this->getLatestPerformanceProfile($user);
         $constraints = $this->arrayPayload($payload['constraints'] ?? []);
         try {
             $constraints = $this->normaliseProgrammingConstraints($constraints);
@@ -421,25 +423,57 @@ class MeController extends AbstractController
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
         }
 
-        $sourceAnalysisRequest = $this->sourceAnalysisRequest($user, $constraints);
+        $athleteProfiles = $this->personalAnalysisAthleteProfiles($user);
+        $profile = $this->getLatestPerformanceProfile($user);
+        if ($profile === null) {
+            if ($athleteProfiles === []) {
+                return $this->json(['error' => 'Performance metrics or a linked competition profile are required.'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $profile = new UserPerformanceProfile($user);
+            $this->entityManager->persist($profile);
+        } elseif (!$profile->hasAnyProvidedMetric() && $athleteProfiles === []) {
+            return $this->json(['error' => 'Performance metrics or a linked competition profile are required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $analysisSnapshot = $this->buildAnalysisSnapshot($profile, $athleteProfiles);
+        $sourceAnalysisRequest = $this->freshCompatibleAnalysisRequest($user, $constraints, $analysisSnapshot);
+        $analysisDependencyMode = 'reused';
         if ($sourceAnalysisRequest === null) {
-            return $this->json([
-                'error' => 'A completed performance analysis is required before programming generation.',
-            ], Response::HTTP_BAD_REQUEST);
+            $sourceAnalysisRequest = (new PerformanceAnalysisRequest(
+                $user,
+                $profile,
+                $this->primaryAnalysisAthleteProfile($athleteProfiles),
+                $this->programmingAnalysisParameters($constraints),
+                $analysisSnapshot
+            ))->markQueued();
+            $analysisDependencyMode = 'generated';
+            $this->entityManager->persist($sourceAnalysisRequest);
+            $this->entityManager->flush();
         }
 
         $programmingRequest = (new ProgrammingGenerationRequest(
             $user,
             $type,
             $constraints,
-            $this->buildProgrammingSnapshot($profile, $sourceAnalysisRequest)
+            $this->buildProgrammingSnapshot($profile, $sourceAnalysisRequest, $analysisDependencyMode)
         ))
             ->setPerformanceProfile($profile)
-            ->markQueued();
+            ->setSourceAnalysisRequest($sourceAnalysisRequest);
+
+        if ($sourceAnalysisRequest->getStatus() === AnalysisRequestStatusEnum::COMPLETED) {
+            $programmingRequest->markQueued();
+        } else {
+            $programmingRequest->markWaitingAnalysis();
+        }
 
         $this->entityManager->persist($programmingRequest);
         $this->entityManager->flush();
-        $this->queuedAiRequestDispatcher->enqueueProgrammingGenerationRequest($programmingRequest, force: true);
+        if ($programmingRequest->getStatus() === ProgrammingGenerationRequestStatusEnum::WAITING_ANALYSIS) {
+            $this->queuedAiRequestDispatcher->enqueuePerformanceAnalysisRequest($sourceAnalysisRequest, force: true);
+        } else {
+            $this->queuedAiRequestDispatcher->enqueueProgrammingGenerationRequest($programmingRequest, force: true);
+        }
 
         return $this->json(
             ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],
@@ -742,6 +776,7 @@ class MeController extends AbstractController
             'status' => $request->getStatus()->value,
             'eligibleAtCreation' => $request->wasEligibleAtCreation(),
             'parameters' => $request->getParameters(),
+            'freshness' => $this->analysisFreshnessMetadata($request->getInputSnapshot()),
             'inputSnapshot' => $request->getInputSnapshot(),
             'result' => $request->getResult(),
             'aiUsage' => $this->aiUsage($request->getResult()),
@@ -773,6 +808,10 @@ class MeController extends AbstractController
             'coachedClient' => $request->getCoachedClient() !== null
                 ? $this->serializeCoachedClient($request->getCoachedClient())
                 : null,
+            'sourceAnalysisRequest' => $request->getSourceAnalysisRequest() !== null
+                ? $this->serializeProgrammingSourceAnalysisRequest($request->getSourceAnalysisRequest())
+                : null,
+            'analysisDependency' => $this->analysisDependency($request),
             'constraints' => $request->getConstraints(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'generatedProgramming' => $request->getGeneratedProgramming(),
@@ -788,6 +827,30 @@ class MeController extends AbstractController
             'startedAt' => $this->date($request->getStartedAt()),
             'completedAt' => $this->date($request->getCompletedAt()),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeProgrammingSourceAnalysisRequest(PerformanceAnalysisRequest $request): array
+    {
+        return [
+            'id' => (string) $request->getId(),
+            'status' => $request->getStatus()->value,
+            'freshness' => $this->analysisFreshnessMetadata($request->getInputSnapshot()),
+            'createdAt' => $this->date($request->getCreatedAt()),
+            'completedAt' => $this->date($request->getCompletedAt()),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function analysisDependency(ProgrammingGenerationRequest $request): ?array
+    {
+        $dependency = $request->getInputSnapshot()['analysis_dependency'] ?? null;
+
+        return is_array($dependency) ? $dependency : null;
     }
 
     /**
@@ -1013,39 +1076,64 @@ class MeController extends AbstractController
         return $request;
     }
 
-    private function latestCompletedAnalysisRequest(User $user): ?PerformanceAnalysisRequest
-    {
-        /** @var PerformanceAnalysisRequest|null $request */
-        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findOneBy(
+    /**
+     * @param array<string, mixed> $constraints
+     * @param array<string, mixed> $currentAnalysisSnapshot
+     */
+    private function freshCompatibleAnalysisRequest(
+        User $user,
+        array $constraints,
+        array $currentAnalysisSnapshot,
+    ): ?PerformanceAnalysisRequest {
+        $sourceAnalysisRequestId = $constraints['sourceAnalysisRequestId'] ?? null;
+        if (is_string($sourceAnalysisRequestId) && trim($sourceAnalysisRequestId) !== '') {
+            /** @var PerformanceAnalysisRequest|null $request */
+            $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->find($sourceAnalysisRequestId);
+
+            return $request !== null
+                && $request->getUser() === $user
+                && $this->isFreshCompatibleAnalysis($request, $currentAnalysisSnapshot)
+                    ? $request
+                    : null;
+        }
+
+        /** @var list<PerformanceAnalysisRequest> $requests */
+        $requests = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findBy(
             ['user' => $user, 'status' => AnalysisRequestStatusEnum::COMPLETED],
-            ['completedAt' => 'DESC', 'createdAt' => 'DESC']
+            ['completedAt' => 'DESC', 'createdAt' => 'DESC'],
+            10
         );
 
-        return $request;
+        foreach ($requests as $request) {
+            if ($this->isFreshCompatibleAnalysis($request, $currentAnalysisSnapshot)) {
+                return $request;
+            }
+        }
+
+        return null;
     }
 
     /**
-     * @param array<string, mixed> $constraints
+     * @param array<string, mixed> $currentAnalysisSnapshot
      */
-    private function sourceAnalysisRequest(User $user, array $constraints): ?PerformanceAnalysisRequest
-    {
-        $sourceAnalysisRequestId = $constraints['sourceAnalysisRequestId'] ?? null;
-        if (!is_string($sourceAnalysisRequestId) || trim($sourceAnalysisRequestId) === '') {
-            return $this->latestCompletedAnalysisRequest($user);
-        }
-
-        /** @var PerformanceAnalysisRequest|null $request */
-        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->find($sourceAnalysisRequestId);
+    private function isFreshCompatibleAnalysis(
+        PerformanceAnalysisRequest $request,
+        array $currentAnalysisSnapshot,
+    ): bool {
         if (
-            $request === null
-            || $request->getUser() !== $user
-            || $request->getStatus() !== AnalysisRequestStatusEnum::COMPLETED
+            $request->getStatus() !== AnalysisRequestStatusEnum::COMPLETED
             || $request->getResult() === null
+            || $request->getCompletedAt() === null
         ) {
-            return null;
+            return false;
         }
 
-        return $request;
+        if ($request->getCompletedAt()->add(new \DateInterval(self::ANALYSIS_FRESHNESS_WINDOW)) < new \DateTimeImmutable()) {
+            return false;
+        }
+
+        return ($this->analysisFreshnessMetadata($request->getInputSnapshot())['inputHash'] ?? null)
+            === ($this->analysisFreshnessMetadata($currentAnalysisSnapshot)['inputHash'] ?? null);
     }
 
     private function latestProgrammingSessionDetailRequest(
@@ -1226,7 +1314,7 @@ class MeController extends AbstractController
     {
         $primaryAthleteProfile = $this->primaryAnalysisAthleteProfile($athleteProfiles);
 
-        return [
+        $snapshot = [
             'performance_metrics' => $this->performanceMetricSnapshot($profile),
             'performance_data_quality' => $profile->analysisDataQuality(),
             'prescription_guidance' => $this->prescriptionGuidance($profile, $athleteProfiles),
@@ -1236,6 +1324,22 @@ class MeController extends AbstractController
                 $athleteProfiles
             ),
             ...$this->competitionSnapshotBuilder->buildMany($athleteProfiles),
+        ];
+
+        return [
+            ...$snapshot,
+            'freshness' => [
+                'version' => self::ANALYSIS_INPUT_SNAPSHOT_VERSION,
+                'inputHash' => $this->stableArrayHash($snapshot),
+                'freshnessWindowDays' => self::ANALYSIS_FRESHNESS_WINDOW_DAYS,
+                'sourceTimestamps' => [
+                    'performanceProfileUpdatedAt' => $this->date($profile->getUpdatedAt()),
+                    'athleteProfilesUpdatedAt' => array_map(
+                        fn (UserAthleteProfile $athleteProfile): ?string => $this->date($athleteProfile->getUpdatedAt()),
+                        $athleteProfiles
+                    ),
+                ],
+            ],
         ];
     }
 
@@ -1285,17 +1389,84 @@ class MeController extends AbstractController
     }
 
     /**
+     * @param array<string, mixed> $snapshot
+     *
      * @return array<string, mixed>
      */
-    private function buildProgrammingSnapshot(?UserPerformanceProfile $profile, PerformanceAnalysisRequest $sourceAnalysisRequest): array
+    private function analysisFreshnessMetadata(array $snapshot): array
     {
+        $freshness = $snapshot['freshness'] ?? null;
+
+        return is_array($freshness) ? $freshness : [];
+    }
+
+    /**
+     * @param array<string, mixed> $constraints
+     *
+     * @return array<string, mixed>
+     */
+    private function programmingAnalysisParameters(array $constraints): array
+    {
+        $parameters = $constraints['analysisParameters'] ?? [];
+        if (!is_array($parameters)) {
+            $parameters = [];
+        }
+
+        $parameters['triggeredBy'] = 'programming_generation';
+
+        return $parameters;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function stableArrayHash(array $payload): string
+    {
+        return hash('sha256', json_encode($this->normaliseForHash($payload), JSON_THROW_ON_ERROR));
+    }
+
+    private function normaliseForHash(mixed $value): mixed
+    {
+        if (!is_array($value)) {
+            return $value;
+        }
+
+        $normalised = [];
+        foreach ($value as $key => $item) {
+            $normalised[$key] = $this->normaliseForHash($item);
+        }
+
+        if (!array_is_list($normalised)) {
+            ksort($normalised);
+        }
+
+        return $normalised;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildProgrammingSnapshot(
+        ?UserPerformanceProfile $profile,
+        PerformanceAnalysisRequest $sourceAnalysisRequest,
+        string $analysisDependencyMode = 'reused',
+    ): array {
         return [
             'performance_profile_id' => $profile?->getId() !== null ? (string) $profile->getId() : null,
             'performance_metrics' => $profile !== null ? $this->performanceMetricSnapshot($profile) : [],
             'performance_data_quality' => $profile?->analysisDataQuality(),
             'prescription_guidance' => $profile !== null ? $this->prescriptionGuidance($profile, []) : null,
+            'analysis_dependency' => [
+                'mode' => $analysisDependencyMode,
+                'status' => $sourceAnalysisRequest->getStatus() === AnalysisRequestStatusEnum::COMPLETED
+                    ? 'completed'
+                    : 'waiting_analysis',
+                'source_analysis_request_id' => (string) $sourceAnalysisRequest->getId(),
+            ],
             'source_analysis_request' => [
                 'id' => (string) $sourceAnalysisRequest->getId(),
+                'status' => $sourceAnalysisRequest->getStatus()->value,
+                'freshness' => $this->analysisFreshnessMetadata($sourceAnalysisRequest->getInputSnapshot()),
                 'parameters' => $sourceAnalysisRequest->getParameters(),
                 'input_snapshot' => $sourceAnalysisRequest->getInputSnapshot(),
                 'result' => $sourceAnalysisRequest->getResult(),

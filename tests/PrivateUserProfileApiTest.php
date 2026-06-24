@@ -569,6 +569,10 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame(true, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
         self::assertSame('weak', $programmingPayload['inputSnapshot']['performance_data_quality']['level']);
         self::assertSame('known_rms_only', $programmingPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
+        self::assertSame($analysisPayload['id'], $programmingPayload['sourceAnalysisRequest']['id']);
+        self::assertSame('completed', $programmingPayload['sourceAnalysisRequest']['status']);
+        self::assertSame('reused', $programmingPayload['analysisDependency']['mode']);
+        self::assertSame('completed', $programmingPayload['analysisDependency']['status']);
         self::assertSame($analysisPayload['id'], $programmingPayload['inputSnapshot']['source_analysis_request']['id']);
         self::assertSame('Gymnastics endurance is the main limiter.', $programmingPayload['inputSnapshot']['source_analysis_request']['result']['summary']);
         self::assertSame($initialMessengerMessages + 2, $this->messengerMessageCount());
@@ -903,7 +907,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
     }
 
-    public function testUserCannotCreateProgrammingRequestWithoutCompletedAnalysis(): void
+    public function testUserCanCreateProgrammingRequestWithoutCompletedAnalysis(): void
     {
         [$token, $user] = $this->createAuthenticatedUser('programming-prereq@example.com', 'programming-prereq-token');
         $performanceProfile = new UserPerformanceProfile($user);
@@ -911,6 +915,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         $this->getEntityManager()->persist($performanceProfile);
         $this->getEntityManager()->flush();
+        $initialMessengerMessages = $this->messengerMessageCount();
 
         $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
             'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
@@ -921,11 +926,57 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             ],
         ], $token);
 
-        self::assertResponseStatusCodeSame(400);
-        self::assertSame(
-            'A completed performance analysis is required before programming generation.',
-            $this->jsonResponse()['error']
-        );
+        self::assertResponseStatusCodeSame(201);
+        $payload = $this->jsonResponse()['programmingRequest'];
+        self::assertSame('waiting_analysis', $payload['status']);
+        self::assertSame('generated', $payload['analysisDependency']['mode']);
+        self::assertSame('waiting_analysis', $payload['analysisDependency']['status']);
+        self::assertSame('queued', $payload['sourceAnalysisRequest']['status']);
+        self::assertSame($payload['sourceAnalysisRequest']['id'], $payload['analysisDependency']['source_analysis_request_id']);
+        self::assertArrayHasKey('inputHash', $payload['sourceAnalysisRequest']['freshness']);
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+    }
+
+    public function testProgrammingRefreshesAnalysisWhenPerformanceMetricsChanged(): void
+    {
+        [$token, $user] = $this->createAuthenticatedUser('programming-stale-analysis@example.com', 'programming-stale-analysis-token');
+        $performanceProfile = new UserPerformanceProfile($user);
+        $backSquat = (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
+
+        $this->getEntityManager()->persist($performanceProfile);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/performance-analysis-requests', [
+            'parameters' => [
+                'goal' => 'baseline',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $analysisPayload = $this->jsonResponse()['analysisRequest'];
+
+        /** @var PerformanceAnalysisRequest|null $storedAnalysisRequest */
+        $storedAnalysisRequest = $this->getRepository(PerformanceAnalysisRequest::class)->find($analysisPayload['id']);
+        self::assertNotNull($storedAnalysisRequest);
+        $storedAnalysisRequest->markCompleted(['summary' => 'Baseline analysis.']);
+        $backSquat->setNumericValue(165);
+        $this->getEntityManager()->flush();
+
+        $this->jsonRequest('POST', '/api/me/programming-generation-requests', [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
+                'durationWeeks' => 8,
+                'sessionsPerWeek' => 5,
+                'goal' => 'use current metrics',
+            ],
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        $programmingPayload = $this->jsonResponse()['programmingRequest'];
+        self::assertSame('waiting_analysis', $programmingPayload['status']);
+        self::assertSame('generated', $programmingPayload['analysisDependency']['mode']);
+        self::assertNotSame($analysisPayload['id'], $programmingPayload['sourceAnalysisRequest']['id']);
+        self::assertSame(165, $programmingPayload['inputSnapshot']['source_analysis_request']['input_snapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
     }
 
     public function testUserCannotCreateBoxProgrammingRequestYet(): void
