@@ -17,6 +17,9 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         'occasional' => ['Box Jump', 'Sit Up', 'Bike Erg', 'Hang Power Clean', 'Burpee Over', 'Push Press', 'Push Up', 'Power Snatch', 'Bench Press', 'Sled Push', 'Back Squat', 'Air Squat', 'Squat Snatch', 'Single Under', 'Hang Squat Clean', 'Push Jerk', 'Sled Pull', 'Burpee Broad Jump', 'Split Jerk', 'Box Step Up'],
     ];
 
+    private const COMPETITION_PROMPT_CANDIDATE_POOL_MIN = 8;
+    private const COMPETITION_PROMPT_CANDIDATE_POOL_MAX = 16;
+
     private const COMPETITION_FREQUENT_MOVEMENT_PAIRS = [
         ['Chest to Bar Pull Up', 'Muscle Up'],
         ['Muscle Up', 'Toes to Bar'],
@@ -300,7 +303,7 @@ EOD;
             $WorkoutMovements = $this->resolveSelectedMovements(
                 $generatedWorkout['movements'],
                 $mandatoryMovements,
-                $candidateMovements,
+                $candidateMovementsForPrompt,
                 $workoutGeneration->getNumberOfDifferentMovements()
             );
             $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
@@ -373,11 +376,10 @@ EOD;
             $workoutGeneration->getAvailableImplements(),
             $possibleMovements
         );
-        $allowedMovements = array_merge($mandatoryMovements, $candidateMovements);
         $allowedMovementsForPrompt = array_merge($mandatoryMovements, $this->candidateMovementsForPrompt($workoutGeneration, $candidateMovements));
 
-        if (count($allowedMovements) < $workoutGeneration->getNumberOfDifferentMovements()) {
-            throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($allowedMovements), count($allowedMovements) > 1 ? 's' : ''));
+        if (count($allowedMovementsForPrompt) < $workoutGeneration->getNumberOfDifferentMovements()) {
+            throw new \InvalidArgumentException(sprintf('Pas assez de mouvements correspondent aux critères actuels (%d demandé%s, %d disponible%s).', $workoutGeneration->getNumberOfDifferentMovements(), $workoutGeneration->getNumberOfDifferentMovements() > 1 ? 's' : '', count($allowedMovementsForPrompt), count($allowedMovementsForPrompt) > 1 ? 's' : ''));
         }
 
         $promptForChatGPT = "Suggest 3 distinct CrossFit workout concepts before generating a final workout.\n";
@@ -421,7 +423,7 @@ Every variant must be meaningfully different from the others. Do not write the f
 EOD;
 
         $payload = $this->decodeOpenAiJsonObject($this->chatGPTApiKey->getWorkoutFlowFromPrompt($promptForChatGPT));
-        $variants = $this->variantsFromPayload($payload['variants'] ?? null, $allowedMovements, $workoutGeneration->getNumberOfDifferentMovements());
+        $variants = $this->variantsFromPayload($payload['variants'] ?? null, $allowedMovementsForPrompt, $workoutGeneration->getNumberOfDifferentMovements());
         if (count($variants) === 0) {
             throw new \RuntimeException('OpenAI workout variant generation returned an invalid variants payload.');
         }
@@ -567,30 +569,139 @@ EOD;
             return $candidateMovements;
         }
 
-        $orderedMovements = $candidateMovements;
-        usort(
-            $orderedMovements,
-            fn (Movement $left, Movement $right): int => strcmp(
-                hash('sha256', implode('|', [
-                    (string) $workoutGeneration->getName(),
-                    (string) $workoutGeneration->getStimulus(),
-                    (string) $workoutGeneration->getStimulusIntent(),
-                    (string) $workoutGeneration->getTimeCap(),
-                    (string) $workoutGeneration->getNumberOfDifferentMovements(),
-                    $left->getName(),
-                ])),
-                hash('sha256', implode('|', [
-                    (string) $workoutGeneration->getName(),
-                    (string) $workoutGeneration->getStimulus(),
-                    (string) $workoutGeneration->getStimulusIntent(),
-                    (string) $workoutGeneration->getTimeCap(),
-                    (string) $workoutGeneration->getNumberOfDifferentMovements(),
-                    $right->getName(),
-                ])),
+        $orderedMovements = $this->deterministicallyOrderedCompetitionMovements($workoutGeneration, $candidateMovements);
+        $mandatoryMovementCount = count($workoutGeneration->getMandatoryMovements());
+        $remainingMovementCount = max(0, $workoutGeneration->getNumberOfDifferentMovements() - $mandatoryMovementCount);
+        $targetPromptCandidateCount = min(
+            count($orderedMovements),
+            max(
+                self::COMPETITION_PROMPT_CANDIDATE_POOL_MIN,
+                min(self::COMPETITION_PROMPT_CANDIDATE_POOL_MAX, $remainingMovementCount + 5),
             )
         );
 
+        if (count($orderedMovements) <= $targetPromptCandidateCount) {
+            return $orderedMovements;
+        }
+
+        $selectedMovements = [];
+        $selectedMovementNames = [];
+        $selectedMovementTypes = [];
+
+        foreach ($orderedMovements as $movement) {
+            if (count($selectedMovements) >= $targetPromptCandidateCount) {
+                break;
+            }
+
+            $movementType = $movement->getMovementType()->getName();
+            if (isset($selectedMovementTypes[$movementType])) {
+                continue;
+            }
+
+            if (!$this->canAddMovementToCompetitionPromptSlate($workoutGeneration, $movement, $selectedMovements)) {
+                continue;
+            }
+
+            $selectedMovements[] = $movement;
+            $selectedMovementNames[$this->normalizeMovementName($movement->getName())] = true;
+            $selectedMovementTypes[$movementType] = true;
+        }
+
+        foreach ($orderedMovements as $movement) {
+            if (count($selectedMovements) >= $targetPromptCandidateCount) {
+                break;
+            }
+
+            $normalizedMovementName = $this->normalizeMovementName($movement->getName());
+            if (isset($selectedMovementNames[$normalizedMovementName])) {
+                continue;
+            }
+
+            if (!$this->canAddMovementToCompetitionPromptSlate($workoutGeneration, $movement, $selectedMovements)) {
+                continue;
+            }
+
+            $selectedMovements[] = $movement;
+            $selectedMovementNames[$normalizedMovementName] = true;
+        }
+
+        foreach ($orderedMovements as $movement) {
+            if (count($selectedMovements) >= $targetPromptCandidateCount) {
+                break;
+            }
+
+            $normalizedMovementName = $this->normalizeMovementName($movement->getName());
+            if (isset($selectedMovementNames[$normalizedMovementName])) {
+                continue;
+            }
+
+            $selectedMovements[] = $movement;
+            $selectedMovementNames[$normalizedMovementName] = true;
+        }
+
+        if (count($selectedMovements) < $remainingMovementCount) {
+            return $orderedMovements;
+        }
+
+        return $selectedMovements;
+    }
+
+    /**
+     * @param Movement[] $candidateMovements
+     *
+     * @return Movement[]
+     */
+    private function deterministicallyOrderedCompetitionMovements(WorkoutGeneration $workoutGeneration, array $candidateMovements): array
+    {
+        $orderedMovements = $candidateMovements;
+        usort($orderedMovements, fn (Movement $left, Movement $right): int => strcmp(
+            $this->competitionMovementPromptOrderHash($workoutGeneration, $left),
+            $this->competitionMovementPromptOrderHash($workoutGeneration, $right),
+        ));
+
         return $orderedMovements;
+    }
+
+    private function competitionMovementPromptOrderHash(WorkoutGeneration $workoutGeneration, Movement $movement): string
+    {
+        return hash('sha256', implode('|', [
+            (string) $workoutGeneration->getName(),
+            (string) $workoutGeneration->getStimulus(),
+            (string) $workoutGeneration->getStimulusIntent(),
+            (string) $workoutGeneration->getTimeCap(),
+            (string) $workoutGeneration->getNumberOfDifferentMovements(),
+            $movement->getName(),
+        ]));
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function canAddMovementToCompetitionPromptSlate(WorkoutGeneration $workoutGeneration, Movement $movement, array $selectedMovements): bool
+    {
+        if (count($workoutGeneration->getMandatoryMovements()) > 0 || !$this->isRecentGeneratedCompetitionOverusedAnchor($movement)) {
+            return true;
+        }
+
+        foreach ($selectedMovements as $selectedMovement) {
+            if ($this->isRecentGeneratedCompetitionOverusedAnchor($selectedMovement)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function isRecentGeneratedCompetitionOverusedAnchor(Movement $movement): bool
+    {
+        $normalizedMovementName = $this->normalizeMovementName($movement->getName());
+        foreach (self::RECENT_GENERATED_COMPETITION_OVERUSED_ANCHORS as $anchorMovementName) {
+            if ($normalizedMovementName === $this->normalizeMovementName($anchorMovementName)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
