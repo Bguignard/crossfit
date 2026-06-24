@@ -286,7 +286,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('RX athlete with gymnastics limiter.', $programmingPayload['inputSnapshot']['coach_client']['coaching_notes']);
         self::assertArrayNotHasKey('email', $programmingPayload['inputSnapshot']['coach_client']);
         self::assertArrayNotHasKey('phone', $programmingPayload['inputSnapshot']['coach_client']);
-        self::assertSame(145.0, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertEquals(145.0, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
         self::assertTrue($programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
         self::assertSame('known_rms_only', $programmingPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
         self::assertNotNull($programmingPayload['messengerEnqueuedAt']);
@@ -309,7 +309,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         self::assertResponseIsSuccessful();
         self::assertSame('Camille Updated', $this->jsonResponse()['client']['displayName']);
-        self::assertSame(170.0, $this->jsonResponse()['client']['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::DEADLIFT_1RM->value]);
+        self::assertEquals(170.0, $this->jsonResponse()['client']['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::DEADLIFT_1RM->value]);
 
         $this->jsonRequest('DELETE', sprintf('/api/me/coach/clients/%s', $clientPayload['id']), [], $coachToken);
 
