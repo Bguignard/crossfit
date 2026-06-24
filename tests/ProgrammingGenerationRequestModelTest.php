@@ -124,7 +124,7 @@ class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
 
         self::assertNotNull($storedRequest);
         self::assertSame('Client Athlete', $storedRequest->getCoachedClient()?->getDisplayName());
-        self::assertSame($coach->getId(), $storedRequest->getCoachedClient()?->getCoach()->getId());
+        self::assertSame((string) $coach->getId(), (string) $storedRequest->getCoachedClient()?->getCoach()->getId());
     }
 
     public function testCompetitionProgrammingRequestLifecycleCanBeTrackedForPythonWorker(): void

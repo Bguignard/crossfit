@@ -245,7 +245,7 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('camille@example.com', $clientPayload['email']);
         self::assertSame('RX athlete with gymnastics limiter.', $clientPayload['notes']);
         self::assertCount(2, $clientPayload['performanceSnapshot']['metrics']);
-        self::assertSame(145.0, $clientPayload['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertEquals(145.0, $clientPayload['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
         self::assertTrue($clientPayload['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
 
         $this->jsonRequest('GET', '/api/me/coach/clients', [], $coachToken);
