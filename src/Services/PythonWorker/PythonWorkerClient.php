@@ -41,6 +41,9 @@ final class PythonWorkerClient implements PythonWorkerClientInterface
             'performance_profile_id' => $request->getPerformanceProfile()?->getId() !== null
                 ? (string) $request->getPerformanceProfile()->getId()
                 : null,
+            'coached_client_id' => $request->getCoachedClient()?->getId() !== null
+                ? (string) $request->getCoachedClient()->getId()
+                : null,
             'box_id' => $request->getBox()?->getId() !== null
                 ? (string) $request->getBox()->getId()
                 : null,

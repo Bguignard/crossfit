@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Entity\Product\Box;
+use App\Entity\Product\CoachedClient;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationRequestStatusEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
@@ -91,6 +92,39 @@ class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
         self::assertNotNull($storedRequest);
         self::assertSame('CrossFit MonWod', $storedRequest->getBox()?->getName());
         self::assertSame(['rx', 'scaled', 'beginner'], $storedRequest->getConstraints()['class_levels']);
+    }
+
+    public function testIndividualProgrammingRequestCanTargetACoachedClient(): void
+    {
+        $coach = (new User('client-programming-coach@example.com'))->setPassword('hashed-password');
+        $client = new CoachedClient($coach, 'Client Athlete');
+        $request = (new ProgrammingGenerationRequest(
+            $coach,
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            [
+                'duration_weeks' => 4,
+                'sessions_per_week' => 3,
+            ],
+            [
+                'coach_client' => [
+                    'display_name' => 'Client Athlete',
+                ],
+            ],
+        ))->setCoachedClient($client);
+
+        $em = $this->getEntityManager();
+        $em->persist($coach);
+        $em->persist($client);
+        $em->persist($request);
+        $em->flush();
+        $em->clear();
+
+        /** @var ProgrammingGenerationRequest|null $storedRequest */
+        $storedRequest = $this->getRepository(ProgrammingGenerationRequest::class)->find($request->getId());
+
+        self::assertNotNull($storedRequest);
+        self::assertSame('Client Athlete', $storedRequest->getCoachedClient()?->getDisplayName());
+        self::assertSame($coach->getId(), $storedRequest->getCoachedClient()?->getCoach()->getId());
     }
 
     public function testCompetitionProgrammingRequestLifecycleCanBeTrackedForPythonWorker(): void

@@ -37,6 +37,20 @@ Private endpoints require an authenticated user and should cover user-owned data
   athlete profiles;
 - `PUT /api/me/performance-profile`: create or update the current user's latest
   performance profile metrics;
+- `GET /api/me/coach/clients`: list active coached clients owned by the current
+  user;
+- `POST /api/me/coach/clients`: create a coached client without requiring a
+  MonWOD user account for that client;
+- `GET /api/me/coach/clients/{id}`: read one owned coached client;
+- `PATCH /api/me/coach/clients/{id}`: update one owned coached client;
+- `DELETE /api/me/coach/clients/{id}`: archive one owned coached client;
+- `POST /api/me/coach/clients/{id}/programming-generation-requests`: create an
+  individual programming generation request for one owned coached client. The
+  request body matches the personal programming endpoint shape:
+  `{"type":"individual","constraints":{...}}`. The response is
+  `{"programmingRequest": {...}}`, including `programmingRequest.coachedClient`
+  and a frozen `programmingRequest.inputSnapshot.coach_client` context for the
+  Python worker;
 - future performance analysis requests;
 - future programming generation requests;
 - future saved or favorite WODs.

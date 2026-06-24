@@ -9,6 +9,7 @@ use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Competition\Enum\ScoreTypeEnum;
 use App\Entity\Competition\Score;
 use App\Entity\Competition\WorkoutResult;
+use App\Entity\Product\CoachedClient;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
 use App\Entity\Product\Enum\ProgrammingGenerationTypeEnum;
 use App\Entity\Product\PerformanceAnalysisRequest;
@@ -212,6 +213,113 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             'Metric "strict_pull_up" expects a booleanValue.',
             $this->jsonResponse()['error']
         );
+    }
+
+    public function testCoachCanManageClientsAndCreateClientProgrammingRequest(): void
+    {
+        [$coachToken] = $this->createAuthenticatedUser('coach-client@example.com', 'coach-client-token');
+        [$otherCoachToken] = $this->createAuthenticatedUser('other-coach-client@example.com', 'other-coach-client-token');
+
+        $this->jsonRequest('POST', '/api/me/coach/clients', [
+            'displayName' => 'Camille Client',
+            'email' => 'camille@example.com',
+            'phone' => '+33601020304',
+            'notes' => 'RX athlete with gymnastics limiter.',
+            'performanceMetrics' => [
+                [
+                    'key' => PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value,
+                    'numericValue' => 145,
+                    'unit' => 'kg',
+                    'notes' => 'Recent single',
+                ],
+                [
+                    'key' => PerformanceMetricKeyEnum::STRICT_PULL_UP->value,
+                    'booleanValue' => true,
+                ],
+            ],
+        ], $coachToken);
+
+        self::assertResponseStatusCodeSame(201);
+        $clientPayload = $this->jsonResponse()['client'];
+        self::assertSame('Camille Client', $clientPayload['displayName']);
+        self::assertSame('camille@example.com', $clientPayload['email']);
+        self::assertSame('RX athlete with gymnastics limiter.', $clientPayload['notes']);
+        self::assertCount(2, $clientPayload['performanceSnapshot']['metrics']);
+        self::assertSame(145.0, $clientPayload['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertTrue($clientPayload['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
+
+        $this->jsonRequest('GET', '/api/me/coach/clients', [], $coachToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $this->jsonResponse()['clients']);
+
+        $this->jsonRequest('GET', sprintf('/api/me/coach/clients/%s', $clientPayload['id']), [], $otherCoachToken);
+
+        self::assertResponseStatusCodeSame(404);
+
+        $initialMessengerMessages = $this->messengerMessageCount();
+
+        $this->jsonRequest('POST', sprintf('/api/me/coach/clients/%s/programming-generation-requests', $clientPayload['id']), [
+            'type' => ProgrammingGenerationTypeEnum::INDIVIDUAL->value,
+            'constraints' => [
+                'durationWeeks' => 4,
+                'sessionsPerWeek' => 3,
+                'sessionDurationMinutes' => 75,
+                'programmingFamily' => 'gymnastics',
+                'goal' => 'Build strict pulling and safe gymnastics volume',
+            ],
+        ], $coachToken);
+
+        self::assertResponseStatusCodeSame(201);
+        $programmingPayload = $this->jsonResponse()['programmingRequest'];
+        self::assertSame(ProgrammingGenerationTypeEnum::INDIVIDUAL->value, $programmingPayload['type']);
+        self::assertSame('queued', $programmingPayload['status']);
+        self::assertSame($clientPayload['id'], $programmingPayload['coachedClient']['id']);
+        self::assertSame('Camille Client', $programmingPayload['coachedClient']['displayName']);
+        self::assertSame('gymnastics', $programmingPayload['constraints']['programmingFamily']);
+        self::assertSame(4, $programmingPayload['constraints']['durationWeeks']);
+        self::assertSame(3, $programmingPayload['constraints']['sessionsPerWeek']);
+        self::assertSame(75, $programmingPayload['constraints']['sessionDurationMinutes']);
+        self::assertSame('coach_client', $programmingPayload['inputSnapshot']['source']);
+        self::assertSame($clientPayload['id'], $programmingPayload['inputSnapshot']['coach_client']['id']);
+        self::assertSame('Camille Client', $programmingPayload['inputSnapshot']['coach_client']['display_name']);
+        self::assertSame('RX athlete with gymnastics limiter.', $programmingPayload['inputSnapshot']['coach_client']['coaching_notes']);
+        self::assertArrayNotHasKey('email', $programmingPayload['inputSnapshot']['coach_client']);
+        self::assertArrayNotHasKey('phone', $programmingPayload['inputSnapshot']['coach_client']);
+        self::assertSame(145.0, $programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
+        self::assertTrue($programmingPayload['inputSnapshot']['performance_metrics'][PerformanceMetricKeyEnum::STRICT_PULL_UP->value]);
+        self::assertSame('known_rms_only', $programmingPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
+        self::assertNotNull($programmingPayload['messengerEnqueuedAt']);
+        self::assertSame($initialMessengerMessages + 1, $this->messengerMessageCount());
+
+        $this->jsonRequest('GET', '/api/me/requests', [], $coachToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($clientPayload['id'], $this->jsonResponse()['programmingRequests'][0]['coachedClient']['id']);
+
+        $this->jsonRequest('PATCH', sprintf('/api/me/coach/clients/%s', $clientPayload['id']), [
+            'displayName' => 'Camille Updated',
+            'performanceMetrics' => [
+                [
+                    'key' => PerformanceMetricKeyEnum::DEADLIFT_1RM->value,
+                    'numericValue' => 170,
+                ],
+            ],
+        ], $coachToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('Camille Updated', $this->jsonResponse()['client']['displayName']);
+        self::assertSame(170.0, $this->jsonResponse()['client']['performanceSnapshot']['metricValues'][PerformanceMetricKeyEnum::DEADLIFT_1RM->value]);
+
+        $this->jsonRequest('DELETE', sprintf('/api/me/coach/clients/%s', $clientPayload['id']), [], $coachToken);
+
+        self::assertResponseStatusCodeSame(204);
+
+        $this->jsonRequest('GET', '/api/me/coach/clients', [], $coachToken);
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $this->jsonResponse()['clients']);
+        self::assertCount(1, $this->getRepository(CoachedClient::class)->findAll());
     }
 
     public function testAnalysisRequestRequiresAtLeastPerformanceMetricsOrCompetitionProfile(): void
