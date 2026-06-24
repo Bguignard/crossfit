@@ -353,6 +353,113 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testCompetitionPromptUsesCuratedMovementSlateWithAtMostOneOverusedAnchor(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $strongman = new MovementType(MovementTypeEnum::STRONGMAN);
+        $plyometric = new MovementType(MovementTypeEnum::PLYOMETRIC);
+        $movements = [
+            new Movement('Row', $difficulty, $cardio),
+            new Movement('Chest to Bar Pull Up', $difficulty, $gymnastic),
+            new Movement('Thruster', $difficulty, $weightlifting),
+            new Movement('Wall Ball Shot', $difficulty, $cardio),
+            new Movement('Power Clean', $difficulty, $weightlifting),
+            new Movement('Toes to Bar', $difficulty, $gymnastic),
+            new Movement('Double Under', $difficulty, $cardio),
+            new Movement('Ski Erg', $difficulty, $cardio),
+            new Movement('Power Snatch', $difficulty, $weightlifting),
+            new Movement('Burpee Box Jump Over', $difficulty, $plyometric),
+            new Movement('Sandbag Carry', $difficulty, $strongman),
+            new Movement('Bike Erg', $difficulty, $cardio),
+        ];
+        $workoutGeneration = $this->competitionWorkoutGeneration($difficulty, [$gymnastic, $weightlifting, $cardio, $strongman, $plyometric]);
+        $service = new WorkoutCreatorService(
+            $this->movementServiceReturning($movements),
+            $this->createMock(ChatGPTApiKeyInterface::class),
+            $this->workoutOriginService(),
+        );
+
+        $slate = $this->candidateMovementsForPrompt($service, $workoutGeneration, $movements);
+        $slateNames = array_map(static fn (Movement $movement): ?string => $movement->getName(), $slate);
+        $overusedAnchors = array_intersect($slateNames, ['Power Clean', 'Chest to Bar Pull Up', 'Wall Ball Shot', 'Thruster']);
+
+        self::assertLessThan(count($movements), count($slate));
+        self::assertGreaterThanOrEqual($workoutGeneration->getNumberOfDifferentMovements(), count($slate));
+        self::assertLessThanOrEqual(1, count($overusedAnchors));
+        self::assertContains('Sandbag Carry', $slateNames);
+    }
+
+    public function testWorkoutGenerationRejectsMovementOutsideCuratedCompetitionSlate(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $gymnastic = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $strongman = new MovementType(MovementTypeEnum::STRONGMAN);
+        $plyometric = new MovementType(MovementTypeEnum::PLYOMETRIC);
+        $movements = [
+            new Movement('Row', $difficulty, $cardio),
+            new Movement('Chest to Bar Pull Up', $difficulty, $gymnastic),
+            new Movement('Thruster', $difficulty, $weightlifting),
+            new Movement('Wall Ball Shot', $difficulty, $cardio),
+            new Movement('Power Clean', $difficulty, $weightlifting),
+            new Movement('Toes to Bar', $difficulty, $gymnastic),
+            new Movement('Double Under', $difficulty, $cardio),
+            new Movement('Ski Erg', $difficulty, $cardio),
+            new Movement('Power Snatch', $difficulty, $weightlifting),
+            new Movement('Burpee Box Jump Over', $difficulty, $plyometric),
+            new Movement('Sandbag Carry', $difficulty, $strongman),
+            new Movement('Bike Erg', $difficulty, $cardio),
+        ];
+        $workoutGeneration = $this->competitionWorkoutGeneration($difficulty, [$gymnastic, $weightlifting, $cardio, $strongman, $plyometric]);
+        $service = new WorkoutCreatorService(
+            $this->movementServiceReturning($movements),
+            $this->createMock(ChatGPTApiKeyInterface::class),
+            $this->workoutOriginService(),
+        );
+        $slateNames = array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $this->candidateMovementsForPrompt($service, $workoutGeneration, $movements)
+        );
+        $outsideSlateMovement = null;
+        foreach ($movements as $movement) {
+            if (!in_array($movement->getName(), $slateNames, true)) {
+                $outsideSlateMovement = $movement;
+                break;
+            }
+        }
+
+        self::assertInstanceOf(Movement::class, $outsideSlateMovement);
+
+        $fallbackMovements = array_slice($slateNames, 0, 2);
+        $chatGpt = new class($outsideSlateMovement->getName(), $fallbackMovements) implements ChatGPTApiKeyInterface {
+            public function __construct(private readonly string $outsideSlateMovementName, private readonly array $fallbackMovementNames)
+            {
+            }
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode([
+                    'flow' => sprintf("For time:\n- 10 %s\n- 10 %s\n- 10 %s", $this->outsideSlateMovementName, $this->fallbackMovementNames[0], $this->fallbackMovementNames[1]),
+                    'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: reduce reps further",
+                    'movements' => [$this->outsideSlateMovementName, $this->fallbackMovementNames[0], $this->fallbackMovementNames[1]],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(sprintf('OpenAI workout generation returned unrecognized movement "%s".', $outsideSlateMovement->getName()));
+
+        (new WorkoutCreatorService(
+            $this->movementServiceReturning($movements),
+            $chatGpt,
+            $this->workoutOriginService(),
+        ))->createWorkout($workoutGeneration);
+    }
+
     public function testOpenAiChoosesMovementsFromTheCompletePossiblePool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -3628,6 +3735,38 @@ class WorkoutCreatorServiceTest extends TestCase
             'workout' => $workout,
             'prompt' => $chatGpt->prompt,
         ];
+    }
+
+    /**
+     * @param list<MovementType> $movementTypes
+     */
+    private function competitionWorkoutGeneration(MovementDifficulty $difficulty, array $movementTypes): WorkoutGeneration
+    {
+        return (new WorkoutGeneration())
+            ->setName('Competition slate test')
+            ->setStimulus('Competition')
+            ->setStimulusIntent('Tester plusieurs qualités simultanément.')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes($movementTypes)
+            ->setNumberOfDifferentMovements(3)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(false);
+    }
+
+    /**
+     * @param list<Movement> $candidateMovements
+     *
+     * @return list<Movement>
+     */
+    private function candidateMovementsForPrompt(WorkoutCreatorService $service, WorkoutGeneration $workoutGeneration, array $candidateMovements): array
+    {
+        $method = new \ReflectionMethod($service, 'candidateMovementsForPrompt');
+        $method->setAccessible(true);
+
+        return $method->invoke($service, $workoutGeneration, $candidateMovements);
     }
 
     /**
