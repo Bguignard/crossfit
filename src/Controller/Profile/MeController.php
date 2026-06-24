@@ -352,7 +352,7 @@ class MeController extends AbstractController
     public function createPerformanceAnalysisRequest(Request $request): JsonResponse
     {
         $user = $this->currentUser();
-        $latestRequest = $this->latestAnalysisRequest($user);
+        $latestRequest = $this->latestStandaloneAnalysisRequest($user);
         $nextAvailableAt = $latestRequest?->getCreatedAt()->add(new \DateInterval(self::ANALYSIS_REQUEST_COOLDOWN));
         if ($nextAvailableAt !== null && $nextAvailableAt > new \DateTimeImmutable()) {
             return $this->json([
@@ -451,6 +451,7 @@ class MeController extends AbstractController
             $this->entityManager->persist($sourceAnalysisRequest);
             $this->entityManager->flush();
         }
+        $constraints['sourceAnalysisRequestId'] = (string) $sourceAnalysisRequest->getId();
 
         $programmingRequest = (new ProgrammingGenerationRequest(
             $user,
@@ -470,7 +471,10 @@ class MeController extends AbstractController
         $this->entityManager->persist($programmingRequest);
         $this->entityManager->flush();
         if ($programmingRequest->getStatus() === ProgrammingGenerationRequestStatusEnum::WAITING_ANALYSIS) {
-            $this->queuedAiRequestDispatcher->enqueuePerformanceAnalysisRequest($sourceAnalysisRequest, force: true);
+            $this->queuedAiRequestDispatcher->enqueuePerformanceAnalysisRequest(
+                $sourceAnalysisRequest,
+                force: $analysisDependencyMode === 'generated'
+            );
         } else {
             $this->queuedAiRequestDispatcher->enqueueProgrammingGenerationRequest($programmingRequest, force: true);
         }
@@ -1065,15 +1069,22 @@ class MeController extends AbstractController
         return $profile;
     }
 
-    private function latestAnalysisRequest(User $user): ?PerformanceAnalysisRequest
+    private function latestStandaloneAnalysisRequest(User $user): ?PerformanceAnalysisRequest
     {
-        /** @var PerformanceAnalysisRequest|null $request */
-        $request = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findOneBy(
+        /** @var list<PerformanceAnalysisRequest> $requests */
+        $requests = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findBy(
             ['user' => $user],
-            ['createdAt' => 'DESC']
+            ['createdAt' => 'DESC'],
+            10
         );
 
-        return $request;
+        foreach ($requests as $request) {
+            if (!$this->isProgrammingGeneratedAnalysis($request)) {
+                return $request;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1098,11 +1109,20 @@ class MeController extends AbstractController
         }
 
         /** @var list<PerformanceAnalysisRequest> $requests */
-        $requests = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)->findBy(
-            ['user' => $user, 'status' => AnalysisRequestStatusEnum::COMPLETED],
-            ['completedAt' => 'DESC', 'createdAt' => 'DESC'],
-            10
-        );
+        $requests = $this->entityManager->getRepository(PerformanceAnalysisRequest::class)
+            ->createQueryBuilder('request')
+            ->andWhere('request.user = :user')
+            ->andWhere('request.status IN (:statuses)')
+            ->setParameter('user', $user)
+            ->setParameter('statuses', [
+                AnalysisRequestStatusEnum::QUEUED,
+                AnalysisRequestStatusEnum::RUNNING,
+                AnalysisRequestStatusEnum::COMPLETED,
+            ])
+            ->orderBy('request.createdAt', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
 
         foreach ($requests as $request) {
             if ($this->isFreshCompatibleAnalysis($request, $currentAnalysisSnapshot)) {
@@ -1120,20 +1140,30 @@ class MeController extends AbstractController
         PerformanceAnalysisRequest $request,
         array $currentAnalysisSnapshot,
     ): bool {
-        if (
-            $request->getStatus() !== AnalysisRequestStatusEnum::COMPLETED
-            || $request->getResult() === null
-            || $request->getCompletedAt() === null
-        ) {
+        if (!in_array($request->getStatus(), [
+            AnalysisRequestStatusEnum::QUEUED,
+            AnalysisRequestStatusEnum::RUNNING,
+            AnalysisRequestStatusEnum::COMPLETED,
+        ], true)) {
             return false;
         }
 
-        if ($request->getCompletedAt()->add(new \DateInterval(self::ANALYSIS_FRESHNESS_WINDOW)) < new \DateTimeImmutable()) {
+        if ($request->getStatus() === AnalysisRequestStatusEnum::COMPLETED && $request->getResult() === null) {
+            return false;
+        }
+
+        $freshnessReference = $request->getCompletedAt() ?? $request->getCreatedAt();
+        if ($freshnessReference->add(new \DateInterval(self::ANALYSIS_FRESHNESS_WINDOW)) < new \DateTimeImmutable()) {
             return false;
         }
 
         return ($this->analysisFreshnessMetadata($request->getInputSnapshot())['inputHash'] ?? null)
             === ($this->analysisFreshnessMetadata($currentAnalysisSnapshot)['inputHash'] ?? null);
+    }
+
+    private function isProgrammingGeneratedAnalysis(PerformanceAnalysisRequest $request): bool
+    {
+        return ($request->getParameters()['triggeredBy'] ?? null) === 'programming_generation';
     }
 
     private function latestProgrammingSessionDetailRequest(
