@@ -3,6 +3,7 @@
 namespace App\Controller\Profile;
 
 use App\Entity\Competition\Athlete;
+use App\Entity\Product\CoachedClient;
 use App\Entity\Product\Enum\AnalysisRequestStatusEnum;
 use App\Entity\Product\Enum\PerformanceMetricCategoryEnum;
 use App\Entity\Product\Enum\PerformanceMetricKeyEnum;
@@ -152,6 +153,162 @@ class MeController extends AbstractController
         $this->entityManager->flush();
 
         return $this->json(['performanceProfile' => $this->serializePerformanceProfile($profile)]);
+    }
+
+    #[Route('/coach/clients', name: 'api_me_coach_clients', methods: ['GET'])]
+    public function coachClients(): JsonResponse
+    {
+        return $this->json([
+            'clients' => array_map(
+                fn (CoachedClient $client): array => $this->serializeCoachedClient($client),
+                $this->entityManager->getRepository(CoachedClient::class)->findBy(
+                    ['coach' => $this->currentUser(), 'archivedAt' => null],
+                    ['createdAt' => 'DESC']
+                )
+            ),
+        ]);
+    }
+
+    #[Route('/coach/clients', name: 'api_me_create_coach_client', methods: ['POST'])]
+    public function createCoachClient(Request $request): JsonResponse
+    {
+        $payload = $this->jsonPayload($request);
+        $displayName = $this->requiredNonEmptyString($payload['displayName'] ?? null, 'displayName');
+        if ($displayName === null) {
+            return $this->json(['error' => 'displayName is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $performanceSnapshot = $this->normaliseClientPerformanceSnapshot($payload['performanceMetrics'] ?? null);
+            $client = (new CoachedClient($this->currentUser(), $displayName))
+                ->setEmail($this->optionalString($payload['email'] ?? null, 'email'))
+                ->setPhone($this->optionalString($payload['phone'] ?? null, 'phone'))
+                ->setNotes($this->optionalString($payload['notes'] ?? null, 'notes'))
+                ->setPerformanceSnapshot($performanceSnapshot);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->persist($client);
+        $this->entityManager->flush();
+
+        return $this->json(['client' => $this->serializeCoachedClient($client)], Response::HTTP_CREATED);
+    }
+
+    #[Route('/coach/clients/{id}', name: 'api_me_coach_client', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['GET'])]
+    public function coachClient(string $id): JsonResponse
+    {
+        $client = $this->coachedClientForCurrentUser($id);
+        if ($client === null) {
+            return $this->json(['error' => 'Client not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json(['client' => $this->serializeCoachedClient($client)]);
+    }
+
+    #[Route('/coach/clients/{id}', name: 'api_me_update_coach_client', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['PATCH'])]
+    public function updateCoachClient(string $id, Request $request): JsonResponse
+    {
+        $client = $this->coachedClientForCurrentUser($id);
+        if ($client === null) {
+            return $this->json(['error' => 'Client not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $payload = $this->jsonPayload($request);
+        try {
+            if (array_key_exists('displayName', $payload)) {
+                $displayName = $this->requiredNonEmptyString($payload['displayName'], 'displayName');
+                if ($displayName === null) {
+                    return $this->json(['error' => 'displayName is required.'], Response::HTTP_BAD_REQUEST);
+                }
+                $client->setDisplayName($displayName);
+            }
+            if (array_key_exists('email', $payload)) {
+                $client->setEmail($this->optionalString($payload['email'], 'email'));
+            }
+            if (array_key_exists('phone', $payload)) {
+                $client->setPhone($this->optionalString($payload['phone'], 'phone'));
+            }
+            if (array_key_exists('notes', $payload)) {
+                $client->setNotes($this->optionalString($payload['notes'], 'notes'));
+            }
+            if (array_key_exists('performanceMetrics', $payload)) {
+                $client->setPerformanceSnapshot($this->normaliseClientPerformanceSnapshot($payload['performanceMetrics']));
+            }
+            if (($payload['archived'] ?? false) === true) {
+                $client->archive();
+            } elseif (($payload['archived'] ?? null) === false) {
+                $client->restore();
+            }
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json(['client' => $this->serializeCoachedClient($client)]);
+    }
+
+    #[Route('/coach/clients/{id}', name: 'api_me_delete_coach_client', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['DELETE'])]
+    public function deleteCoachClient(string $id): JsonResponse
+    {
+        $client = $this->coachedClientForCurrentUser($id);
+        if ($client === null) {
+            return $this->json(['error' => 'Client not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $client->archive();
+        $this->entityManager->flush();
+
+        return $this->json(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/coach/clients/{id}/programming-generation-requests', name: 'api_me_create_coach_client_programming_generation_request', requirements: ['id' => '[0-9a-fA-F\-]{36}'], methods: ['POST'])]
+    public function createCoachClientProgrammingGenerationRequest(string $id, Request $request): JsonResponse
+    {
+        $client = $this->coachedClientForCurrentUser($id);
+        if ($client === null) {
+            return $this->json(['error' => 'Client not found.'], Response::HTTP_NOT_FOUND);
+        }
+        if ($client->getArchivedAt() !== null) {
+            return $this->json(['error' => 'Archived clients cannot receive new programming requests.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $payload = $this->jsonPayload($request);
+        $typeValue = $payload['type'] ?? null;
+        if (!is_string($typeValue)) {
+            return $this->json(['error' => 'type is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $type = ProgrammingGenerationTypeEnum::tryFrom($typeValue);
+        if ($type !== ProgrammingGenerationTypeEnum::INDIVIDUAL) {
+            return $this->json(['error' => 'Only individual programming generation is available for coached clients.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $constraints = $this->arrayPayload($payload['constraints'] ?? []);
+        try {
+            $constraints = $this->normaliseProgrammingConstraints($constraints);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $programmingRequest = (new ProgrammingGenerationRequest(
+            $this->currentUser(),
+            ProgrammingGenerationTypeEnum::INDIVIDUAL,
+            $constraints,
+            $this->buildCoachedClientProgrammingSnapshot($client)
+        ))
+            ->setCoachedClient($client)
+            ->markQueued();
+
+        $this->entityManager->persist($programmingRequest);
+        $this->entityManager->flush();
+        $this->queuedAiRequestDispatcher->enqueueProgrammingGenerationRequest($programmingRequest, force: true);
+
+        return $this->json(
+            ['programmingRequest' => $this->serializeProgrammingRequest($programmingRequest)],
+            Response::HTTP_CREATED
+        );
     }
 
     #[Route('/requests', name: 'api_me_requests', methods: ['GET'])]
@@ -543,6 +700,24 @@ class MeController extends AbstractController
     /**
      * @return array<string, mixed>
      */
+    private function serializeCoachedClient(CoachedClient $client): array
+    {
+        return [
+            'id' => (string) $client->getId(),
+            'displayName' => $client->getDisplayName(),
+            'email' => $client->getEmail(),
+            'phone' => $client->getPhone(),
+            'notes' => $client->getNotes(),
+            'performanceSnapshot' => $client->getPerformanceSnapshot(),
+            'archivedAt' => $this->date($client->getArchivedAt()),
+            'createdAt' => $this->date($client->getCreatedAt()),
+            'updatedAt' => $this->date($client->getUpdatedAt()),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function serializeMetric(UserPerformanceMetric $metric): array
     {
         return [
@@ -595,6 +770,9 @@ class MeController extends AbstractController
             'id' => (string) $request->getId(),
             'type' => $request->getType()->value,
             'status' => $request->getStatus()->value,
+            'coachedClient' => $request->getCoachedClient() !== null
+                ? $this->serializeCoachedClient($request->getCoachedClient())
+                : null,
             'constraints' => $request->getConstraints(),
             'inputSnapshot' => $request->getInputSnapshot(),
             'generatedProgramming' => $request->getGeneratedProgramming(),
@@ -720,6 +898,86 @@ class MeController extends AbstractController
         return null;
     }
 
+    /**
+     * @return array{metrics: list<array<string, mixed>>, metricValues: array<string, bool|float>}
+     */
+    private function normaliseClientPerformanceSnapshot(mixed $metricsPayload): array
+    {
+        if ($metricsPayload === null) {
+            return [
+                'metrics' => [],
+                'metricValues' => [],
+            ];
+        }
+        if (!is_array($metricsPayload)) {
+            throw new \InvalidArgumentException('performanceMetrics must be an array.');
+        }
+
+        $metrics = [];
+        $metricValues = [];
+        $seenMetricKeys = [];
+        foreach ($metricsPayload as $metricPayload) {
+            if (!is_array($metricPayload)) {
+                throw new \InvalidArgumentException('Each performance metric must be an object.');
+            }
+
+            $metricKeyValue = $metricPayload['key'] ?? null;
+            if (!is_string($metricKeyValue)) {
+                throw new \InvalidArgumentException('Metric key is required.');
+            }
+
+            $metricKey = PerformanceMetricKeyEnum::tryFrom($metricKeyValue);
+            if ($metricKey === null) {
+                throw new \InvalidArgumentException(sprintf('Unknown metric key "%s".', $metricKeyValue));
+            }
+            if (isset($seenMetricKeys[$metricKey->value])) {
+                throw new \InvalidArgumentException(sprintf('Duplicate metric key "%s".', $metricKey->value));
+            }
+            $seenMetricKeys[$metricKey->value] = true;
+
+            $numericValue = null;
+            $booleanValue = null;
+            if ($metricKey->valueType() === PerformanceMetricValueTypeEnum::BOOLEAN) {
+                if (!array_key_exists('booleanValue', $metricPayload) || !is_bool($metricPayload['booleanValue'])) {
+                    throw new \InvalidArgumentException(sprintf('Metric "%s" expects a booleanValue.', $metricKey->value));
+                }
+                $booleanValue = $metricPayload['booleanValue'];
+                $metricValues[$metricKey->value] = $booleanValue;
+            } else {
+                if (!array_key_exists('numericValue', $metricPayload) || !is_numeric($metricPayload['numericValue'])) {
+                    throw new \InvalidArgumentException(sprintf('Metric "%s" expects a numericValue.', $metricKey->value));
+                }
+                $numericValue = (float) $metricPayload['numericValue'];
+                $metricValues[$metricKey->value] = $numericValue;
+            }
+
+            $unit = $metricPayload['unit'] ?? null;
+            if ($unit !== null && !is_string($unit)) {
+                throw new \InvalidArgumentException(sprintf('Metric "%s" unit must be a string.', $metricKey->value));
+            }
+            $notes = $metricPayload['notes'] ?? null;
+            if ($notes !== null && !is_string($notes)) {
+                throw new \InvalidArgumentException(sprintf('Metric "%s" notes must be a string.', $metricKey->value));
+            }
+
+            $metrics[] = [
+                'key' => $metricKey->value,
+                'label' => $this->label($metricKey->value),
+                'category' => $metricKey->category()->value,
+                'valueType' => $metricKey->valueType()->value,
+                'numericValue' => $numericValue,
+                'booleanValue' => $booleanValue,
+                'unit' => $unit ?? $metricKey->defaultUnit(),
+                'notes' => $notes,
+            ];
+        }
+
+        return [
+            'metrics' => $metrics,
+            'metricValues' => $metricValues,
+        ];
+    }
+
     private function getOrCreatePerformanceProfile(User $user): UserPerformanceProfile
     {
         $profile = $this->getLatestPerformanceProfile($user);
@@ -801,6 +1059,17 @@ class MeController extends AbstractController
         );
 
         return $request;
+    }
+
+    private function coachedClientForCurrentUser(string $id): ?CoachedClient
+    {
+        /** @var CoachedClient|null $client */
+        $client = $this->entityManager->getRepository(CoachedClient::class)->find($id);
+        if ($client === null || $client->getCoach() !== $this->currentUser()) {
+            return null;
+        }
+
+        return $client;
     }
 
     private function publicAiErrorMessage(string $status, string $requestType): ?string
@@ -1057,6 +1326,65 @@ class MeController extends AbstractController
     /**
      * @return array<string, mixed>
      */
+    private function buildCoachedClientProgrammingSnapshot(CoachedClient $client): array
+    {
+        $profile = $this->clientPerformanceProfile($client);
+
+        return [
+            'coach_client' => [
+                'id' => (string) $client->getId(),
+                'display_name' => $client->getDisplayName(),
+                'coaching_notes' => $client->getNotes(),
+            ],
+            'performance_metrics' => $this->performanceMetricSnapshot($profile),
+            'performance_data_quality' => $profile->analysisDataQuality(),
+            'prescription_guidance' => $this->prescriptionGuidance($profile, []),
+            'source' => 'coach_client',
+        ];
+    }
+
+    private function clientPerformanceProfile(CoachedClient $client): UserPerformanceProfile
+    {
+        $profile = new UserPerformanceProfile($client->getCoach());
+        $metrics = $client->getPerformanceSnapshot()['metrics'] ?? [];
+        if (!is_array($metrics)) {
+            return $profile;
+        }
+
+        foreach ($metrics as $metric) {
+            if (!is_array($metric)) {
+                continue;
+            }
+            $metricKeyValue = $metric['key'] ?? null;
+            if (!is_string($metricKeyValue)) {
+                continue;
+            }
+            $metricKey = PerformanceMetricKeyEnum::tryFrom($metricKeyValue);
+            if ($metricKey === null) {
+                continue;
+            }
+
+            $performanceMetric = new UserPerformanceMetric($profile, $metricKey);
+            if ($metricKey->valueType() === PerformanceMetricValueTypeEnum::BOOLEAN) {
+                $performanceMetric->setBooleanValue(is_bool($metric['booleanValue'] ?? null) ? $metric['booleanValue'] : null);
+            } else {
+                $numericValue = $metric['numericValue'] ?? null;
+                $unit = $metric['unit'] ?? null;
+                $performanceMetric->setNumericValue(
+                    is_numeric($numericValue) ? (float) $numericValue : null,
+                    is_string($unit) ? $unit : null
+                );
+            }
+            $notes = $metric['notes'] ?? null;
+            $performanceMetric->setNotes(is_string($notes) ? $notes : null);
+        }
+
+        return $profile;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function performanceMetricSnapshot(UserPerformanceProfile $profile): array
     {
         $metrics = [];
@@ -1281,6 +1609,31 @@ class MeController extends AbstractController
         }
 
         return $value;
+    }
+
+    private function requiredNonEmptyString(mixed $value, string $field): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $normalized = trim($value);
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function optionalString(mixed $value, string $field): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (!is_string($value)) {
+            throw new \InvalidArgumentException(sprintf('%s must be a string.', $field));
+        }
+
+        $normalized = trim($value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     /**

@@ -33,6 +33,10 @@ class ProgrammingGenerationRequest
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Box $box = null;
 
+    #[ORM\ManyToOne(targetEntity: CoachedClient::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?CoachedClient $coachedClient = null;
+
     #[ORM\Column(type: 'string', length: 32, enumType: ProgrammingGenerationRequestStatusEnum::class)]
     private ProgrammingGenerationRequestStatusEnum $status = ProgrammingGenerationRequestStatusEnum::DRAFT;
 
@@ -116,6 +120,19 @@ class ProgrammingGenerationRequest
     public function setBox(?Box $box): self
     {
         $this->box = $box;
+        $this->touch();
+
+        return $this;
+    }
+
+    public function getCoachedClient(): ?CoachedClient
+    {
+        return $this->coachedClient;
+    }
+
+    public function setCoachedClient(?CoachedClient $coachedClient): self
+    {
+        $this->coachedClient = $coachedClient;
         $this->touch();
 
         return $this;

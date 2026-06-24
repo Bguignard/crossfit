@@ -93,6 +93,7 @@ class PythonWorkerClientTest extends TestCase
             self::assertSame(ProgrammingGenerationTypeEnum::BOX->value, $payload['type']);
             self::assertSame((string) $box->getId(), $payload['box_id']);
             self::assertSame((string) $performanceProfile->getId(), $payload['performance_profile_id']);
+            self::assertNull($payload['coached_client_id']);
             self::assertSame(6, $payload['constraints']['duration_weeks']);
             self::assertSame('crossfit_general', $payload['constraints']['programmingFamily']);
             self::assertSame('main_program', $payload['constraints']['programmingPurpose']);
