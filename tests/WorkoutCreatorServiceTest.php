@@ -141,6 +141,22 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('avoid building the whole workout around only the classic wall-ball / thruster / pull-up-bar / box-jump pattern', $prompt);
     }
 
+    public function testOneMovementWorkoutPromptSkipsInteractionStrategyGuidance(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Strength',
+            1,
+        );
+
+        self::assertStringContainsString('Choose exactly 1 different movement for the final workout.', $prompt);
+        self::assertStringNotContainsString('Movement interaction strategy guidance', $prompt);
+        self::assertStringNotContainsString('pair movements that interfere little', $prompt);
+        self::assertStringNotContainsString('alternate movement demands', $prompt);
+        self::assertStringNotContainsString('pre-fatigue the next movement', $prompt);
+    }
+
     public function testCompetitionPromptUsesMovementFrequencyGuidanceFilteredByAllowedPool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -3726,8 +3742,12 @@ class WorkoutCreatorServiceTest extends TestCase
     /**
      * @return array{workout: \App\Entity\Workout\Workout, prompt: string}
      */
-    private function createWorkoutAndCapturePrompt(WorkoutTypeEnum $workoutType, ?int $numberOfRounds): array
-    {
+    private function createWorkoutAndCapturePrompt(
+        WorkoutTypeEnum $workoutType,
+        ?int $numberOfRounds,
+        ?string $stimulus = null,
+        int $numberOfDifferentMovements = 1,
+    ): array {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
         $cardio = new MovementType(MovementTypeEnum::CARDIO);
         $row = new Movement('Row', $difficulty, $cardio);
@@ -3795,12 +3815,13 @@ class WorkoutCreatorServiceTest extends TestCase
 
         $workoutGeneration = (new WorkoutGeneration())
             ->setName('Optional rounds prompt test')
+            ->setStimulus($stimulus)
             ->setTimeCap(12)
             ->setWorkoutType(new WorkoutType($workoutType))
             ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
             ->setMovementDifficulty($difficulty)
             ->setMovementTypes([$cardio])
-            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfDifferentMovements($numberOfDifferentMovements)
             ->setNumberOfRounds($numberOfRounds)
             ->setIntervalsTime(90)
             ->setIntervalsRestTime(30)

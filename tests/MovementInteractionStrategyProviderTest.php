@@ -79,6 +79,20 @@ final class MovementInteractionStrategyProviderTest extends TestCase
         );
     }
 
+    public function testOneMovementWorkoutDoesNotEmitInteractionGuidance(): void
+    {
+        $provider = new MovementInteractionStrategyProvider();
+
+        self::assertSame(
+            '',
+            $provider->buildPromptGuidance($this->workoutGeneration('Strength', 'Single lift')->setNumberOfDifferentMovements(1)),
+        );
+        self::assertSame(
+            '',
+            $provider->buildPromptGuidance($this->workoutGeneration('Strength', 'Single lift variant')->setNumberOfDifferentMovements(1), true),
+        );
+    }
+
     private function workoutGeneration(string $stimulus, string $name = 'Strategy test'): WorkoutGeneration
     {
         return (new WorkoutGeneration())

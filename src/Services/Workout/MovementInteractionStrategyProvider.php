@@ -89,6 +89,10 @@ readonly class MovementInteractionStrategyProvider
 
     public function buildPromptGuidance(WorkoutGeneration $workoutGeneration, bool $forVariants = false): string
     {
+        if ($workoutGeneration->getNumberOfDifferentMovements() <= 1) {
+            return '';
+        }
+
         $strategy = $this->selectStrategy($workoutGeneration);
         $context = $forVariants ? 'concepts' : 'final workout';
 
