@@ -35,9 +35,13 @@ Seeded groups are available for broad local checks:
 composer test:unit
 composer test:integration
 composer test:workflow
+composer test:slow
+composer test:no-slow
 ```
 
-These commands only run tests already tagged with the matching group. They are useful for local focus, but they are not a replacement for `composer test`.
+The positive group commands only run tests already tagged with the matching group. `composer test:no-slow` runs the full suite except tests tagged `slow`, including untagged tests. These commands are useful for local focus, but they are not a replacement for `composer test`.
+
+Use `composer test:no-slow` only as a local iteration shortcut when the touched code is unrelated to the slow API/profile flows. The full suite is still required before merge.
 
 The Composer PHPUnit scripts use `memory_limit=1G`, matching CI, because the full suite can exceed PHP's default 128M memory limit on local runs.
 
@@ -67,6 +71,30 @@ composer test
 ```
 
 ## Profiling Runtime
+
+First measured full-suite profile, recorded on 2026-06-26 after #381:
+
+- 253 tests, 1623 assertions.
+- 98.138s in the JUnit report, 01:38.462 in PHPUnit output.
+- 0 failures, 0 errors, 0 skipped.
+- 278.50 MB peak memory.
+
+Slowest classes from that profile:
+
+```text
+28.416s App\Tests\WorkoutApiWorkflowTest (38 tests)
+17.114s App\Tests\PrivateUserProfileApiTest (21 tests)
+4.515s App\Tests\InferWorkoutPrescriptionPatternsCommandTest (6 tests)
+4.397s App\Tests\ProgrammingGenerationRequestModelTest (5 tests)
+4.222s App\Tests\ImportCompetitionResultsCommandTest (5 tests)
+3.724s App\Tests\SuggestOfficialCompetitionQualificationsCommandTest (5 tests)
+3.275s App\Tests\ProductFixturesTest (4 tests)
+2.896s App\Tests\WorkoutEnrichmentCommandTest (4 tests)
+2.785s App\Tests\DispatchPerformanceAnalysisRequestsCommandTest (4 tests)
+2.721s App\Tests\AdminDashboardMetricsTest (4 tests)
+```
+
+The current `slow` group contains only the two classes above 5 seconds in that profile.
 
 Generate a PHPUnit JUnit report:
 
@@ -108,9 +136,10 @@ Use PHPUnit 9-compatible annotations for now:
 
 Current seed:
 
-- `unit`: pure service/model tests with no Symfony kernel or database.
-- `integration`: the two slowest API/DB workflow classes from the first profile, `WorkoutApiWorkflowTest` and `PrivateUserProfileApiTest`.
-- `workflow`: dispatch/worker tests around Messenger and generated request processing.
+- `unit`: pure service/model/parser/report tests with no Symfony kernel or database.
+- `integration`: API/DB full-stack tests, DB-backed command tests, repository/model persistence tests.
+- `workflow`: Messenger dispatch, worker request processing, and generated request lifecycle tests.
+- `slow`: currently `WorkoutApiWorkflowTest` and `PrivateUserProfileApiTest`, the only classes above 5 seconds in the first measured profile.
 
 Do not retag everything at once. Continue from the slowest classes found by profiling and the clearly pure unit/service tests.
 

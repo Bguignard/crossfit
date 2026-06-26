@@ -12,6 +12,9 @@ use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
+/**
+ * @group integration
+ */
 class ImportedCompetitionModelTest extends AbstractIntegrationTest
 {
     public function testImportedResultGraphCanBeMatchedBySourceIdentity(): void

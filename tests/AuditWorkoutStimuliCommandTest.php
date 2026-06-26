@@ -8,6 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group unit
+ */
 final class AuditWorkoutStimuliCommandTest extends TestCase
 {
     public function testCommandWritesDryRunReports(): void

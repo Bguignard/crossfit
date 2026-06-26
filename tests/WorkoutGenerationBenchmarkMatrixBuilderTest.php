@@ -6,6 +6,9 @@ use App\Services\Workout\Audit\WorkoutGenerationBenchmarkMatrixBuilder;
 use App\Services\Workout\Audit\WorkoutStimulusAuditor;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 final class WorkoutGenerationBenchmarkMatrixBuilderTest extends TestCase
 {
     public function testBuildDryRunReportCreatesModelStrategyScenarioMatrix(): void

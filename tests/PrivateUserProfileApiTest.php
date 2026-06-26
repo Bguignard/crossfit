@@ -23,6 +23,7 @@ use App\Entity\Security\UserToken;
 
 /**
  * @group integration
+ * @group slow
  */
 class PrivateUserProfileApiTest extends AbstractIntegrationTest
 {

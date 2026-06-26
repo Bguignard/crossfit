@@ -11,6 +11,9 @@ use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutPrescriptionStandard;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 final class InferWorkoutPrescriptionPatternsCommandTest extends AbstractIntegrationTest
 {
     public function testReportUsesTextInferredMovementsForImportedWorkouts(): void

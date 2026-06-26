@@ -9,6 +9,9 @@ use function MonWod\Tooling\PhpUnitJUnitSummary\summarizeFile;
 
 require_once __DIR__.'/../scripts/summarize_phpunit_junit.php';
 
+/**
+ * @group unit
+ */
 final class PhpUnitJUnitSummaryScriptTest extends TestCase
 {
     public function testSummarizeFileAggregatesSlowestClassesAndTests(): void

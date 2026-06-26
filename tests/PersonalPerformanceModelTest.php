@@ -9,6 +9,9 @@ use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 
+/**
+ * @group integration
+ */
 class PersonalPerformanceModelTest extends AbstractIntegrationTest
 {
     public function testUserCanStoreOptionalPerformanceMetrics(): void

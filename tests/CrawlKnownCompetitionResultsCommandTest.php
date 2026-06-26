@@ -13,6 +13,9 @@ use App\Services\PythonWorker\PythonWorkerClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 class CrawlKnownCompetitionResultsCommandTest extends AbstractIntegrationTest
 {
     public function testEndedKnownCompetitionCanCrawlResultsWithoutLinkedAthleteProfile(): void

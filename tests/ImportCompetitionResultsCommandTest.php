@@ -14,6 +14,9 @@ use App\Entity\Workout\Workout;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
 {
     public function testImportExamplePayloadIsIdempotent(): void

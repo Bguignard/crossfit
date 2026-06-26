@@ -37,6 +37,7 @@ use App\Services\Workout\WorkoutCreatorServiceInterface;
 
 /**
  * @group integration
+ * @group slow
  */
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 {

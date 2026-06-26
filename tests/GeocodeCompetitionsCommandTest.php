@@ -10,6 +10,9 @@ use App\Services\Competition\CompetitionGeoNormalizer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 final class GeocodeCompetitionsCommandTest extends AbstractIntegrationTest
 {
     public function testItReusesCacheCreatedEarlierInSameBatch(): void
