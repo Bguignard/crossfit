@@ -243,6 +243,10 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Do not select both together unless the user explicitly forced both movements.', $chatGpt->prompt);
         self::assertStringContainsString('Chest to Bar Pull Up + Thruster', $chatGpt->prompt);
         self::assertStringContainsString('Double Under + Toes to Bar', $chatGpt->prompt);
+        self::assertStringContainsString('Movement interaction strategy guidance', $chatGpt->prompt);
+        self::assertStringContainsString('internal strategy', $chatGpt->prompt);
+        self::assertStringContainsString('invisible to the athlete', $chatGpt->prompt);
+        self::assertStringContainsString('The final workout should', $chatGpt->prompt);
         self::assertStringNotContainsString('Muscle Up + Toes to Bar', $chatGpt->prompt);
         self::assertStringNotContainsString('regular available movements: Chest to Bar Pull Up, Box Jump Over', $chatGpt->prompt);
         self::assertStringNotContainsString('Box Jump Over +', $chatGpt->prompt);
@@ -737,6 +741,10 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Suggest 3 distinct CrossFit workout concepts before generating a final workout.', $chatGpt->prompt);
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
+        self::assertStringContainsString('Movement interaction strategy guidance', $chatGpt->prompt);
+        self::assertStringContainsString('Each concept should', $chatGpt->prompt);
+        self::assertStringNotContainsString('"skill_under_fatigue"', $chatGpt->prompt);
+        self::assertStringNotContainsString('"same_limiter"', $chatGpt->prompt);
         self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $chatGpt->prompt);
         self::assertStringContainsString('must not be used as a default group simply because they are familiar benchmark movements', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
