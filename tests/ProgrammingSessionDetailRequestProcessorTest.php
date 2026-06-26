@@ -14,6 +14,9 @@ use App\Services\Profile\ProgrammingNotificationSenderInterface;
 use App\Services\Profile\ProgrammingSessionDetailRequestProcessor;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 
+/**
+ * @group workflow
+ */
 class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTest
 {
     public function testQueuedSessionDetailRequestIsCompletedWithWorkerResult(): void

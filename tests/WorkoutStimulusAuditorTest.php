@@ -12,6 +12,9 @@ use App\Services\Workout\Audit\WorkoutStimulusAuditor;
 use App\Services\Workout\Audit\WorkoutStimulusAuditScenario;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 final class WorkoutStimulusAuditorTest extends TestCase
 {
     public function testScenariosCoverCurrentStimuli(): void

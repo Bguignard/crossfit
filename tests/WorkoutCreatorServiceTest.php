@@ -33,6 +33,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 class WorkoutCreatorServiceTest extends TestCase
 {
     public function testWorkoutGenerationRejectsMovementThatIsBothMandatoryAndBanned(): void

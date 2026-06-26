@@ -19,6 +19,9 @@ use App\Services\PythonWorker\PythonWorkerClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group workflow
+ */
 class DispatchPerformanceAnalysisRequestsCommandTest extends AbstractIntegrationTest
 {
     public function testQueuedAnalysisRequestIsCompletedWithWorkerResult(): void

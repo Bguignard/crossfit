@@ -8,7 +8,7 @@ This document defines the current MonWOD backend test loop. The goal is to speed
 - GitHub CI already separates `Quality` from `Tests`.
 - CI must keep running the full PHPUnit suite before merge.
 - `tests/AbstractIntegrationTest.php` reloads all Doctrine fixtures in `setUp()`, which is likely one of the main costs for DB/API tests.
-- The suite does not use PHPUnit groups yet.
+- The suite now has a small seed of PHPUnit groups for obvious classes only. Groups are not exhaustive yet.
 
 ## Local Validation Paths
 
@@ -22,12 +22,24 @@ php bin/console lint:container --env=test
 composer test:fast -- 'ClassNameOrMethodName'
 ```
 
-`composer test:fast` is intentionally a targeted PHPUnit filter. It does not claim to be a complete fast suite yet, because no groups exist today. Prefer filters that match the touched behavior, for example:
+`composer test:fast` is intentionally a targeted PHPUnit filter. Prefer filters that match the touched behavior, for example:
 
 ```bash
 composer test:fast -- WorkoutCreatorServiceTest
 composer test:fast -- 'WorkoutCreatorServiceTest::testCompetitionPromptUsesMovementFrequencyGuidanceFilteredByAllowedPool'
 ```
+
+Seeded groups are available for broad local checks:
+
+```bash
+composer test:unit
+composer test:integration
+composer test:workflow
+```
+
+These commands only run tests already tagged with the matching group. They are useful for local focus, but they are not a replacement for `composer test`.
+
+The Composer PHPUnit scripts use `memory_limit=1G`, matching CI, because the full suite can exceed PHP's default 128M memory limit on local runs.
 
 When a change touches Doctrine mapping or migrations, add:
 
@@ -86,17 +98,21 @@ These are the categories we should introduce progressively with PHPUnit groups o
 - `migration`: Doctrine migrations and schema validation.
 - `external`: adapters around OpenAI, Python worker, geocoding, crawling, email, and other network-like boundaries; tests should use fakes by default.
 
-Suggested future group names:
+Use PHPUnit 9-compatible annotations for now:
 
 ```php
-#[Group('unit')]
-#[Group('integration')]
-#[Group('workflow')]
-#[Group('migration')]
-#[Group('external')]
+/**
+ * @group unit
+ */
 ```
 
-Do not retag everything at once. Start with the slowest classes found by profiling and the clearly pure unit/service tests.
+Current seed:
+
+- `unit`: pure service/model tests with no Symfony kernel or database.
+- `integration`: the two slowest API/DB workflow classes from the first profile, `WorkoutApiWorkflowTest` and `PrivateUserProfileApiTest`.
+- `workflow`: dispatch/worker tests around Messenger and generated request processing.
+
+Do not retag everything at once. Continue from the slowest classes found by profiling and the clearly pure unit/service tests.
 
 ## Fixture Guidance
 

@@ -21,6 +21,9 @@ use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Entity\Security\UserToken;
 
+/**
+ * @group integration
+ */
 class PrivateUserProfileApiTest extends AbstractIntegrationTest
 {
     public function testPrivateDashboardRequiresAuthentication(): void
