@@ -157,6 +157,23 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringNotContainsString('pre-fatigue the next movement', $prompt);
     }
 
+    public function testPureStrengthPromptSkipsMetconInteractionStrategyGuidance(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Strength',
+            2,
+        );
+
+        self::assertStringContainsString('Strength: write this like a true strength prescription', $prompt);
+        self::assertStringContainsString('Choose exactly 2 different movements for the final workout.', $prompt);
+        self::assertStringNotContainsString('Movement interaction strategy guidance', $prompt);
+        self::assertStringNotContainsString('pair movements that interfere little', $prompt);
+        self::assertStringNotContainsString('alternate movement demands', $prompt);
+        self::assertStringNotContainsString('pre-fatigue the next movement', $prompt);
+    }
+
     public function testCompetitionPromptUsesMovementFrequencyGuidanceFilteredByAllowedPool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -3751,8 +3768,9 @@ class WorkoutCreatorServiceTest extends TestCase
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
         $cardio = new MovementType(MovementTypeEnum::CARDIO);
         $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
 
-        $movementService = new class([$row]) implements MovementServiceInterface {
+        $movementService = new class([$row, $burpee]) implements MovementServiceInterface {
             /**
              * @param list<Movement> $possibleMovements
              */
@@ -3797,11 +3815,12 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 $this->prompt = $prompt;
+                $isTwoMovementWorkout = str_contains($prompt, 'Choose exactly 2 different movements');
 
                 return json_encode([
-                    'flow' => "Workout:\n1000 m Row",
+                    'flow' => $isTwoMovementWorkout ? "Workout:\n1000 m Row\n20 Burpee" : "Workout:\n1000 m Row",
                     'scalingOptions' => "RX: as written\nIntermediate: 800 m Row\nScaled: 600 m Row",
-                    'movements' => ['Row'],
+                    'movements' => $isTwoMovementWorkout ? ['Row', 'Burpee'] : ['Row'],
                 ], JSON_THROW_ON_ERROR);
             }
         };

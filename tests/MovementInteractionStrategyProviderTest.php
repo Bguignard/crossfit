@@ -93,6 +93,15 @@ final class MovementInteractionStrategyProviderTest extends TestCase
         );
     }
 
+    public function testPureStrengthWorkoutDoesNotEmitMetconInteractionGuidance(): void
+    {
+        $provider = new MovementInteractionStrategyProvider();
+
+        self::assertSame('', $provider->buildPromptGuidance($this->workoutGeneration('Strength')->setNumberOfDifferentMovements(2)));
+        self::assertSame('', $provider->buildPromptGuidance($this->workoutGeneration('Strength')->setNumberOfDifferentMovements(2), true));
+        self::assertNotSame('', $provider->buildPromptGuidance($this->workoutGeneration('Strength Endurance')->setNumberOfDifferentMovements(2)));
+    }
+
     private function workoutGeneration(string $stimulus, string $name = 'Strategy test'): WorkoutGeneration
     {
         return (new WorkoutGeneration())

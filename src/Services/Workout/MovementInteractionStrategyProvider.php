@@ -89,7 +89,7 @@ readonly class MovementInteractionStrategyProvider
 
     public function buildPromptGuidance(WorkoutGeneration $workoutGeneration, bool $forVariants = false): string
     {
-        if ($workoutGeneration->getNumberOfDifferentMovements() <= 1) {
+        if ($workoutGeneration->getNumberOfDifferentMovements() <= 1 || $this->isPureStrengthStimulus($workoutGeneration)) {
             return '';
         }
 
@@ -111,6 +111,14 @@ readonly class MovementInteractionStrategyProvider
             (string) $workoutGeneration->getStimulus(),
             (string) $workoutGeneration->getStimulusIntent(),
         )));
+    }
+
+    private function isPureStrengthStimulus(WorkoutGeneration $workoutGeneration): bool
+    {
+        $stimulus = $this->normalizedStimulus($workoutGeneration);
+
+        return str_contains($stimulus, 'strength')
+            && !str_contains($stimulus, 'strength endurance');
     }
 
     private function strategyGuidance(string $strategy, bool $forVariants): string
