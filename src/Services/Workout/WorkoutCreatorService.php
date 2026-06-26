@@ -13,6 +13,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 {
     private CompetitionMovementFrequencyGuidanceProvider $competitionMovementFrequencyGuidanceProvider;
     private TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider;
+    private MovementInteractionStrategyProvider $movementInteractionStrategyProvider;
 
     public function __construct(
         public MovementServiceInterface $movementService,
@@ -21,9 +22,11 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         private ?WorkoutPrescriptionStandardPromptBuilder $prescriptionStandardPromptBuilder = null,
         ?CompetitionMovementFrequencyGuidanceProvider $competitionMovementFrequencyGuidanceProvider = null,
         ?TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider = null,
+        ?MovementInteractionStrategyProvider $movementInteractionStrategyProvider = null,
     ) {
         $this->competitionMovementFrequencyGuidanceProvider = $competitionMovementFrequencyGuidanceProvider ?? new CompetitionMovementFrequencyGuidanceProvider();
         $this->teamWorkoutStructureGuidanceProvider = $teamWorkoutStructureGuidanceProvider ?? new TeamWorkoutStructureGuidanceProvider();
+        $this->movementInteractionStrategyProvider = $movementInteractionStrategyProvider ?? new MovementInteractionStrategyProvider();
     }
 
     public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
@@ -79,6 +82,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->teamWorkoutGuidance($workoutGeneration);
         $promptForChatGPT .= "Make the final workout flow match the stimulus identity and intent.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->movementInteractionGuidance($workoutGeneration);
         $promptForChatGPT .= $this->timeCapCalibrationGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
         $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovementsForPrompt));
@@ -364,6 +368,7 @@ EOD;
         $promptForChatGPT .= $this->formatMovementPromptSection($allowedMovementsForPrompt);
         $promptForChatGPT .= "Use only movements and implement options printed in the pool above. Do not invent unavailable equipment.\n";
         $promptForChatGPT .= $this->stimulusSpecificGuidance($workoutGeneration);
+        $promptForChatGPT .= $this->movementInteractionVariantGuidance($workoutGeneration);
         $promptForChatGPT .= $this->movementDiversityGuidance($workoutGeneration);
         $promptForChatGPT .= $this->competitionMovementFrequencyGuidance($workoutGeneration, $allowedMovementsForPrompt);
         $promptForChatGPT .= <<<EOD
@@ -692,6 +697,16 @@ EOD;
     private function teamWorkoutVariantGuidance(WorkoutGeneration $workoutGeneration): string
     {
         return $this->teamWorkoutStructureGuidanceProvider->buildVariantPromptGuidance($workoutGeneration);
+    }
+
+    private function movementInteractionGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        return $this->movementInteractionStrategyProvider->buildPromptGuidance($workoutGeneration);
+    }
+
+    private function movementInteractionVariantGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        return $this->movementInteractionStrategyProvider->buildPromptGuidance($workoutGeneration, true);
     }
 
     /**

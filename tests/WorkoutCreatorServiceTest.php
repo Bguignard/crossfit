@@ -141,6 +141,39 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('avoid building the whole workout around only the classic wall-ball / thruster / pull-up-bar / box-jump pattern', $prompt);
     }
 
+    public function testOneMovementWorkoutPromptSkipsInteractionStrategyGuidance(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Strength',
+            1,
+        );
+
+        self::assertStringContainsString('Choose exactly 1 different movement for the final workout.', $prompt);
+        self::assertStringNotContainsString('Movement interaction strategy guidance', $prompt);
+        self::assertStringNotContainsString('pair movements that interfere little', $prompt);
+        self::assertStringNotContainsString('alternate movement demands', $prompt);
+        self::assertStringNotContainsString('pre-fatigue the next movement', $prompt);
+    }
+
+    public function testPureStrengthPromptSkipsMetconInteractionStrategyGuidance(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Strength',
+            2,
+        );
+
+        self::assertStringContainsString('Strength: write this like a true strength prescription', $prompt);
+        self::assertStringContainsString('Choose exactly 2 different movements for the final workout.', $prompt);
+        self::assertStringNotContainsString('Movement interaction strategy guidance', $prompt);
+        self::assertStringNotContainsString('pair movements that interfere little', $prompt);
+        self::assertStringNotContainsString('alternate movement demands', $prompt);
+        self::assertStringNotContainsString('pre-fatigue the next movement', $prompt);
+    }
+
     public function testCompetitionPromptUsesMovementFrequencyGuidanceFilteredByAllowedPool(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -243,6 +276,10 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Do not select both together unless the user explicitly forced both movements.', $chatGpt->prompt);
         self::assertStringContainsString('Chest to Bar Pull Up + Thruster', $chatGpt->prompt);
         self::assertStringContainsString('Double Under + Toes to Bar', $chatGpt->prompt);
+        self::assertStringContainsString('Movement interaction strategy guidance', $chatGpt->prompt);
+        self::assertStringContainsString('internal strategy', $chatGpt->prompt);
+        self::assertStringContainsString('invisible to the athlete', $chatGpt->prompt);
+        self::assertStringContainsString('The final workout should', $chatGpt->prompt);
         self::assertStringNotContainsString('Muscle Up + Toes to Bar', $chatGpt->prompt);
         self::assertStringNotContainsString('regular available movements: Chest to Bar Pull Up, Box Jump Over', $chatGpt->prompt);
         self::assertStringNotContainsString('Box Jump Over +', $chatGpt->prompt);
@@ -737,6 +774,10 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Suggest 3 distinct CrossFit workout concepts before generating a final workout.', $chatGpt->prompt);
         self::assertStringContainsString('Stimulus-specific guidance:', $chatGpt->prompt);
         self::assertStringContainsString('Engine: make the limitation primarily aerobic', $chatGpt->prompt);
+        self::assertStringContainsString('Movement interaction strategy guidance', $chatGpt->prompt);
+        self::assertStringContainsString('Each concept should', $chatGpt->prompt);
+        self::assertStringNotContainsString('"skill_under_fatigue"', $chatGpt->prompt);
+        self::assertStringNotContainsString('"same_limiter"', $chatGpt->prompt);
         self::assertStringContainsString('Movement diversity guidance: choose movements from the full allowed pool', $chatGpt->prompt);
         self::assertStringContainsString('must not be used as a default group simply because they are familiar benchmark movements', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
@@ -3718,13 +3759,18 @@ class WorkoutCreatorServiceTest extends TestCase
     /**
      * @return array{workout: \App\Entity\Workout\Workout, prompt: string}
      */
-    private function createWorkoutAndCapturePrompt(WorkoutTypeEnum $workoutType, ?int $numberOfRounds): array
-    {
+    private function createWorkoutAndCapturePrompt(
+        WorkoutTypeEnum $workoutType,
+        ?int $numberOfRounds,
+        ?string $stimulus = null,
+        int $numberOfDifferentMovements = 1,
+    ): array {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
         $cardio = new MovementType(MovementTypeEnum::CARDIO);
         $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
 
-        $movementService = new class([$row]) implements MovementServiceInterface {
+        $movementService = new class([$row, $burpee]) implements MovementServiceInterface {
             /**
              * @param list<Movement> $possibleMovements
              */
@@ -3769,11 +3815,12 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 $this->prompt = $prompt;
+                $isTwoMovementWorkout = str_contains($prompt, 'Choose exactly 2 different movements');
 
                 return json_encode([
-                    'flow' => "Workout:\n1000 m Row",
+                    'flow' => $isTwoMovementWorkout ? "Workout:\n1000 m Row\n20 Burpee" : "Workout:\n1000 m Row",
                     'scalingOptions' => "RX: as written\nIntermediate: 800 m Row\nScaled: 600 m Row",
-                    'movements' => ['Row'],
+                    'movements' => $isTwoMovementWorkout ? ['Row', 'Burpee'] : ['Row'],
                 ], JSON_THROW_ON_ERROR);
             }
         };
@@ -3787,12 +3834,13 @@ class WorkoutCreatorServiceTest extends TestCase
 
         $workoutGeneration = (new WorkoutGeneration())
             ->setName('Optional rounds prompt test')
+            ->setStimulus($stimulus)
             ->setTimeCap(12)
             ->setWorkoutType(new WorkoutType($workoutType))
             ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
             ->setMovementDifficulty($difficulty)
             ->setMovementTypes([$cardio])
-            ->setNumberOfDifferentMovements(1)
+            ->setNumberOfDifferentMovements($numberOfDifferentMovements)
             ->setNumberOfRounds($numberOfRounds)
             ->setIntervalsTime(90)
             ->setIntervalsRestTime(30)
