@@ -5,6 +5,9 @@ namespace App\Tests;
 use App\Services\Competition\AthleteNameNormalizer;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 final class AthleteNameNormalizerTest extends TestCase
 {
     public function testNormalizesNamesWithoutAccents(): void

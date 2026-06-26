@@ -35,6 +35,9 @@ use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Services\Workout\WorkoutCreatorServiceInterface;
 
+/**
+ * @group integration
+ */
 class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 {
     public function testFrontendCanListWorkoutCatalogFromApi(): void

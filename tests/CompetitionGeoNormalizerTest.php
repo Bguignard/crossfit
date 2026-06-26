@@ -5,6 +5,9 @@ namespace App\Tests;
 use App\Services\Competition\CompetitionGeoNormalizer;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 final class CompetitionGeoNormalizerTest extends TestCase
 {
     public function testItKeepsExplicitStructuredGeo(): void

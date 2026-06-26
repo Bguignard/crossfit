@@ -95,11 +95,14 @@
             "@cs:check",
             "@psalm"
         ],
-        "test": "php bin/phpunit",
-        "test:fast": "php bin/phpunit --filter",
+        "test": "php -d memory_limit=1G bin/phpunit",
+        "test:fast": "php -d memory_limit=1G bin/phpunit --filter",
+        "test:unit": "php -d memory_limit=1G bin/phpunit --group unit",
+        "test:integration": "php -d memory_limit=1G bin/phpunit --group integration",
+        "test:workflow": "php -d memory_limit=1G bin/phpunit --group workflow",
         "test:profile": [
             "php -r \"is_dir('var/reports') || mkdir('var/reports', 0775, true);\"",
-            "php bin/phpunit --log-junit var/reports/phpunit-junit.xml"
+            "php -d memory_limit=1G bin/phpunit --log-junit var/reports/phpunit-junit.xml"
         ],
         "test:profile:summary": "php scripts/summarize_phpunit_junit.php var/reports/phpunit-junit.xml"
     },
