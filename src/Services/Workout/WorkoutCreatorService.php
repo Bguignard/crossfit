@@ -12,6 +12,7 @@ use App\Entity\WorkoutGeneration\WorkoutGeneration;
 readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 {
     private CompetitionMovementFrequencyGuidanceProvider $competitionMovementFrequencyGuidanceProvider;
+    private TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider;
 
     public function __construct(
         public MovementServiceInterface $movementService,
@@ -19,8 +20,10 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         public WorkoutOriginServiceInterface $workoutOriginService,
         private ?WorkoutPrescriptionStandardPromptBuilder $prescriptionStandardPromptBuilder = null,
         ?CompetitionMovementFrequencyGuidanceProvider $competitionMovementFrequencyGuidanceProvider = null,
+        ?TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider = null,
     ) {
         $this->competitionMovementFrequencyGuidanceProvider = $competitionMovementFrequencyGuidanceProvider ?? new CompetitionMovementFrequencyGuidanceProvider();
+        $this->teamWorkoutStructureGuidanceProvider = $teamWorkoutStructureGuidanceProvider ?? new TeamWorkoutStructureGuidanceProvider();
     }
 
     public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
@@ -351,6 +354,7 @@ EOD;
         $promptForChatGPT .= sprintf("Workout format: %s\n", $workoutGeneration->getWorkoutType()->getName());
         $promptForChatGPT .= sprintf("Time cap: %d minutes\n", $workoutGeneration->getTimeCap());
         $promptForChatGPT .= sprintf("Team workout: %s\n", $workoutGeneration->isTeamWorkout() ? 'yes' : 'no');
+        $promptForChatGPT .= $this->teamWorkoutVariantGuidance($workoutGeneration);
         $promptForChatGPT .= sprintf("Each concept must use exactly %d movement name(s).\n", $workoutGeneration->getNumberOfDifferentMovements());
         if (count($mandatoryMovements) > 0) {
             $promptForChatGPT .= "Mandatory movements that must appear in every concept:\n";
@@ -682,16 +686,12 @@ EOD;
 
     private function teamWorkoutGuidance(WorkoutGeneration $workoutGeneration): string
     {
-        if (!$workoutGeneration->isTeamWorkout()) {
-            return "Team workout guidance: this is an individual workout. Do not use partner relay, shared reps or synchronized work.\n";
-        }
+        return $this->teamWorkoutStructureGuidanceProvider->buildPromptGuidance($workoutGeneration);
+    }
 
-        return <<<TXT
-Team workout guidance: this must be explicitly written as a team workout. Use team-of-2 unless another team size is clearly better for the stimulus. Include a clear work-sharing pattern such as short "you go, I go" switches, shared reps, split anyhow, synchronized reps, relay stations or partner alternating rounds. The flow must make the team structure impossible to miss.
-Avoid long idle partner windows: do not prescribe "you go, I go" chunks where one athlete waits 2-3 minutes while the other completes a long station, long row/run, large unbroken set or full round. If using "you go, I go", keep each switch short enough that the resting partner is back to work quickly, usually small sets, short distances or one compact movement at a time.
-For longer stations, prefer shared reps, split-anyhow work, synchronized work, active holds/carries for the waiting partner, or explicit short distance/repetition switches.
-
-TXT;
+    private function teamWorkoutVariantGuidance(WorkoutGeneration $workoutGeneration): string
+    {
+        return $this->teamWorkoutStructureGuidanceProvider->buildVariantPromptGuidance($workoutGeneration);
     }
 
     /**

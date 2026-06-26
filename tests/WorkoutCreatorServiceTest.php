@@ -573,6 +573,9 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Put all substitutions and adaptations only in scalingOptions', $chatGpt->prompt);
         self::assertStringContainsString('the movements array must contain exactly the movement names used in the main workout flow', strtolower($chatGpt->prompt));
         self::assertStringContainsString('Team workout guidance: this is an individual workout', $chatGpt->prompt);
+        self::assertStringContainsString('Do not use partner relay, shared reps, split-anyhow rules, synchronized work', $chatGpt->prompt);
+        self::assertStringContainsString('partner holds/carries/static constraints', $chatGpt->prompt);
+        self::assertStringNotContainsString('Do not use partner relay, shared reps, split-anyhow rules, synchronized work, holds, carries', $chatGpt->prompt);
         self::assertStringContainsString('Movement A', $chatGpt->prompt);
         self::assertStringNotContainsString('25 Pull-Ups', $chatGpt->prompt);
         self::assertStringNotContainsString('10 thrusters', $chatGpt->prompt);
@@ -739,6 +742,61 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Do not write the final workout flow yet.', $chatGpt->prompt);
     }
 
+    public function testTeamWorkoutVariantPromptUsesConceptGuidanceWithoutFinalFlowInstruction(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public string $prompt = '';
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompt = $prompt;
+
+                return json_encode([
+                    'variants' => [
+                        [
+                            'title' => 'Relais court',
+                            'intent' => 'Alterner des relais courts sans attente longue.',
+                            'format' => 'Team of 2, intervals courts',
+                            'movementNames' => ['Row', 'Burpee'],
+                            'summary' => 'Un concept team avec calories partagees et relais rapides.',
+                        ],
+                    ],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Team variant test')
+            ->setStimulus('Engine')
+            ->setStimulusIntent('Maintenir une respiration stable en equipe.')
+            ->setTimeCap(18)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(2)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(true);
+
+        $variants = (new WorkoutCreatorService(
+            $this->movementServiceReturning([$row, $burpee]),
+            $chatGpt,
+            $this->createMock(WorkoutOriginServiceInterface::class),
+        ))->createWorkoutVariants($workoutGeneration);
+
+        self::assertSame('Relais court', $variants[0]['title']);
+        self::assertStringContainsString('Team workout concept guidance', $chatGpt->prompt);
+        self::assertStringContainsString('Do not write the final workout flow yet', $chatGpt->prompt);
+        self::assertStringContainsString('describe the chosen team structure in the concept intent, format or summary', $chatGpt->prompt);
+        self::assertStringContainsString('Central "you go, I go" constraint for concepts: short relays only', $chatGpt->prompt);
+        self::assertStringNotContainsString('then write the flow so the work-sharing rule is impossible to miss', $chatGpt->prompt);
+    }
+
     public function testTeamWorkoutPromptRequiresExplicitTeamStructure(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
@@ -823,10 +881,18 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Team workout: yes', $chatGpt->prompt);
         self::assertStringContainsString('this must be explicitly written as a team workout', $chatGpt->prompt);
         self::assertStringContainsString('team-of-2', $chatGpt->prompt);
+        self::assertStringContainsString('Team structure taxonomy available for this generation', $chatGpt->prompt);
+        self::assertStringContainsString('synchronized block', $chatGpt->prompt);
+        self::assertStringContainsString('shared total reps/calories, split anyhow', $chatGpt->prompt);
+        self::assertStringContainsString('partner alternating rounds', $chatGpt->prompt);
+        self::assertStringContainsString('active hold/carry/static constraint while partner works', $chatGpt->prompt);
+        self::assertStringContainsString('Pick exactly one main structure', $chatGpt->prompt);
         self::assertStringContainsString('you go, I go', $chatGpt->prompt);
-        self::assertStringContainsString('Avoid long idle partner windows', $chatGpt->prompt);
-        self::assertStringContainsString('do not prescribe "you go, I go" chunks where one athlete waits 2-3 minutes', $chatGpt->prompt);
-        self::assertStringContainsString('prefer shared reps, split-anyhow work, synchronized work, active holds/carries', $chatGpt->prompt);
+        self::assertStringContainsString('Central "you go, I go" constraint: use short relays only', $chatGpt->prompt);
+        self::assertStringContainsString('Do not prescribe long row/run segments, full long stations, large unbroken sets or whole long rounds as "you go, I go"', $chatGpt->prompt);
+        self::assertStringContainsString('split it into short distance/repetition/calorie switches', $chatGpt->prompt);
+        self::assertStringContainsString('do not synchronize the entire workout if that breaks the stimulus', $chatGpt->prompt);
+        self::assertStringContainsString('state explicitly whether athletes share one machine', $chatGpt->prompt);
         self::assertStringContainsString('Time-cap calibration guidance: the requested time cap is 24 minutes.', $chatGpt->prompt);
         self::assertStringContainsString('For-time workouts: calibrate reps, distances, loads, round count and transitions', $chatGpt->prompt);
         self::assertStringContainsString('For team workouts, account for shared reps, split-anyhow work, synchronized reps, partner changes and machine sharing.', $chatGpt->prompt);
