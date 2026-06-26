@@ -17,6 +17,9 @@ use App\Entity\Workout\Movement;
 use App\Entity\Workout\Muscle;
 use App\Entity\Workout\Workout;
 
+/**
+ * @group integration
+ */
 class ProductFixturesTest extends AbstractIntegrationTest
 {
     public function testWorkoutFixturesExposeMonolithicWorkoutsWithEnrichmentMetadata(): void

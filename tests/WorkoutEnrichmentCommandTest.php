@@ -7,6 +7,9 @@ use App\Entity\Workout\Enum\ImplementEnum;
 use App\Entity\Workout\Workout;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 class WorkoutEnrichmentCommandTest extends AbstractIntegrationTest
 {
     public function testDryRunReportsMatchesWithoutChangingWorkout(): void

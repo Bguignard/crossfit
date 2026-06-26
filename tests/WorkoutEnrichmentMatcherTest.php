@@ -12,6 +12,9 @@ use App\Services\Workout\Enrichment\WorkoutEnrichmentMatcher;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * @group unit
+ */
 class WorkoutEnrichmentMatcherTest extends TestCase
 {
     public function testItMatchesAbmatImplementAliases(): void

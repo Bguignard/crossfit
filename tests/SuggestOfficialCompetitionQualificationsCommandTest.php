@@ -10,6 +10,9 @@ use App\Entity\Security\User;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+/**
+ * @group integration
+ */
 final class SuggestOfficialCompetitionQualificationsCommandTest extends AbstractIntegrationTest
 {
     public function testDryRunSuggestsMadFitnessFestivalSemifinalWithoutPersisting(): void

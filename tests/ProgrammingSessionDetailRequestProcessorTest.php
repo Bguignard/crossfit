@@ -15,6 +15,7 @@ use App\Services\Profile\ProgrammingSessionDetailRequestProcessor;
 use App\Services\PythonWorker\PythonWorkerClientInterface;
 
 /**
+ * @group integration
  * @group workflow
  */
 class ProgrammingSessionDetailRequestProcessorTest extends AbstractIntegrationTest

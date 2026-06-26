@@ -9,6 +9,9 @@ use App\Entity\Workout\WorkoutOriginName;
 use App\Services\Workout\Prescription\WorkoutPrescriptionPatternInferer;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 final class WorkoutPrescriptionPatternInfererTest extends TestCase
 {
     public function testInfersPairedBarbellLoadsAndLevelHints(): void

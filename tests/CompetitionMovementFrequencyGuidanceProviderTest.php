@@ -11,6 +11,9 @@ use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Services\Workout\CompetitionMovementFrequencyGuidanceProvider;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group unit
+ */
 class CompetitionMovementFrequencyGuidanceProviderTest extends TestCase
 {
     public function testAvailableCompetitionGuidanceDataIsFilteredByAllowedMovements(): void

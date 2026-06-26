@@ -6,6 +6,9 @@ use App\Entity\Competition\Athlete;
 use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Security\User;
 
+/**
+ * @group integration
+ */
 class ProductIdentityModelTest extends AbstractIntegrationTest
 {
     public function testUserCanLinkSeveralExternalAthleteProfiles(): void

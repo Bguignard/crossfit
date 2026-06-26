@@ -22,6 +22,9 @@ use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Entity\Workout\Workout;
 
+/**
+ * @group integration
+ */
 class AdminDashboardMetricsTest extends AbstractIntegrationTest
 {
     public function testAdminCanReadProductAndCrawlerMetrics(): void

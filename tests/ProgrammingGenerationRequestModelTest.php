@@ -13,6 +13,10 @@ use App\Entity\Product\UserPerformanceMetric;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 
+/**
+ * @group integration
+ * @group workflow
+ */
 class ProgrammingGenerationRequestModelTest extends AbstractIntegrationTest
 {
     public function testIndividualProgrammingRequestStoresConstraintsAndProfileSnapshot(): void

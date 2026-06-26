@@ -5,6 +5,9 @@ namespace App\Tests;
 use App\Entity\Workout\WorkoutPrescriptionStandard;
 use App\Repository\Workout\WorkoutPrescriptionStandardRepository;
 
+/**
+ * @group integration
+ */
 final class WorkoutPrescriptionStandardRepositoryTest extends AbstractIntegrationTest
 {
     public function testFindForPromptDoesNotReturnOtherMovementsOnlyBecauseImplementMatches(): void
