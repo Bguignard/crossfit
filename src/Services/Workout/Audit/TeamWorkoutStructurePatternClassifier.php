@@ -77,10 +77,10 @@ final readonly class TeamWorkoutStructurePatternClassifier
     {
         $teamSizes = [];
 
-        if (preg_match_all('/\bteams?\s*(?:of|de|-)?\s*(2|3|4)\b|\bteam-of-(2|3|4)\b/u', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/\bteams?\s*(?:of|de|-)?\s*(2|3|4|two|three|four)\b|\bteam-of-(2|3|4|two|three|four)\b/u', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $size = $match[1] !== '' ? $match[1] : $match[2];
-                $teamSizes[] = 'team_of_'.$size;
+                $teamSizes[] = 'team_of_'.$this->normalizeTeamSize($size);
             }
         }
 
@@ -93,6 +93,16 @@ final readonly class TeamWorkoutStructurePatternClassifier
         }
 
         return array_values(array_unique($teamSizes));
+    }
+
+    private function normalizeTeamSize(string $size): string
+    {
+        return match ($size) {
+            'two' => '2',
+            'three' => '3',
+            'four' => '4',
+            default => $size,
+        };
     }
 
     private function matches(string $text, string $pattern): bool

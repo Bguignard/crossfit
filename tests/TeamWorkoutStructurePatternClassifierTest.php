@@ -71,4 +71,13 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
 
         self::assertNotContains(TeamWorkoutStructurePatternClassifier::YOU_GO_I_GO, $detection['patterns']);
     }
+
+    public function testDetectsWrittenTeamSizes(): void
+    {
+        $classifier = new TeamWorkoutStructurePatternClassifier();
+
+        self::assertContains('team_of_2', $classifier->classify('Teams of two, split the work anyhow.')['teamSizes']);
+        self::assertContains('team_of_3', $classifier->classify('Team of three, complete as a team.')['teamSizes']);
+        self::assertContains('team_of_4', $classifier->classify('Team of four relay stations.')['teamSizes']);
+    }
 }

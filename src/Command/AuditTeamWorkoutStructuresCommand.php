@@ -161,7 +161,7 @@ final class AuditTeamWorkoutStructuresCommand extends Command
     /**
      * @param array<string, mixed> $parameters
      *
-     * @return list<array{id: string, name: string, flow: string, source: ?string, competitionId: string, competitionName: string, eventId: string, eventName: string}>
+     * @return list<array{id: string, name: string, flow: string, source: ?string, competitions: list<array{id: string, name: string}>, events: list<array{id: string, name: string}>}>
      */
     private function workouts(string $whereSql, array $parameters, ?int $limit): array
     {
@@ -169,7 +169,16 @@ final class AuditTeamWorkoutStructuresCommand extends Command
         $rows = $this->connection->fetchAllAssociative(
             sprintf(
                 <<<'SQL'
-                    SELECT DISTINCT ON (w.id)
+                    WITH base_workouts AS (
+                        SELECT DISTINCT w.id
+                        FROM competition_event ce
+                        INNER JOIN competition c ON c.id = ce.competition_id
+                        INNER JOIN workout w ON w.id = ce.workout_id
+                        WHERE %s
+                        ORDER BY w.id
+                        %s
+                    )
+                    SELECT
                         w.id::TEXT AS workout_id,
                         COALESCE(w.name, ce.name) AS workout_name,
                         w.flow,
@@ -178,37 +187,68 @@ final class AuditTeamWorkoutStructuresCommand extends Command
                         c.name AS competition_name,
                         ce.id::TEXT AS event_id,
                         ce.name AS event_name
-                    FROM competition_event ce
+                    FROM base_workouts bw
+                    INNER JOIN workout w ON w.id = bw.id
+                    INNER JOIN competition_event ce ON ce.workout_id = w.id
                     INNER JOIN competition c ON c.id = ce.competition_id
-                    INNER JOIN workout w ON w.id = ce.workout_id
                     WHERE %s
                     ORDER BY w.id, c.name ASC, ce.event_order ASC NULLS LAST, ce.name ASC
-                    %s
                     SQL,
                 $whereSql,
                 $limitSql,
+                $whereSql,
             ),
             $parameters,
         );
 
-        return array_map(
-            static fn (array $row): array => [
-                'id' => (string) $row['workout_id'],
+        return $this->aggregateWorkouts($rows);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return list<array{id: string, name: string, flow: string, source: ?string, competitions: list<array{id: string, name: string}>, events: list<array{id: string, name: string}>}>
+     */
+    private function aggregateWorkouts(array $rows): array
+    {
+        $workouts = [];
+
+        foreach ($rows as $row) {
+            $workoutId = (string) $row['workout_id'];
+            $workouts[$workoutId] ??= [
+                'id' => $workoutId,
                 'name' => (string) $row['workout_name'],
                 'flow' => (string) $row['flow'],
                 'source' => $row['source_name'] === null ? null : (string) $row['source_name'],
-                'competitionId' => (string) $row['competition_id'],
-                'competitionName' => (string) $row['competition_name'],
-                'eventId' => (string) $row['event_id'],
-                'eventName' => (string) $row['event_name'],
+                'competitions' => [],
+                'events' => [],
+            ];
+
+            $competitionId = (string) $row['competition_id'];
+            $eventId = (string) $row['event_id'];
+            $workouts[$workoutId]['competitions'][$competitionId] = [
+                'id' => $competitionId,
+                'name' => (string) $row['competition_name'],
+            ];
+            $workouts[$workoutId]['events'][$eventId] = [
+                'id' => $eventId,
+                'name' => (string) $row['event_name'],
+            ];
+        }
+
+        return array_map(
+            static fn (array $workout): array => [
+                ...$workout,
+                'competitions' => array_values($workout['competitions']),
+                'events' => array_values($workout['events']),
             ],
-            $rows,
+            array_values($workouts),
         );
     }
 
     /**
-     * @param array<string, mixed>                                                                                                                                     $filters
-     * @param list<array{id: string, name: string, flow: string, source: ?string, competitionId: string, competitionName: string, eventId: string, eventName: string}> $workouts
+     * @param array<string, mixed>                                                                                                                                                     $filters
+     * @param list<array{id: string, name: string, flow: string, source: ?string, competitions: list<array{id: string, name: string}>, events: list<array{id: string, name: string}>}> $workouts
      *
      * @return array<string, mixed>
      */
@@ -224,8 +264,13 @@ final class AuditTeamWorkoutStructuresCommand extends Command
         $workoutsWithDetectedPatterns = 0;
 
         foreach ($workouts as $workout) {
-            $competitionIds[$workout['competitionId']] = true;
-            $eventIds[$workout['eventId']] = true;
+            foreach ($workout['competitions'] as $competition) {
+                $competitionIds[$competition['id']] = true;
+            }
+            foreach ($workout['events'] as $event) {
+                $eventIds[$event['id']] = true;
+            }
+
             $detection = $this->classifier->classify($workout['flow']);
             $patterns = $detection['patterns'];
 
@@ -351,9 +396,9 @@ final class AuditTeamWorkoutStructuresCommand extends Command
     }
 
     /**
-     * @param array{id: string, name: string, flow: string, source: ?string, competitionId: string, competitionName: string, eventId: string, eventName: string} $workout
+     * @param array{id: string, name: string, flow: string, source: ?string, competitions: list<array{id: string, name: string}>, events: list<array{id: string, name: string}>} $workout
      *
-     * @return array{id: string, name: string, source: ?string, competition: string, event: string, flowExcerpt: string}
+     * @return array{id: string, name: string, source: ?string, competitions: list<string>, events: list<string>, flowExcerpt: string}
      */
     private function example(array $workout): array
     {
@@ -361,8 +406,8 @@ final class AuditTeamWorkoutStructuresCommand extends Command
             'id' => $workout['id'],
             'name' => $workout['name'],
             'source' => $workout['source'],
-            'competition' => $workout['competitionName'],
-            'event' => $workout['eventName'],
+            'competitions' => array_map(static fn (array $competition): string => $competition['name'], $workout['competitions']),
+            'events' => array_map(static fn (array $event): string => $event['name'], $workout['events']),
             'flowExcerpt' => $this->flowExcerpt($workout['flow']),
         ];
     }
