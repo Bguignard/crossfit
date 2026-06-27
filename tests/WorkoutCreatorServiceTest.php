@@ -834,7 +834,8 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Team workout concept guidance', $chatGpt->prompt);
         self::assertStringContainsString('Do not write the final workout flow yet', $chatGpt->prompt);
         self::assertStringContainsString('describe the chosen team structure in the concept intent, format or summary', $chatGpt->prompt);
-        self::assertStringContainsString('Central "you go, I go" constraint for concepts: short relays only', $chatGpt->prompt);
+        self::assertStringContainsString('Audit-informed team concept weighting', $chatGpt->prompt);
+        self::assertStringContainsString('Alternating work / short relay covers "you go, I go", relay stations and partner alternating rounds', $chatGpt->prompt);
         self::assertStringNotContainsString('then write the flow so the work-sharing rule is impossible to miss', $chatGpt->prompt);
     }
 
@@ -921,16 +922,17 @@ class WorkoutCreatorServiceTest extends TestCase
 
         self::assertStringContainsString('Team workout: yes', $chatGpt->prompt);
         self::assertStringContainsString('this must be explicitly written as a team workout', $chatGpt->prompt);
-        self::assertStringContainsString('team-of-2', $chatGpt->prompt);
-        self::assertStringContainsString('Team structure taxonomy available for this generation', $chatGpt->prompt);
-        self::assertStringContainsString('synchronized block', $chatGpt->prompt);
-        self::assertStringContainsString('shared total reps/calories, split anyhow', $chatGpt->prompt);
-        self::assertStringContainsString('partner alternating rounds', $chatGpt->prompt);
+        self::assertStringContainsString('Use team of 2 by default', $chatGpt->prompt);
+        self::assertStringContainsString('Use team of 3 only when the stimulus, format or logistics clearly justify it', $chatGpt->prompt);
+        self::assertStringContainsString('Do not create team sizes above 3 for standard MonWOD generation', $chatGpt->prompt);
+        self::assertStringContainsString('Audit-informed team structure weighting for this generation', $chatGpt->prompt);
+        self::assertStringContainsString('major structure: synchronized / mixed synchro', $chatGpt->prompt);
+        self::assertStringContainsString('regular structures: shared total reps/calories; split anyhow; alternating work / short relay', $chatGpt->prompt);
+        self::assertStringContainsString('Alternating work / short relay includes "you go, I go", relay stations and partner alternating rounds', $chatGpt->prompt);
         self::assertStringContainsString('active hold/carry/static constraint while partner works', $chatGpt->prompt);
         self::assertStringContainsString('Pick exactly one main structure', $chatGpt->prompt);
-        self::assertStringContainsString('you go, I go', $chatGpt->prompt);
-        self::assertStringContainsString('Central "you go, I go" constraint: use short relays only', $chatGpt->prompt);
-        self::assertStringContainsString('Do not prescribe long row/run segments, full long stations, large unbroken sets or whole long rounds as "you go, I go"', $chatGpt->prompt);
+        self::assertStringContainsString('Prefer short relays in small sets, small calorie chunks, short distances or one compact movement at a time', $chatGpt->prompt);
+        self::assertStringContainsString('do not prescribe long row/run segments, full long stations, large unbroken sets or whole long rounds', $chatGpt->prompt);
         self::assertStringContainsString('split it into short distance/repetition/calorie switches', $chatGpt->prompt);
         self::assertStringContainsString('do not synchronize the entire workout if that breaks the stimulus', $chatGpt->prompt);
         self::assertStringContainsString('state explicitly whether athletes share one machine', $chatGpt->prompt);
