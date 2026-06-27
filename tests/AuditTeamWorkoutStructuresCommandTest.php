@@ -6,12 +6,45 @@ use App\Command\AuditTeamWorkoutStructuresCommand;
 use App\Services\Workout\Audit\TeamWorkoutStructurePatternClassifier;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Input\ArrayInput;
 
 /**
  * @group unit
  */
 final class AuditTeamWorkoutStructuresCommandTest extends TestCase
 {
+    public function testDefaultTeamFilterIncludesMixedParticipationCompetitions(): void
+    {
+        $command = new AuditTeamWorkoutStructuresCommand(
+            $this->createMock(Connection::class),
+            new TeamWorkoutStructurePatternClassifier(),
+        );
+        $filters = new \ReflectionMethod($command, 'filters');
+        $filters->setAccessible(true);
+
+        [, $whereSql, $parameters] = $filters->invoke($command, new ArrayInput([], $command->getDefinition()));
+
+        self::assertStringContainsString('IN (:participationTypeTeam, :participationTypeBoth)', $whereSql);
+        self::assertSame('team', $parameters['participationTypeTeam']);
+        self::assertSame('both', $parameters['participationTypeBoth']);
+    }
+
+    public function testTeamOnlyFilterKeepsExactTeamParticipation(): void
+    {
+        $command = new AuditTeamWorkoutStructuresCommand(
+            $this->createMock(Connection::class),
+            new TeamWorkoutStructurePatternClassifier(),
+        );
+        $filters = new \ReflectionMethod($command, 'filters');
+        $filters->setAccessible(true);
+
+        [, $whereSql, $parameters] = $filters->invoke($command, new ArrayInput(['--participation-type' => 'team-only'], $command->getDefinition()));
+
+        self::assertStringContainsString('= :participationType', $whereSql);
+        self::assertSame('team', $parameters['participationType']);
+        self::assertArrayNotHasKey('participationTypeBoth', $parameters);
+    }
+
     public function testReportPreservesEventAndCompetitionCountsAfterWorkoutAggregation(): void
     {
         $command = new AuditTeamWorkoutStructuresCommand(

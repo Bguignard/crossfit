@@ -28,7 +28,7 @@ final class AuditTeamWorkoutStructuresCommand extends Command
     {
         $this
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Filter by competition source_name.')
-            ->addOption('participation-type', null, InputOption::VALUE_REQUIRED, 'Filter by competition participation_type. Use "all" to disable the default team filter.', 'team')
+            ->addOption('participation-type', null, InputOption::VALUE_REQUIRED, 'Filter by competition participation_type. Default "team" includes team and both; use "team-only" for an exact team filter or "all" to disable it.', 'team')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum competition workouts to analyze.')
             ->addOption('examples-per-pattern', null, InputOption::VALUE_REQUIRED, 'Maximum examples to keep per detected pattern.', 3)
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output the report as JSON.');
@@ -150,7 +150,12 @@ final class AuditTeamWorkoutStructuresCommand extends Command
             $parameters['source'] = $filters['source'];
         }
 
-        if ($participationType !== null && $participationType !== 'all') {
+        if ($participationType === 'team') {
+            $where[] = 'LOWER(COALESCE(c.participation_type, \'\')) IN (:participationTypeTeam, :participationTypeBoth)';
+            $parameters['participationTypeTeam'] = 'team';
+            $parameters['participationTypeBoth'] = 'both';
+        } elseif ($participationType !== null && $participationType !== 'all') {
+            $participationType = $participationType === 'team-only' ? 'team' : $participationType;
             $where[] = 'LOWER(COALESCE(c.participation_type, \'\')) = :participationType';
             $parameters['participationType'] = $participationType;
         }
@@ -238,7 +243,10 @@ final class AuditTeamWorkoutStructuresCommand extends Command
 
         return array_map(
             static fn (array $workout): array => [
-                ...$workout,
+                'id' => $workout['id'],
+                'name' => $workout['name'],
+                'flow' => $workout['flow'],
+                'source' => $workout['source'],
                 'competitions' => array_values($workout['competitions']),
                 'events' => array_values($workout['events']),
             ],
