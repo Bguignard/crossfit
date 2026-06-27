@@ -52,7 +52,8 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::RELAY;
         }
 
-        if ($this->matches($text, '/\b(?:total\b(?!\s+(?:rounds?|attempts?))|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+(reps?|calories?|cals?|meters?|metres?)\b/')) {
+        $hasPerAthleteTotal = $this->matches($text, '/\b(each|both)\s+(athletes?|partners?|teammates?)\b.{0,45}\bcomplet\w*\b.{0,30}\b\d+\s+(reps?|calories?|cals?|meters?|metres?)\s+total\b|\bper\s+(athlete|partner|teammate)\b.{0,45}\b\d+\s+(reps?|calories?|cals?|meters?|metres?)\s+total\b/');
+        if (!$hasPerAthleteTotal && $this->matches($text, '/\b(?:total\b(?!\s+(?:rounds?|attempts?))|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+(reps?|calories?|cals?|meters?|metres?)\b|\bcomplete\b.{0,20}\b\d+\s+(reps?|calories?|cals?|meters?|metres?)\s+total\b|\bcomplete\b.{0,20}\b\d+\s+(reps?|calories?|cals?|meters?|metres?)\b.{0,20}\bas a team\b/')) {
             $patterns[] = self::SHARED_TOTAL;
         }
 

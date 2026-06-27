@@ -62,6 +62,24 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_3', $detection['teamSizes']);
     }
 
+    public function testDetectsSharedTotalWithTrailingTeamWording(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: complete 240 calories as a team, split reps anyhow.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDetectsSharedTotalWithTrailingTotalWording(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: complete 100 reps total before moving to the next station.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
     public function testDoesNotTreatBareAsATeamAsSharedTotal(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
@@ -76,6 +94,33 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
             'Both athletes complete 10 reps each before switching stations.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatPerAthleteRoundTotalAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: complete 10 reps each for 5 rounds total.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatEachAthleteTotalAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Each athlete must complete 100 reps total before advancing.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatBothAthletesTotalAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Both athletes complete 50 calories total on the bike.'
         );
 
         self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
