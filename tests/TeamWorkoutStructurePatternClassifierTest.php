@@ -108,6 +108,24 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
     }
 
+    public function testDoesNotTreatEachAthleteTotalAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Each athlete must complete 100 reps total before advancing.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatBothAthletesTotalAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Both athletes complete 50 calories total on the bike.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
     public function testDetectsActiveHoldWhilePartnerWorks(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
