@@ -48,7 +48,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::YOU_GO_I_GO;
         }
 
-        if ($this->matches($text, '/\b(relay|relais|handoff|hand-off|tag in|tag out|tag-in|tag-out)\b/')) {
+        if ($this->matches($text, '/\b(relay|relais|handoffs?|hand offs?|tag in|tag out|tag-in|tag-out)\b/')) {
             $patterns[] = self::RELAY;
         }
 

@@ -33,6 +33,15 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_2', $detection['teamSizes']);
     }
 
+    public function testDetectsNormalizedHandOffRelayCue(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: hand-off every 100 m between stations.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::RELAY, $detection['patterns']);
+    }
+
     public function testDetectsSharedTotalCaloriesAndReps(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
