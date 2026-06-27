@@ -110,6 +110,25 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertNotContains(TeamWorkoutStructurePatternClassifier::YOU_GO_I_GO, $detection['patterns']);
     }
 
+    public function testDoesNotTreatAlternatingMovementNamesPerRoundAsYouGoIGo(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2, 5 rounds: 20 alternating lunges per round, 15 box jumps, 200 m run.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::YOU_GO_I_GO, $detection['patterns']);
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::PARTNER_ALTERNATING_ROUNDS, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatTotalRoundsAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: 3 total rounds, both athletes complete 10 reps each.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
     public function testDetectsWrittenTeamSizes(): void
     {
         $classifier = new TeamWorkoutStructurePatternClassifier();
@@ -117,5 +136,7 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_2', $classifier->classify('Teams of two, split the work anyhow.')['teamSizes']);
         self::assertContains('team_of_3', $classifier->classify('Team of three, complete as a team.')['teamSizes']);
         self::assertContains('team_of_4', $classifier->classify('Team of four relay stations.')['teamSizes']);
+        self::assertContains('team_of_5', $classifier->classify('Team of 5, split the reps anyhow.')['teamSizes']);
+        self::assertContains('team_of_6', $classifier->classify('Teams of six, relay stations.')['teamSizes']);
     }
 }

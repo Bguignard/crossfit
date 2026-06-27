@@ -44,7 +44,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::SPLIT_ANYHOW;
         }
 
-        if ($this->matches($text, '/\byou\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*i\s*[- ]?\s*go\b|\bi\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*you\s*[- ]?\s*go\b|\bygigo\b|\balternat\w*\s+every\b|\b(?:switch|rotate)\s+every\b|\bthen\s+switch\b|\b(partner|teammate|athlete|pair)\b.{0,45}\b(alternat\w*|switch\w*|rotat\w*)\b|\b(alternat\w*|switch\w*|rotat\w*)\b.{0,45}\b(partner|teammate|athlete|pair|rounds?|stations?)\b/')) {
+        if ($this->matches($text, '/\byou\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*i\s*[- ]?\s*go\b|\bi\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*you\s*[- ]?\s*go\b|\bygigo\b|\balternat\w*\s+every\b|\b(?:switch|rotate)\s+every\b|\bthen\s+switch\b|\b(partners?|teammates?|athletes?|pairs?)\b.{0,45}\b(alternat\w*|switch\w*|rotat\w*)\b|\b(alternat\w*|switch\w*|rotat\w*)\b.{0,45}\b(partners?|teammates?|athletes?|pairs?)\b/')) {
             $patterns[] = self::YOU_GO_I_GO;
         }
 
@@ -52,7 +52,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::RELAY;
         }
 
-        if ($this->matches($text, '/\b(total|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+\w+/')) {
+        if ($this->matches($text, '/\b(?:total\b(?!\s+(?:rounds?|attempts?))|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+(reps?|calories?|cals?|meters?|metres?)\b/')) {
             $patterns[] = self::SHARED_TOTAL;
         }
 
@@ -60,7 +60,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::ACTIVE_HOLD_CONSTRAINT;
         }
 
-        if ($this->matches($text, '/\b(partner|teammate|athlete|pair)\b.{0,45}\balternat\w*\b.{0,45}\brounds?\b|\balternat\w*\b.{0,35}\brounds?\b/')) {
+        if ($this->matches($text, '/\b(partners?|teammates?|athletes?|pairs?)\b.{0,45}\balternat\w*\b.{0,45}\brounds?\b/')) {
             $patterns[] = self::PARTNER_ALTERNATING_ROUNDS;
         }
 
@@ -77,7 +77,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
     {
         $teamSizes = [];
 
-        if (preg_match_all('/\bteams?\s*(?:of|de|-)?\s*(2|3|4|two|three|four)\b|\bteam-of-(2|3|4|two|three|four)\b/u', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/\bteams?\s*(?:of|de|-)?\s*(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)\b|\bteam-of-(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)\b/u', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $size = $match[1] !== '' ? $match[1] : $match[2];
                 $teamSizes[] = 'team_of_'.$this->normalizeTeamSize($size);
@@ -101,6 +101,12 @@ final readonly class TeamWorkoutStructurePatternClassifier
             'two' => '2',
             'three' => '3',
             'four' => '4',
+            'five' => '5',
+            'six' => '6',
+            'seven' => '7',
+            'eight' => '8',
+            'nine' => '9',
+            'ten' => '10',
             default => $size,
         };
     }
