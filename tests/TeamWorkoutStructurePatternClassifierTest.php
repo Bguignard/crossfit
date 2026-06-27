@@ -62,4 +62,13 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains(TeamWorkoutStructurePatternClassifier::YOU_GO_I_GO, $detection['patterns']);
         self::assertContains('team_of_4', $detection['teamSizes']);
     }
+
+    public function testDoesNotTreatAlternatingMovementNamesAsYouGoIGo(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2, AMRAP 12: 20 alternating dumbbell snatches, 15 box jumps, 200 m run.'
+        );
+
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::YOU_GO_I_GO, $detection['patterns']);
+    }
 }

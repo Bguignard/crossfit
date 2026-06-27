@@ -44,7 +44,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::SPLIT_ANYHOW;
         }
 
-        if ($this->matches($text, '/\byou\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*i\s*[- ]?\s*go\b|\bi\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*you\s*[- ]?\s*go\b|\bygigo\b|\balternat\w*\b/')) {
+        if ($this->matches($text, '/\byou\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*i\s*[- ]?\s*go\b|\bi\s*[- ]?\s*go\s*(?:[,\/&+ ]|then)+\s*you\s*[- ]?\s*go\b|\bygigo\b|\balternat\w*\s+every\b|\b(?:switch|rotate)\s+every\b|\bthen\s+switch\b|\b(partner|teammate|athlete|pair)\b.{0,45}\b(alternat\w*|switch\w*|rotat\w*)\b|\b(alternat\w*|switch\w*|rotat\w*)\b.{0,45}\b(partner|teammate|athlete|pair|rounds?|stations?)\b/')) {
             $patterns[] = self::YOU_GO_I_GO;
         }
 
