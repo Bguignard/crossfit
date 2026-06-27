@@ -52,7 +52,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::RELAY;
         }
 
-        if ($this->matches($text, '/\b(?:total\b(?!\s+(?:rounds?|attempts?))|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+(reps?|calories?|cals?|meters?|metres?)\b/')) {
+        if ($this->matches($text, '/\b(?:total\b(?!\s+(?:rounds?|attempts?))|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+(reps?|calories?|cals?|meters?|metres?)\b|\bcomplete\b.{0,20}\b\d+\s+(reps?|calories?|cals?|meters?|metres?)\b.{0,20}\b(as a team|total)\b/')) {
             $patterns[] = self::SHARED_TOTAL;
         }
 

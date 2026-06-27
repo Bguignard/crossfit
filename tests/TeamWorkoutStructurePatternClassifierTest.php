@@ -62,6 +62,24 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_3', $detection['teamSizes']);
     }
 
+    public function testDetectsSharedTotalWithTrailingTeamWording(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: complete 240 calories as a team, split reps anyhow.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDetectsSharedTotalWithTrailingTotalWording(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2: complete 100 reps total before moving to the next station.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
     public function testDoesNotTreatBareAsATeamAsSharedTotal(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
