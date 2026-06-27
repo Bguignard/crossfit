@@ -43,6 +43,16 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_3', $detection['teamSizes']);
     }
 
+    public function testDoesNotTreatBareAsATeamAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Team of 2, synchronized burpees as a team, then switch every minute on the bike.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SYNCHRONIZED, $detection['patterns']);
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
     public function testDetectsActiveHoldWhilePartnerWorks(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
