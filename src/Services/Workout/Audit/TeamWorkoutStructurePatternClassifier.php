@@ -40,7 +40,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::SYNCHRONIZED;
         }
 
-        if ($this->matches($text, '/\b(split|partition|divide|share)\b.{0,45}\b(anyhow|any way|as desired|as needed|freely|reps?|work)\b/')) {
+        if ($this->matches($text, '/\b(split|partition|divide)\b.{0,45}\b(anyhow|any way|as desired|as needed|freely|reps?|work)\b|\bshar\w*\b.{0,35}\b(reps?|calories?|cals?)\b/')) {
             $patterns[] = self::SPLIT_ANYHOW;
         }
 
@@ -52,7 +52,7 @@ final readonly class TeamWorkoutStructurePatternClassifier
             $patterns[] = self::RELAY;
         }
 
-        if ($this->matches($text, '/\b(total|accumulate|complete|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+\w+/')) {
+        if ($this->matches($text, '/\b(total|accumulate|complete as a team|team total)\b.{0,65}\b(reps?|calories?|cals?|meters?|metres?|work)\b|\b\d+\s+total\s+\w+/')) {
             $patterns[] = self::SHARED_TOTAL;
         }
 

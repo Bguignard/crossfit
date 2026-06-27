@@ -22,6 +22,16 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         self::assertContains('team_of_2', $detection['teamSizes']);
     }
 
+    public function testDoesNotTreatSharedEquipmentAsSplitAnyhow(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Partners share one barbell and work synchronized for 10 rounds.'
+        );
+
+        self::assertContains(TeamWorkoutStructurePatternClassifier::SYNCHRONIZED, $detection['patterns']);
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SPLIT_ANYHOW, $detection['patterns']);
+    }
+
     public function testDetectsShortYouGoIGoRelay(): void
     {
         $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
@@ -59,6 +69,15 @@ final class TeamWorkoutStructurePatternClassifierTest extends TestCase
         );
 
         self::assertContains(TeamWorkoutStructurePatternClassifier::SYNCHRONIZED, $detection['patterns']);
+        self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
+    }
+
+    public function testDoesNotTreatPerAthleteCompletionAsSharedTotal(): void
+    {
+        $detection = (new TeamWorkoutStructurePatternClassifier())->classify(
+            'Both athletes complete 10 reps each before switching stations.'
+        );
+
         self::assertNotContains(TeamWorkoutStructurePatternClassifier::SHARED_TOTAL, $detection['patterns']);
     }
 
