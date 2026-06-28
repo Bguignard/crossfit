@@ -1985,6 +1985,27 @@ class WorkoutCreatorServiceTest extends TestCase
         );
     }
 
+    public function testRxWorkoutGenerationDoesNotReuseAnotherMovementLoadOnCompactPlusDelimitedLine(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+        $hangPowerClean = new Movement('Hang Power Clean', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Hang Power Clean" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift, $hangPowerClean],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Deadlifts (100/70 kg)+10 Hang Power Cleans",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter barbell",
+                'movements' => ['Deadlift', 'Hang Power Clean'],
+            ],
+        );
+    }
+
     public function testRxWorkoutGenerationDoesNotReuseAnotherMovementLoadOnCommaDelimitedLine(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
@@ -2024,6 +2045,45 @@ class WorkoutCreatorServiceTest extends TestCase
         );
 
         self::assertStringContainsString('10 Dumbbell Snatch (22,5/15 kg)', $workout->getFlow());
+    }
+
+    public function testRxWorkoutGenerationKeepsCommaSeparatedLoadNoteWithMovementSegment(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Deadlifts, 100/70 kg",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter barbell",
+                'movements' => ['Deadlift'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Deadlifts, 100/70 kg', $workout->getFlow());
+    }
+
+    public function testRxWorkoutGenerationAcceptsHyphenatedUnitLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $dumbbell = new Implement(ImplementEnum::DUMBBELL, null);
+        $dumbbellSnatch = (new Movement('Dumbbell Snatch', $difficulty, $weightlifting))->addPossibleImplement($dumbbell);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$dumbbellSnatch],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Dumbbell Snatch (50-lb)",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter dumbbell",
+                'movements' => ['Dumbbell Snatch'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Dumbbell Snatch (50-lb)', $workout->getFlow());
     }
 
     public function testRxWorkoutGenerationRejectsExplicitWeightedMixedImplementVariantWithoutLoad(): void

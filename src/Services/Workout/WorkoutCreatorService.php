@@ -1210,7 +1210,7 @@ EOD;
      */
     private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
     {
-        $segments = preg_split('/\s+(?:\+|then)\s+|;+|(?<!\d),(?!\d)/i', $line) ?: [$line];
+        $segments = preg_split('/(?<=\S)\s*\+\s*(?=\d)|\s+then\s+|;+|(?<!\d),(?!\d)(?=\s*\d+\s+[a-z])/i', $line) ?: [$line];
         foreach ($segments as $segment) {
             $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
             if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
@@ -1240,7 +1240,7 @@ EOD;
 
     private function textHasLoadPrescription(string $text): bool
     {
-        return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
+        return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?(?:\s*-\s*|\s*)?(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
             || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/i', $text) === 1
             || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
     }
