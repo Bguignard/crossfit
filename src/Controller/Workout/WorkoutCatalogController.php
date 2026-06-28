@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Workout;
 
+use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
@@ -158,9 +159,20 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         if ($filters['sourceName'] !== null) {
-            $queryBuilder
-                ->andWhere('LOWER(workout.sourceName) = :sourceName')
-                ->setParameter('sourceName', $filters['sourceName']);
+            if ($filters['sourceName'] === 'monwod_catalog') {
+                $queryBuilder
+                    ->innerJoin('workout.workoutOrigin', 'sourceWorkoutOrigin')
+                    ->innerJoin('sourceWorkoutOrigin.name', 'sourceWorkoutOriginName')
+                    ->andWhere('sourceWorkoutOriginName.name IN (:monwodCatalogOrigins)')
+                    ->setParameter('monwodCatalogOrigins', [
+                        WorkoutOriginNameEnum::GIRLS_WORKOUT->value,
+                        WorkoutOriginNameEnum::HERO_WORKOUT->value,
+                    ]);
+            } else {
+                $queryBuilder
+                    ->andWhere('LOWER(workout.sourceName) = :sourceName')
+                    ->setParameter('sourceName', $filters['sourceName']);
+            }
         }
 
         foreach ($filters['movementNames'] as $index => $movementName) {

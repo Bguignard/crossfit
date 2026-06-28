@@ -69,6 +69,58 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotContains('Fran', $names);
     }
 
+    public function testFrontendCanFilterGirlsAndHeroesCatalogByMonwodCatalogSource(): void
+    {
+        $this->browser()->request('GET', '/api/workout-catalog?name=fran&sourceName=monwod_catalog&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Fran', $names);
+    }
+
+    public function testFrontendSourceFilterStillUsesWorkoutSourceNameForImportedSources(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), null);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $crossfitGamesWorkout = (new Workout(
+            'Source filter classic test',
+            "For time:\n10 Burpees",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))->setSourceName('crossfit_games');
+        $competitionCornerWorkout = (new Workout(
+            'Source filter classic test',
+            "For time:\n10 Burpees",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))->setSourceName('competition_corner');
+
+        foreach ([$origin, $workoutType, $crossfitGamesWorkout, $competitionCornerWorkout] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=source%20filter%20classic&sourceName=crossfit_games&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+
+        self::assertSame(1, $payload['totalItems']);
+        self::assertSame('Source filter classic test', $workouts[0]['name'] ?? null);
+        self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
+    }
+
     public function testFrontendCanSearchWorkoutCatalogWithAdvancedFiltersAndMatchDetails(): void
     {
         $this->browser()->request(
