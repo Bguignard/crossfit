@@ -1129,11 +1129,7 @@ EOD;
         }
 
         foreach ($selectedMovements as $movement) {
-            if (!$this->isLoadedMovementRequiringMainPrescription($movement)) {
-                continue;
-            }
-
-            if (!$this->mainFlowHasLoadPrescriptionForMovement($mainFlow, $selectedMovements, $movement)) {
+            if (!$this->mainFlowHasRequiredLoadPrescriptionForMovement($mainFlow, $selectedMovements, $movement)) {
                 throw new \RuntimeException(sprintf('OpenAI workout generation included loaded movement "%s" without a main workout load prescription.', $movement->getName()));
             }
         }
@@ -1148,25 +1144,20 @@ EOD;
         );
     }
 
-    private function isLoadedMovementRequiringMainPrescription(Movement $movement): bool
-    {
-        if (count($movement->getPossibleImplements()) > 0) {
-            return $this->hasLoadableImplement($movement);
-        }
-
-        $name = $this->normalizeMovementName($movement->getName());
-
-        if (preg_match('/\b(?:air|pistol|alternate pistol)\s+squats?\b/', $name) === 1) {
-            return false;
-        }
-
-        return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
-            || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
-    }
-
     private function hasLoadableImplement(Movement $movement): bool
     {
-        $loadableImplements = [
+        foreach ($movement->getPossibleImplements() as $implement) {
+            if ($this->isLoadableImplementName($implement->getName())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isLoadableImplementName(string $implementName): bool
+    {
+        return isset([
             ImplementEnum::BARBELL->value => true,
             ImplementEnum::DUMBBELL->value => true,
             ImplementEnum::KETTLEBELL->value => true,
@@ -1186,21 +1177,13 @@ EOD;
             ImplementEnum::PIG->value => true,
             ImplementEnum::WEIGHTED_VEST->value => true,
             ImplementEnum::WORM->value => true,
-        ];
-
-        foreach ($movement->getPossibleImplements() as $implement) {
-            if (isset($loadableImplements[$implement->getName()])) {
-                return true;
-            }
-        }
-
-        return false;
+        ][$implementName]);
     }
 
     /**
      * @param Movement[] $selectedMovements
      */
-    private function mainFlowHasLoadPrescriptionForMovement(string $mainFlow, array $selectedMovements, Movement $movement): bool
+    private function mainFlowHasRequiredLoadPrescriptionForMovement(string $mainFlow, array $selectedMovements, Movement $movement): bool
     {
         $lines = preg_split('/\R+/', $mainFlow) ?: [$mainFlow];
         foreach ($lines as $line) {
@@ -1209,12 +1192,50 @@ EOD;
                 continue;
             }
 
-            if ($this->textHasLoadPrescription($line)) {
-                return true;
+            $movementSegment = $this->lineSegmentForMovement($line, $selectedMovements, $movement);
+            if (!$this->movementLineRequiresLoadPrescription($movement, $movementSegment)) {
+                continue;
+            }
+
+            if (!$this->textHasLoadPrescription($movementSegment)) {
+                return false;
             }
         }
 
-        return false;
+        return true;
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
+    {
+        $segments = preg_split('/\s+(?:\+|and|then)\s+|[;,]/i', $line) ?: [$line];
+        foreach ($segments as $segment) {
+            $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
+            if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
+                return $segment;
+            }
+        }
+
+        return $line;
+    }
+
+    private function movementLineRequiresLoadPrescription(Movement $movement, string $line): bool
+    {
+        if (count($movement->getPossibleImplements()) === 0) {
+            return $this->isLoadedMovementNameRequiringMainPrescription($movement);
+        }
+
+        if (!$this->hasLoadableImplement($movement)) {
+            return false;
+        }
+
+        if ($this->hasOnlyLoadableImplements($movement)) {
+            return true;
+        }
+
+        return $this->lineMentionsLoadableImplement($line);
     }
 
     private function textHasLoadPrescription(string $text): bool
@@ -1222,6 +1243,34 @@ EOD;
         return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
             || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/i', $text) === 1
             || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
+    }
+
+    private function isLoadedMovementNameRequiringMainPrescription(Movement $movement): bool
+    {
+        $name = $this->normalizeMovementName($movement->getName());
+
+        if (preg_match('/\b(?:air|pistol|alternate pistol)\s+squats?\b/', $name) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
+            || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
+    }
+
+    private function hasOnlyLoadableImplements(Movement $movement): bool
+    {
+        foreach ($movement->getPossibleImplements() as $implement) {
+            if (!$this->isLoadableImplementName($implement->getName())) {
+                return false;
+            }
+        }
+
+        return count($movement->getPossibleImplements()) > 0;
+    }
+
+    private function lineMentionsLoadableImplement(string $line): bool
+    {
+        return preg_match('/\b(?:barbell|bb|dumbbell|dumbbells|db|dbs|kettlebell|kettlebells|kb|kbs|medicine ball|med ball|wall ball|plate|slam ball|sled|tire|hammer|sledge|sandbag|sand bag|husafell|yoke|axle|pig|weighted vest|worm)\b/i', $line) === 1;
     }
 
     private function flowWithoutScalingOptions(string $flow): string
