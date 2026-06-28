@@ -1210,7 +1210,7 @@ EOD;
      */
     private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
     {
-        $segments = preg_split('/(?<=\S)\s*\+\s*(?=\d)|\s+then\s+|;+|(?<!\d),(?!\d)(?=\s*\d+\s+[a-z])/i', $line) ?: [$line];
+        $segments = preg_split('/(?<=\S)\s*\+\s*(?=\d)|\s+then\s+|;+|(?<!\d),(?!\d)(?=\s*\d+\s+[a-z])|\s+and\s+(?=\d+\s+[a-z])/i', $line) ?: [$line];
         foreach ($segments as $segment) {
             $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
             if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
@@ -1228,6 +1228,10 @@ EOD;
         }
 
         if (!$this->hasLoadableImplement($movement)) {
+            return false;
+        }
+
+        if ($this->isObstacleMovementExemptFromLoadPrescription($movement)) {
             return false;
         }
 
@@ -1259,6 +1263,11 @@ EOD;
 
         return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
             || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
+    }
+
+    private function isObstacleMovementExemptFromLoadPrescription(Movement $movement): bool
+    {
+        return preg_match('/\bburpees?\s+over(?:\s+facing)?\b/', $this->normalizeMovementName($movement->getName())) === 1;
     }
 
     private function hasOnlyLoadableImplements(Movement $movement): bool
