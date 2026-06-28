@@ -1920,6 +1920,27 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('20 Pistol Squats', $workout->getFlow());
     }
 
+    public function testRxWorkoutGenerationRejectsLoadedMovementDetectedByImplementWithoutMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $kettlebell = new Implement(ImplementEnum::KETTLEBELL, null);
+        $americanSwing = (new Movement('American Swing', $difficulty, $weightlifting))->addPossibleImplement($kettlebell);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "American Swing" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$americanSwing],
+            [
+                'flow' => "AMRAP 10 minutes\n20 American Swings",
+                'scalingOptions' => "RX: 24/16 kg\nIntermediate: reduce load\nScaled: lighter kettlebell",
+                'movements' => ['American Swing'],
+            ],
+        );
+    }
+
     public function testWorkoutGenerationRejectsStrictToesToBarInMainFlow(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

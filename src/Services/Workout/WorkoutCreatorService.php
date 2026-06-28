@@ -2,6 +2,7 @@
 
 namespace App\Services\Workout;
 
+use App\Entity\Workout\Enum\ImplementEnum;
 use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
@@ -1149,6 +1150,10 @@ EOD;
 
     private function isLoadedMovementRequiringMainPrescription(Movement $movement): bool
     {
+        if (count($movement->getPossibleImplements()) > 0) {
+            return $this->hasLoadableImplement($movement);
+        }
+
         $name = $this->normalizeMovementName($movement->getName());
 
         if (preg_match('/\b(?:air|pistol|alternate pistol)\s+squats?\b/', $name) === 1) {
@@ -1157,6 +1162,39 @@ EOD;
 
         return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
             || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
+    }
+
+    private function hasLoadableImplement(Movement $movement): bool
+    {
+        $loadableImplements = [
+            ImplementEnum::BARBELL->value => true,
+            ImplementEnum::DUMBBELL->value => true,
+            ImplementEnum::KETTLEBELL->value => true,
+            ImplementEnum::MEDICINE_BALL->value => true,
+            ImplementEnum::DOUBLE_KETTLEBELLS->value => true,
+            ImplementEnum::DOUBLE_DUMBBELLS->value => true,
+            ImplementEnum::PLATE->value => true,
+            ImplementEnum::SLAM_BALL->value => true,
+            ImplementEnum::SLED->value => true,
+            ImplementEnum::TIRE->value => true,
+            ImplementEnum::HAMMER->value => true,
+            ImplementEnum::SLEDGE->value => true,
+            ImplementEnum::SAND_BAG->value => true,
+            ImplementEnum::HUSAFELL_BAG->value => true,
+            ImplementEnum::YOKE->value => true,
+            ImplementEnum::AXLE_BARBELL->value => true,
+            ImplementEnum::PIG->value => true,
+            ImplementEnum::WEIGHTED_VEST->value => true,
+            ImplementEnum::WORM->value => true,
+        ];
+
+        foreach ($movement->getPossibleImplements() as $implement) {
+            if (isset($loadableImplements[$implement->getName()])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
