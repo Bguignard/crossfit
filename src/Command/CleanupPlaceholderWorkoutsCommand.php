@@ -42,12 +42,18 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
         $write = (bool) $input->getOption('write');
         $workouts = $this->placeholderWorkouts($limit, $source);
         $detachedEvents = 0;
-        $eventsByWorkout = [];
+        $workoutRows = [];
 
         foreach ($workouts as $workout) {
             $events = $this->eventsForWorkout($workout);
-            $eventsByWorkout[(string) $workout->getId()] = $events;
             $detachedEvents += count($events);
+            $workoutRows[] = [
+                $workout->getName(),
+                $workout->getSourceName(),
+                $workout->getExternalId(),
+                $workout->getFlow(),
+                count($events),
+            ];
             if (!$write) {
                 continue;
             }
@@ -71,16 +77,7 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
         if ($workouts !== []) {
             $io->table(
                 ['Workout', 'Source', 'External ID', 'Flow', 'Events'],
-                array_map(
-                    fn (Workout $workout): array => [
-                        $workout->getName(),
-                        $workout->getSourceName(),
-                        $workout->getExternalId(),
-                        $workout->getFlow(),
-                        count($eventsByWorkout[(string) $workout->getId()] ?? []),
-                    ],
-                    array_slice($workouts, 0, 20),
-                ),
+                array_slice($workoutRows, 0, 20),
             );
         }
 
