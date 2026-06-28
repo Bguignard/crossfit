@@ -1985,6 +1985,47 @@ class WorkoutCreatorServiceTest extends TestCase
         );
     }
 
+    public function testRxWorkoutGenerationAcceptsDecimalCommaLoadOnMovementSegment(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $dumbbell = new Implement(ImplementEnum::DUMBBELL, null);
+        $dumbbellSnatch = (new Movement('Dumbbell Snatch', $difficulty, $weightlifting))->addPossibleImplement($dumbbell);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$dumbbellSnatch],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Dumbbell Snatch (22,5/15 kg)",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter dumbbell",
+                'movements' => ['Dumbbell Snatch'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Dumbbell Snatch (22,5/15 kg)', $workout->getFlow());
+    }
+
+    public function testRxWorkoutGenerationDoesNotSplitMovementNameOnAndWhenBindingLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cleanAndJerk = new Movement('Clean and Jerk', $difficulty, $weightlifting);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Clean and Jerk" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$cleanAndJerk, $deadlift],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Clean and Jerks + 10 Deadlifts (100/70 kg)",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter barbell",
+                'movements' => ['Clean and Jerk', 'Deadlift'],
+            ],
+        );
+    }
+
     public function testWorkoutGenerationRejectsStrictToesToBarInMainFlow(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

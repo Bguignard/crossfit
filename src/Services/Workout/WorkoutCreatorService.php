@@ -1210,7 +1210,7 @@ EOD;
      */
     private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
     {
-        $segments = preg_split('/\s+(?:\+|and|then)\s+|[;,]/i', $line) ?: [$line];
+        $segments = preg_split('/\s+(?:\+|then)\s+|;+/i', $line) ?: [$line];
         foreach ($segments as $segment) {
             $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
             if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
