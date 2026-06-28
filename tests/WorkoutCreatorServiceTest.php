@@ -1843,6 +1843,84 @@ class WorkoutCreatorServiceTest extends TestCase
         (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
     }
 
+    public function testEliteWorkoutGenerationRejectsLoadedMovementWithoutMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::ELITE);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $hangPowerClean = new Movement('Hang Power Clean', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Hang Power Clean" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$hangPowerClean],
+            [
+                'flow' => "AMRAP 12 minutes\n10 Hang Power Clean\n12 Toes to Bar",
+                'scalingOptions' => "RX: Hang Power Clean 80/55 kg\nIntermediate: reduce load\nScaled: lighter barbell",
+                'movements' => ['Hang Power Clean'],
+            ],
+        );
+    }
+
+    public function testEliteWorkoutGenerationAcceptsLoadedMovementWithMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::ELITE);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $hangPowerClean = new Movement('Hang Power Clean', $difficulty, $weightlifting);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$hangPowerClean],
+            [
+                'flow' => "AMRAP 12 minutes\n10 Hang Power Clean (80/55 kg)",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter barbell",
+                'movements' => ['Hang Power Clean'],
+            ],
+        );
+
+        self::assertStringContainsString('Hang Power Clean (80/55 kg)', $workout->getFlow());
+    }
+
+    public function testWorkoutGenerationRejectsStrictToesToBarInMainFlow(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastics);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$toesToBar],
+            [
+                'flow' => "AMRAP 10 minutes\n12 strict toes to bar",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: knee raises",
+                'movements' => ['Toes to Bar'],
+            ],
+        );
+    }
+
+    public function testWorkoutGenerationAcceptsRegularToesToBarInMainFlow(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastics);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$toesToBar],
+            [
+                'flow' => "AMRAP 10 minutes\n12 Toes to Bar",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: knee raises",
+                'movements' => ['Toes to Bar'],
+            ],
+        );
+
+        self::assertStringContainsString('12 Toes to Bar', $workout->getFlow());
+    }
+
     public function testWorkoutGenerationRejectsAllowedMovementInFlowWhenNotListed(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -3941,5 +4019,41 @@ class WorkoutCreatorServiceTest extends TestCase
                 return new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), $year);
             }
         };
+    }
+
+    /**
+     * @param list<Movement>                                                       $possibleMovements
+     * @param array{flow: string, scalingOptions: string, movements: list<string>} $payload
+     */
+    private function createWorkoutFromGeneratedPayload(MovementDifficulty $difficulty, array $possibleMovements, array $payload): \App\Entity\Workout\Workout
+    {
+        $movementService = $this->movementServiceReturning($possibleMovements);
+        $chatGpt = new class($payload) implements ChatGPTApiKeyInterface {
+            /**
+             * @param array{flow: string, scalingOptions: string, movements: list<string>} $payload
+             */
+            public function __construct(private readonly array $payload)
+            {
+            }
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                return json_encode($this->payload, JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Generated payload safety test')
+            ->setStimulus('Competition')
+            ->setTimeCap(12)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$possibleMovements[0]->getMovementType()])
+            ->setNumberOfDifferentMovements(count($possibleMovements))
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        return (new WorkoutCreatorService($movementService, $chatGpt, $this->workoutOriginService()))->createWorkout($workoutGeneration);
     }
 }

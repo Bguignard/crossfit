@@ -2,6 +2,7 @@
 
 namespace App\Services\Workout;
 
+use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
@@ -93,6 +94,7 @@ When prescribing loaded movements, always include level-appropriate male/female 
 Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
 Create a short "Scaling options" section in the JSON scalingOptions field with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
+Do not prescribe strict toes to bar in the main workout flow. Normal Toes to Bar is allowed; strict toes to bar belongs only to accessory/strength notes outside the main metcon or competition flow.
 The Scaling options section is mandatory in the JSON "scalingOptions" field. Do not duplicate the Scaling options heading in the flow field.
 If the exact selected movement name is Assault Bike, write Echo Bike in the athlete-facing flow for modern WODs while keeping Assault Bike as the exact movement name in the JSON movements array.
 
@@ -279,6 +281,7 @@ EOD;
             );
             $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
             $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
+            $this->assertGeneratedMainFlowSafety($workoutGeneration, $WorkoutMovements, $generatedWorkout['flow']);
 
             try {
                 $this->assertNoRejectedCompetitionMovementCluster($workoutGeneration, $WorkoutMovements);
@@ -1107,6 +1110,75 @@ EOD;
         }
 
         $this->competitionMovementFrequencyGuidanceProvider->assertNoRejectedMovementCluster($selectedMovements);
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function assertGeneratedMainFlowSafety(WorkoutGeneration $workoutGeneration, array $selectedMovements, string $flow): void
+    {
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedMainFlow = $this->normalizeMovementSearchText($mainFlow);
+        if (preg_match('/(?:^| )strict (?:toes to bar|toes to bars|t2b|ttb)(?: |$)/', $normalizedMainFlow) === 1) {
+            throw new \RuntimeException('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
+        }
+
+        if (!$this->requiresMainFlowLoadPrescription($workoutGeneration)) {
+            return;
+        }
+
+        foreach ($selectedMovements as $movement) {
+            if (!$this->isLoadedMovementRequiringMainPrescription($movement)) {
+                continue;
+            }
+
+            if (!$this->mainFlowHasLoadPrescriptionForMovement($mainFlow, $selectedMovements, $movement)) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation included loaded movement "%s" without a main workout load prescription.', $movement->getName()));
+            }
+        }
+    }
+
+    private function requiresMainFlowLoadPrescription(WorkoutGeneration $workoutGeneration): bool
+    {
+        return in_array(
+            $workoutGeneration->getMovementDifficulty()->getNameAsEnum(),
+            [MovementDifficultyEnum::ELITE, MovementDifficultyEnum::RX],
+            true
+        );
+    }
+
+    private function isLoadedMovementRequiringMainPrescription(Movement $movement): bool
+    {
+        $name = $this->normalizeMovementName($movement->getName());
+
+        return preg_match('/\b(?:clean|snatch|deadlift|squat|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1;
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function mainFlowHasLoadPrescriptionForMovement(string $mainFlow, array $selectedMovements, Movement $movement): bool
+    {
+        $lines = preg_split('/\R+/', $mainFlow) ?: [$mainFlow];
+        foreach ($lines as $line) {
+            $normalizedLine = $this->normalizedFlowWithoutOtherMovementNames($line, $selectedMovements, $movement);
+            if (!$this->normalizedFlowContainsMovement($normalizedLine, $movement)) {
+                continue;
+            }
+
+            if ($this->textHasLoadPrescription($line)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function textHasLoadPrescription(string $text): bool
+    {
+        return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
+            || preg_match('/(?:@|at\s+)\s*\d+(?:[.,]\d+)?\s*%/i', $text) === 1
+            || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
     }
 
     private function flowWithoutScalingOptions(string $flow): string
