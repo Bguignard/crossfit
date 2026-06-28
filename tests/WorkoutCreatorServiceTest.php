@@ -2244,6 +2244,26 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('10 Burpee Over (barbell)', $workout->getFlow());
     }
 
+    public function testRxWorkoutGenerationAllowsDeficitHandstandPushUpsOnPlatesWithoutLoadPrescription(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $plate = new Implement(ImplementEnum::PLATE, null);
+        $deficitHandstandPushUp = (new Movement('Deficit Handstand Push Up', $difficulty, $gymnastics))->addPossibleImplement($plate);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deficitHandstandPushUp],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Deficit Handstand Push Ups on plates",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce deficit\nScaled: pike push-ups",
+                'movements' => ['Deficit Handstand Push Up'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Deficit Handstand Push Ups on plates', $workout->getFlow());
+    }
+
     public function testRxWorkoutGenerationDoesNotSplitMovementNameOnAndWhenBindingLoad(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

@@ -1235,6 +1235,10 @@ EOD;
             return false;
         }
 
+        if ($this->isPlateSupportMovementExemptFromLoadPrescription($movement)) {
+            return false;
+        }
+
         if ($this->hasOnlyLoadableImplements($movement)) {
             return true;
         }
@@ -1268,6 +1272,11 @@ EOD;
     private function isObstacleMovementExemptFromLoadPrescription(Movement $movement): bool
     {
         return preg_match('/\bburpees?\s+over(?:\s+facing)?\b/', $this->normalizeMovementName($movement->getName())) === 1;
+    }
+
+    private function isPlateSupportMovementExemptFromLoadPrescription(Movement $movement): bool
+    {
+        return preg_match('/\bdeficit\s+(?:handstand\s+push\s+ups?|hspu)\b/', $this->normalizeMovementName($movement->getName())) === 1;
     }
 
     private function hasOnlyLoadableImplements(Movement $movement): bool
