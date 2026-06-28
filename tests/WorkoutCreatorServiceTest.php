@@ -1964,6 +1964,57 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('20 Box Step Ups', $workout->getFlow());
     }
 
+    public function testRxWorkoutGenerationRejectsSupportImplementLoadedMovementWithoutMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $bodybuilding = new MovementType(MovementTypeEnum::BODYBUILDING);
+        $barbell = new Implement(ImplementEnum::BARBELL, null);
+        $bench = new Implement(ImplementEnum::BENCH, null);
+        $dumbbell = new Implement(ImplementEnum::DUMBBELL, null);
+        $benchPress = (new Movement('Bench Press', $difficulty, $bodybuilding))
+            ->addPossibleImplement($barbell)
+            ->addPossibleImplement($bench)
+            ->addPossibleImplement($dumbbell);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Bench Press" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$benchPress],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Bench Press",
+                'scalingOptions' => "RX: as written\nIntermediate: lighter load\nScaled: dumbbell bench press",
+                'movements' => ['Bench Press'],
+            ],
+        );
+    }
+
+    public function testRxWorkoutGenerationAcceptsSupportImplementLoadedMovementWithMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $bodybuilding = new MovementType(MovementTypeEnum::BODYBUILDING);
+        $barbell = new Implement(ImplementEnum::BARBELL, null);
+        $bench = new Implement(ImplementEnum::BENCH, null);
+        $dumbbell = new Implement(ImplementEnum::DUMBBELL, null);
+        $benchPress = (new Movement('Bench Press', $difficulty, $bodybuilding))
+            ->addPossibleImplement($barbell)
+            ->addPossibleImplement($bench)
+            ->addPossibleImplement($dumbbell);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$benchPress],
+            [
+                'flow' => "AMRAP 10 minutes\n10 Bench Press (70/45 kg)",
+                'scalingOptions' => "RX: as written\nIntermediate: lighter load\nScaled: dumbbell bench press",
+                'movements' => ['Bench Press'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Bench Press (70/45 kg)', $workout->getFlow());
+    }
+
     public function testRxWorkoutGenerationDoesNotReuseAnotherMovementLoadOnCompactLine(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

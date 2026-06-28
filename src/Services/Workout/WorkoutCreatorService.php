@@ -1235,6 +1235,10 @@ EOD;
             return true;
         }
 
+        if ($this->isLoadedMovementNameRequiringMainPrescription($movement)) {
+            return true;
+        }
+
         return $this->lineMentionsLoadableImplement($line) || $this->lineMentionsLoadedVariant($line);
     }
 
