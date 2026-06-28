@@ -1210,7 +1210,7 @@ EOD;
      */
     private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
     {
-        $segments = preg_split('/\s+(?:\+|then)\s+|;+/i', $line) ?: [$line];
+        $segments = preg_split('/\s+(?:\+|then)\s+|;+|(?<!\d),(?!\d)/i', $line) ?: [$line];
         foreach ($segments as $segment) {
             $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
             if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
@@ -1235,7 +1235,7 @@ EOD;
             return true;
         }
 
-        return $this->lineMentionsLoadableImplement($line);
+        return $this->lineMentionsLoadableImplement($line) || $this->lineMentionsLoadedVariant($line);
     }
 
     private function textHasLoadPrescription(string $text): bool
@@ -1271,6 +1271,11 @@ EOD;
     private function lineMentionsLoadableImplement(string $line): bool
     {
         return preg_match('/\b(?:barbell|bb|dumbbell|dumbbells|db|dbs|kettlebell|kettlebells|kb|kbs|medicine ball|med ball|wall ball|plate|slam ball|sled|tire|hammer|sledge|sandbag|sand bag|husafell|yoke|axle|pig|weighted vest|worm)\b/i', $line) === 1;
+    }
+
+    private function lineMentionsLoadedVariant(string $line): bool
+    {
+        return preg_match('/\b(?:weighted|loaded)\b/i', $line) === 1;
     }
 
     private function flowWithoutScalingOptions(string $flow): string
