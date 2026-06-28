@@ -7,49 +7,12 @@ use App\Entity\WorkoutGeneration\WorkoutGeneration;
 
 readonly class CompetitionMovementFrequencyGuidanceProvider
 {
-    private const MOVEMENT_FREQUENCY_BANDS = [
-        'very frequent' => ['Toes to Bar', 'Double Under', 'Front Squat', 'Pull Up', 'Wall Ball Shot', 'Muscle Up', 'Clean and Jerk'],
-        'regular' => ['Chest to Bar Pull Up', 'Shoulder To Overhead', 'Box Jump Over', 'Hang Clean', 'Squat Clean', 'Rope Climb', 'Power Clean', 'Wall Walk', 'Ski Erg', 'Shuttle Run', 'Overhead Squat', 'Handstand Walk', 'Walking Lunge', 'Burpee Box Jump Over', 'Handstand Push Up', 'Assault Bike'],
-        'occasional' => ['Box Jump', 'Sit Up', 'Bike Erg', 'Hang Power Clean', 'Burpee Over', 'Push Press', 'Push Up', 'Power Snatch', 'Bench Press', 'Sled Push', 'Back Squat', 'Air Squat', 'Squat Snatch', 'Single Under', 'Hang Squat Clean', 'Push Jerk', 'Sled Pull', 'Burpee Broad Jump', 'Split Jerk', 'Box Step Up'],
-    ];
+    private CompetitionMovementGuidanceSnapshot $snapshot;
 
-    private const FREQUENT_MOVEMENT_PAIRS = [
-        ['Chest to Bar Pull Up', 'Muscle Up'],
-        ['Muscle Up', 'Toes to Bar'],
-        ['Front Squat', 'Shoulder To Overhead'],
-        ['Chest to Bar Pull Up', 'Toes to Bar'],
-        ['Double Under', 'Toes to Bar'],
-        ['Front Squat', 'Hang Clean'],
-        ['Muscle Up', 'Pull Up'],
-        ['Front Squat', 'Power Clean'],
-        ['Toes to Bar', 'Wall Ball Shot'],
-        ['Double Under', 'Muscle Up'],
-        ['Pull Up', 'Toes to Bar'],
-        ['Front Squat', 'Squat Clean'],
-        ['Chest to Bar Pull Up', 'Thruster'],
-        ['Thruster', 'Wall Ball Shot'],
-    ];
-
-    private const RECENT_GENERATED_TEMPLATE_MOVEMENTS = [
-        'Power Clean',
-        'Wall Ball Shot',
-        'Box Jump Over',
-        'Row',
-        'Chest to Bar Pull Up',
-    ];
-
-    private const RECENT_GENERATED_OVERUSED_ANCHORS = [
-        'Power Clean',
-        'Chest to Bar Pull Up',
-        'Wall Ball Shot',
-        'Thruster',
-    ];
-
-    private const REJECTED_MOVEMENT_CLUSTERS = [
-        ['Chest to Bar Pull Up', 'Thruster', 'Row'],
-        ['Chest to Bar Pull Up', 'Thruster', 'Power Clean'],
-        ['Chest to Bar Pull Up', 'Thruster', 'Wall Ball Shot'],
-    ];
+    public function __construct(?CompetitionMovementGuidanceSnapshot $snapshot = null)
+    {
+        $this->snapshot = $snapshot ?? CompetitionMovementGuidanceSnapshot::default();
+    }
 
     public function promptCandidatePoolMin(): int
     {
@@ -94,7 +57,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
     public function isOverusedRotationAnchor(Movement $movement): bool
     {
         $normalizedMovementName = $this->normalizeMovementName($movement->getName());
-        foreach (self::RECENT_GENERATED_OVERUSED_ANCHORS as $anchorMovementName) {
+        foreach ($this->snapshot->overusedRotationAnchors() as $anchorMovementName) {
             if ($normalizedMovementName === $this->normalizeMovementName($anchorMovementName)) {
                 return true;
             }
@@ -113,7 +76,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
             $selectedMovementNames[$this->normalizeMovementName($movement->getName())] = $movement->getName();
         }
 
-        foreach (self::REJECTED_MOVEMENT_CLUSTERS as $cluster) {
+        foreach ($this->snapshot->rejectedMovementClusters() as $cluster) {
             $matchedCluster = [];
             foreach ($cluster as $movementName) {
                 $normalizedMovementName = $this->normalizeMovementName($movementName);
@@ -138,7 +101,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
         $allowedMovementNames = $this->allowedMovementNames($allowedMovements);
         $availableFrequencyBands = [];
 
-        foreach (self::MOVEMENT_FREQUENCY_BANDS as $band => $movementNames) {
+        foreach ($this->snapshot->movementFrequencyBands() as $band => $movementNames) {
             $availableMovementNames = $this->availableGuidanceMovementNames($movementNames, $allowedMovementNames);
 
             if ($availableMovementNames === []) {
@@ -161,7 +124,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
         $allowedMovementNames = $this->allowedMovementNames($allowedMovements);
         $availablePairs = [];
 
-        foreach (self::FREQUENT_MOVEMENT_PAIRS as [$movementA, $movementB]) {
+        foreach ($this->snapshot->frequentMovementPairs() as [$movementA, $movementB]) {
             $normalizedMovementA = $this->normalizeMovementName($movementA);
             $normalizedMovementB = $this->normalizeMovementName($movementB);
 
@@ -183,7 +146,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
     public function availableRecentGeneratedTemplateMovements(array $allowedMovements): array
     {
         return $this->availableGuidanceMovementNames(
-            self::RECENT_GENERATED_TEMPLATE_MOVEMENTS,
+            $this->snapshot->recentGeneratedTemplateMovements(),
             $this->allowedMovementNames($allowedMovements),
         );
     }
@@ -196,7 +159,7 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
     public function availableOverusedRotationAnchors(array $allowedMovements): array
     {
         return $this->availableGuidanceMovementNames(
-            self::RECENT_GENERATED_OVERUSED_ANCHORS,
+            $this->snapshot->overusedRotationAnchors(),
             $this->allowedMovementNames($allowedMovements),
         );
     }
@@ -206,8 +169,8 @@ readonly class CompetitionMovementFrequencyGuidanceProvider
      */
     private function recentGeneratedCompetitionTemplateGuidance(WorkoutGeneration $workoutGeneration, array $allowedMovementNames): string
     {
-        $availableTemplateMovements = $this->availableGuidanceMovementNames(self::RECENT_GENERATED_TEMPLATE_MOVEMENTS, $allowedMovementNames);
-        $availableOverusedAnchors = $this->availableGuidanceMovementNames(self::RECENT_GENERATED_OVERUSED_ANCHORS, $allowedMovementNames);
+        $availableTemplateMovements = $this->availableGuidanceMovementNames($this->snapshot->recentGeneratedTemplateMovements(), $allowedMovementNames);
+        $availableOverusedAnchors = $this->availableGuidanceMovementNames($this->snapshot->overusedRotationAnchors(), $allowedMovementNames);
 
         if (count($availableTemplateMovements) < 3 && count($availableOverusedAnchors) < 2) {
             return '';
