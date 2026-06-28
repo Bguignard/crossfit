@@ -2,12 +2,15 @@
 
 namespace App\Services\Workout;
 
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
+
 /**
  * Empirical Competition guidance extracted from audits and recent generations.
  *
  * This snapshot is distribution guidance for prompts and rotation checks, not a banlist.
  * Refresh it after post-deployment audits when the observed movement mix changes.
  */
+#[Exclude]
 readonly class CompetitionMovementGuidanceSnapshot
 {
     /**
