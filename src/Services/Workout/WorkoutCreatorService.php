@@ -1119,7 +1119,7 @@ EOD;
     {
         $mainFlow = $this->flowWithoutScalingOptions($flow);
         $normalizedMainFlow = $this->normalizeMovementSearchText($mainFlow);
-        if (preg_match('/(?:^| )strict (?:toes to bar|toes to bars|t2b|ttb)(?: |$)/', $normalizedMainFlow) === 1) {
+        if (preg_match('/(?:^| )strict (?:toes to bars?|t2bs?|ttbs?)(?: |$)/', $normalizedMainFlow) === 1) {
             throw new \RuntimeException('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
         }
 
@@ -1151,7 +1151,12 @@ EOD;
     {
         $name = $this->normalizeMovementName($movement->getName());
 
-        return preg_match('/\b(?:clean|snatch|deadlift|squat|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1;
+        if (preg_match('/\b(?:air|pistol|alternate pistol)\s+squats?\b/', $name) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
+            || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
     }
 
     /**
@@ -1177,7 +1182,7 @@ EOD;
     private function textHasLoadPrescription(string $text): bool
     {
         return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
-            || preg_match('/(?:@|at\s+)\s*\d+(?:[.,]\d+)?\s*%/i', $text) === 1
+            || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/i', $text) === 1
             || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
     }
 

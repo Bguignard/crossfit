@@ -1882,6 +1882,44 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('Hang Power Clean (80/55 kg)', $workout->getFlow());
     }
 
+    public function testRxWorkoutGenerationAcceptsBarePercentageMainFlowLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "5 rounds\n10 Deadlifts 75%",
+                'scalingOptions' => "RX: as written\nIntermediate: 60%\nScaled: lighter deadlift",
+                'movements' => ['Deadlift'],
+            ],
+        );
+
+        self::assertStringContainsString('10 Deadlifts 75%', $workout->getFlow());
+    }
+
+    public function testRxWorkoutGenerationDoesNotRequireLoadForBodyweightSquat(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $pistolSquat = new Movement('Pistol Squat', $difficulty, $gymnastics);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$pistolSquat],
+            [
+                'flow' => "AMRAP 10 minutes\n20 Pistol Squats",
+                'scalingOptions' => "RX: as written\nIntermediate: assisted pistols\nScaled: air squats",
+                'movements' => ['Pistol Squat'],
+            ],
+        );
+
+        self::assertStringContainsString('20 Pistol Squats', $workout->getFlow());
+    }
+
     public function testWorkoutGenerationRejectsStrictToesToBarInMainFlow(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
@@ -1896,6 +1934,26 @@ class WorkoutCreatorServiceTest extends TestCase
             [$toesToBar],
             [
                 'flow' => "AMRAP 10 minutes\n12 strict toes to bar",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: knee raises",
+                'movements' => ['Toes to Bar'],
+            ],
+        );
+    }
+
+    public function testWorkoutGenerationRejectsStrictPluralToesToBarAcronymInMainFlow(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $toesToBar = new Movement('Toes to Bar', $difficulty, $gymnastics);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$toesToBar],
+            [
+                'flow' => "AMRAP 10 minutes\n12 strict T2Bs",
                 'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: knee raises",
                 'movements' => ['Toes to Bar'],
             ],
