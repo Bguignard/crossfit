@@ -2,6 +2,8 @@
 
 namespace App\Services\Workout;
 
+use App\Entity\Workout\Enum\ImplementEnum;
+use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
@@ -93,6 +95,7 @@ When prescribing loaded movements, always include level-appropriate male/female 
 Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
 Create a short "Scaling options" section in the JSON scalingOptions field with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
+Do not prescribe strict toes to bar in the main workout flow. Normal Toes to Bar is allowed; strict toes to bar belongs only to accessory/strength notes outside the main metcon or competition flow.
 The Scaling options section is mandatory in the JSON "scalingOptions" field. Do not duplicate the Scaling options heading in the flow field.
 If the exact selected movement name is Assault Bike, write Echo Bike in the athlete-facing flow for modern WODs while keeping Assault Bike as the exact movement name in the JSON movements array.
 
@@ -279,6 +282,7 @@ EOD;
             );
             $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
             $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
+            $this->assertGeneratedMainFlowSafety($workoutGeneration, $WorkoutMovements, $generatedWorkout['flow']);
 
             try {
                 $this->assertNoRejectedCompetitionMovementCluster($workoutGeneration, $WorkoutMovements);
@@ -1107,6 +1111,193 @@ EOD;
         }
 
         $this->competitionMovementFrequencyGuidanceProvider->assertNoRejectedMovementCluster($selectedMovements);
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function assertGeneratedMainFlowSafety(WorkoutGeneration $workoutGeneration, array $selectedMovements, string $flow): void
+    {
+        $mainFlow = $this->flowWithoutScalingOptions($flow);
+        $normalizedMainFlow = $this->normalizeMovementSearchText($mainFlow);
+        if (preg_match('/(?:^| )strict (?:toes to bars?|t2bs?|ttbs?)(?: |$)/', $normalizedMainFlow) === 1) {
+            throw new \RuntimeException('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
+        }
+
+        if (!$this->requiresMainFlowLoadPrescription($workoutGeneration)) {
+            return;
+        }
+
+        foreach ($selectedMovements as $movement) {
+            if (!$this->mainFlowHasRequiredLoadPrescriptionForMovement($mainFlow, $selectedMovements, $movement)) {
+                throw new \RuntimeException(sprintf('OpenAI workout generation included loaded movement "%s" without a main workout load prescription.', $movement->getName()));
+            }
+        }
+    }
+
+    private function requiresMainFlowLoadPrescription(WorkoutGeneration $workoutGeneration): bool
+    {
+        return in_array(
+            $workoutGeneration->getMovementDifficulty()->getNameAsEnum(),
+            [MovementDifficultyEnum::ELITE, MovementDifficultyEnum::RX],
+            true
+        );
+    }
+
+    private function hasLoadableImplement(Movement $movement): bool
+    {
+        foreach ($movement->getPossibleImplements() as $implement) {
+            if ($this->isLoadableImplementName($implement->getName())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isLoadableImplementName(string $implementName): bool
+    {
+        return isset([
+            ImplementEnum::BARBELL->value => true,
+            ImplementEnum::DUMBBELL->value => true,
+            ImplementEnum::KETTLEBELL->value => true,
+            ImplementEnum::MEDICINE_BALL->value => true,
+            ImplementEnum::DOUBLE_KETTLEBELLS->value => true,
+            ImplementEnum::DOUBLE_DUMBBELLS->value => true,
+            ImplementEnum::PLATE->value => true,
+            ImplementEnum::SLAM_BALL->value => true,
+            ImplementEnum::SLED->value => true,
+            ImplementEnum::TIRE->value => true,
+            ImplementEnum::HAMMER->value => true,
+            ImplementEnum::SLEDGE->value => true,
+            ImplementEnum::SAND_BAG->value => true,
+            ImplementEnum::HUSAFELL_BAG->value => true,
+            ImplementEnum::YOKE->value => true,
+            ImplementEnum::AXLE_BARBELL->value => true,
+            ImplementEnum::PIG->value => true,
+            ImplementEnum::WEIGHTED_VEST->value => true,
+            ImplementEnum::WORM->value => true,
+        ][$implementName]);
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function mainFlowHasRequiredLoadPrescriptionForMovement(string $mainFlow, array $selectedMovements, Movement $movement): bool
+    {
+        $lines = preg_split('/\R+/', $mainFlow) ?: [$mainFlow];
+        foreach ($lines as $line) {
+            $normalizedLine = $this->normalizedFlowWithoutOtherMovementNames($line, $selectedMovements, $movement);
+            if (!$this->normalizedFlowContainsMovement($normalizedLine, $movement)) {
+                continue;
+            }
+
+            $movementSegment = $this->lineSegmentForMovement($line, $selectedMovements, $movement);
+            if (!$this->movementLineRequiresLoadPrescription($movement, $movementSegment)) {
+                continue;
+            }
+
+            if (!$this->textHasLoadPrescription($movementSegment)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param Movement[] $selectedMovements
+     */
+    private function lineSegmentForMovement(string $line, array $selectedMovements, Movement $movement): string
+    {
+        $segments = preg_split('/(?<=\S)\s*\+\s*(?=\d)|\s+then\s+|;+|(?<!\d),(?!\d)(?=\s*\d+\s+[a-z])|\s+and\s+(?=\d+\s+[a-z])/i', $line) ?: [$line];
+        foreach ($segments as $segment) {
+            $normalizedSegment = $this->normalizedFlowWithoutOtherMovementNames($segment, $selectedMovements, $movement);
+            if ($this->normalizedFlowContainsMovement($normalizedSegment, $movement)) {
+                return $segment;
+            }
+        }
+
+        return $line;
+    }
+
+    private function movementLineRequiresLoadPrescription(Movement $movement, string $line): bool
+    {
+        if (count($movement->getPossibleImplements()) === 0) {
+            return $this->isLoadedMovementNameRequiringMainPrescription($movement);
+        }
+
+        if (!$this->hasLoadableImplement($movement)) {
+            return false;
+        }
+
+        if ($this->isObstacleMovementExemptFromLoadPrescription($movement)) {
+            return false;
+        }
+
+        if ($this->isPlateSupportMovementExemptFromLoadPrescription($movement)) {
+            return false;
+        }
+
+        if ($this->hasOnlyLoadableImplements($movement)) {
+            return true;
+        }
+
+        if ($this->isLoadedMovementNameRequiringMainPrescription($movement)) {
+            return true;
+        }
+
+        return $this->lineMentionsLoadableImplement($line) || $this->lineMentionsLoadedVariant($line);
+    }
+
+    private function textHasLoadPrescription(string $text): bool
+    {
+        return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?(?:\s*-\s*|\s*)?(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
+            || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/i', $text) === 1
+            || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
+    }
+
+    private function isLoadedMovementNameRequiringMainPrescription(Movement $movement): bool
+    {
+        $name = $this->normalizeMovementName($movement->getName());
+
+        if (preg_match('/\b(?:air|pistol|alternate pistol)\s+squats?\b/', $name) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:clean|snatch|deadlift|press|thruster|jerk|shoulder to overhead|dumbbell|kettlebell|db|kb|barbell|wall ball|farmer carry|sled)\b/', $name) === 1
+            || preg_match('/\b(?:back|front|overhead|goblet|sandbag|dumbbell|kettlebell|barbell)\s+squats?\b/', $name) === 1;
+    }
+
+    private function isObstacleMovementExemptFromLoadPrescription(Movement $movement): bool
+    {
+        return preg_match('/\bburpees?\s+over(?:\s+facing)?\b/', $this->normalizeMovementName($movement->getName())) === 1;
+    }
+
+    private function isPlateSupportMovementExemptFromLoadPrescription(Movement $movement): bool
+    {
+        return preg_match('/\bdeficit\s+(?:strict\s+)?(?:handstand\s+push\s+ups?|hspu)\b/', $this->normalizeMovementName($movement->getName())) === 1;
+    }
+
+    private function hasOnlyLoadableImplements(Movement $movement): bool
+    {
+        foreach ($movement->getPossibleImplements() as $implement) {
+            if (!$this->isLoadableImplementName($implement->getName())) {
+                return false;
+            }
+        }
+
+        return count($movement->getPossibleImplements()) > 0;
+    }
+
+    private function lineMentionsLoadableImplement(string $line): bool
+    {
+        return preg_match('/\b(?:barbell|bb|dumbbell|dumbbells|db|dbs|kettlebell|kettlebells|kb|kbs|medicine ball|med ball|wall ball|plate|slam ball|sled|tire|hammer|sledge|sandbag|sand bag|husafell|yoke|axle|pig|weighted vest|worm)\b/i', $line) === 1;
+    }
+
+    private function lineMentionsLoadedVariant(string $line): bool
+    {
+        return preg_match('/\b(?:weighted|loaded)\b/i', $line) === 1;
     }
 
     private function flowWithoutScalingOptions(string $flow): string
