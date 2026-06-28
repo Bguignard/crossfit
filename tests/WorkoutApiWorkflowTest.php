@@ -678,8 +678,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
     {
         $entityManager = $this->getEntityManager();
         $workout = new Workout(
-            'Workout 1',
-            '*',
+            'Workout WOD 1',
+            'WOD 1',
             null,
             null,
             null,
@@ -688,7 +688,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $athlete = new Athlete('Bruno Guignard', 'competition_corner', 'bruno-corner');
         $competition = (new Competition('Marseille Throwdown 2025', 'competition_corner', '15984'))
             ->setSeason(2025);
-        $event = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', '15984-workout-1'))
+        $event = (new CompetitionEvent($competition, 'WOD 1', 'competition_corner', '15984-workout-1'))
             ->setWorkout($workout);
         $result = new WorkoutResult($athlete, $event, new Score(ScoreTypeEnum::TIME, '10:00'), 'competition_corner', 'bruno-marseille-1');
 
@@ -704,7 +704,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertSame('Workout 1', $payload['member'][0]['workoutDetails']['name']);
+        self::assertSame('Workout WOD 1', $payload['member'][0]['workoutDetails']['name']);
+        self::assertSame('WOD 1', $payload['member'][0]['eventDetails']['name']);
         self::assertNull($payload['member'][0]['workoutDetails']['flow']);
     }
 
