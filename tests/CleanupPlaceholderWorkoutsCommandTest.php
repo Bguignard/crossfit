@@ -14,6 +14,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 final class CleanupPlaceholderWorkoutsCommandTest extends AbstractIntegrationTest
 {
+    private int $fixtureCounter = 0;
+
     public function testDryRunDoesNotRemovePlaceholderWorkout(): void
     {
         [$workout] = $this->persistPlaceholderWorkoutContext();
@@ -76,12 +78,42 @@ final class CleanupPlaceholderWorkoutsCommandTest extends AbstractIntegrationTes
         self::assertNull($storedEvent->getWorkout());
     }
 
+    public function testLimitAppliesAfterPlaceholderFilteringAcrossBatches(): void
+    {
+        $entityManager = $this->getEntityManager();
+        for ($index = 1; $index <= 3; ++$index) {
+            $this->persistPlaceholderWorkoutContext(
+                sprintf('Real Workout %d', $index),
+                sprintf("For time:\n%d Thrusters\n%d Pull-ups", 20 + $index, 10 + $index),
+                sprintf('Real Event %d', $index),
+            );
+        }
+
+        [$placeholder] = $this->persistPlaceholderWorkoutContext('Workout WOD 4', 'WOD 4', 'WOD 4');
+        $placeholderId = $placeholder->getId();
+        $command = $this->getService(CleanupPlaceholderWorkoutsCommand::class);
+        self::assertInstanceOf(CleanupPlaceholderWorkoutsCommand::class, $command);
+
+        $tester = new CommandTester($command);
+
+        self::assertSame(Command::SUCCESS, $tester->execute([
+            '--source' => 'competition_corner',
+            '--limit' => 1,
+            '--batch-size' => 2,
+            '--write' => true,
+        ]));
+        $entityManager->clear();
+
+        self::assertNull($this->getRepository(Workout::class)->find($placeholderId));
+    }
+
     /**
      * @return array{0: Workout, 1: CompetitionEvent}
      */
     private function persistPlaceholderWorkoutContext(string $workoutName = 'Workout 1', string $flow = '*', string $eventName = 'Workout 1'): array
     {
         $entityManager = $this->getEntityManager();
+        ++$this->fixtureCounter;
         $workout = (new Workout(
             $workoutName,
             $flow,
@@ -91,9 +123,18 @@ final class CleanupPlaceholderWorkoutsCommandTest extends AbstractIntegrationTes
             new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2025),
         ))
             ->setSourceName('competition_corner')
-            ->setExternalId('marseille-workout-1');
-        $competition = new Competition('Marseille Throwdown 2025', 'competition_corner', '15984');
-        $event = (new CompetitionEvent($competition, $eventName, 'competition_corner', '15984-workout-1'))
+            ->setExternalId(sprintf('marseille-workout-%d', $this->fixtureCounter));
+        $competition = new Competition(
+            sprintf('Marseille Throwdown 2025 #%d', $this->fixtureCounter),
+            'competition_corner',
+            sprintf('15984-%d', $this->fixtureCounter),
+        );
+        $event = (new CompetitionEvent(
+            $competition,
+            $eventName,
+            'competition_corner',
+            sprintf('15984-workout-%d', $this->fixtureCounter),
+        ))
             ->setWorkout($workout);
 
         foreach ([$workout, $competition, $event] as $entity) {

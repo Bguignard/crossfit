@@ -29,7 +29,8 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum placeholder workouts to inspect.', 500)
+            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum placeholder workouts to clean.', 500)
+            ->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Raw imported workouts to inspect per page.', 500)
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Only clean workouts from this source.')
             ->addOption('write', null, InputOption::VALUE_NONE, 'Persist the cleanup.');
     }
@@ -38,9 +39,10 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $limit = max(1, (int) $input->getOption('limit'));
+        $batchSize = max(1, (int) $input->getOption('batch-size'));
         $source = $this->stringOrNull($input->getOption('source'));
         $write = (bool) $input->getOption('write');
-        $workouts = $this->placeholderWorkouts($limit, $source);
+        $workouts = $this->placeholderWorkouts($limit, $batchSize, $source);
         $detachedEvents = 0;
         $workoutRows = [];
 
@@ -91,31 +93,52 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
     /**
      * @return list<Workout>
      */
-    private function placeholderWorkouts(int $limit, ?string $source): array
+    private function placeholderWorkouts(int $limit, int $batchSize, ?string $source): array
     {
-        $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
-            ->andWhere('workout.sourceName IS NOT NULL')
-            ->setMaxResults($limit)
-            ->orderBy('workout.createdAt', 'ASC');
+        $placeholders = [];
+        $offset = 0;
 
-        if ($source !== null) {
-            $queryBuilder
-                ->andWhere('workout.sourceName = :source')
-                ->setParameter('source', $source);
-        }
+        do {
+            $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
+                ->andWhere('workout.sourceName IS NOT NULL')
+                ->setFirstResult($offset)
+                ->setMaxResults($batchSize)
+                ->orderBy('workout.createdAt', 'ASC');
 
-        /** @var list<Workout> $workouts */
-        $workouts = $queryBuilder->getQuery()->getResult();
+            if ($source !== null) {
+                $queryBuilder
+                    ->andWhere('workout.sourceName = :source')
+                    ->setParameter('source', $source);
+            }
 
-        return array_values(array_filter($workouts, function (Workout $workout): bool {
-            foreach ($this->eventsForWorkout($workout) as $event) {
-                if ($this->placeholderFlowDetector->displayableFlow($workout, $event->getName()) === null) {
-                    return true;
+            /** @var list<Workout> $workouts */
+            $workouts = $queryBuilder->getQuery()->getResult();
+            foreach ($workouts as $workout) {
+                if (!$this->isPlaceholderWorkout($workout)) {
+                    continue;
+                }
+
+                $placeholders[] = $workout;
+                if (count($placeholders) >= $limit) {
+                    return $placeholders;
                 }
             }
 
-            return $this->placeholderFlowDetector->displayableFlow($workout) === null;
-        }));
+            $offset += $batchSize;
+        } while (count($workouts) === $batchSize);
+
+        return $placeholders;
+    }
+
+    private function isPlaceholderWorkout(Workout $workout): bool
+    {
+        foreach ($this->eventsForWorkout($workout) as $event) {
+            if ($this->placeholderFlowDetector->displayableFlow($workout, $event->getName()) === null) {
+                return true;
+            }
+        }
+
+        return $this->placeholderFlowDetector->displayableFlow($workout) === null;
     }
 
     /**
