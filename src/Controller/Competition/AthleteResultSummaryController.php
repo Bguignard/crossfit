@@ -8,6 +8,7 @@ use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
 use App\Services\Competition\AthleteNameNormalizer;
 use App\Services\Competition\CompetitionOfficialQualificationPresenter;
+use App\Services\Workout\WorkoutPlaceholderFlowDetector;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,8 +17,10 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AthleteResultSummaryController extends AbstractController
 {
-    public function __construct(private readonly CompetitionOfficialQualificationPresenter $qualificationPresenter)
-    {
+    public function __construct(
+        private readonly CompetitionOfficialQualificationPresenter $qualificationPresenter,
+        private readonly WorkoutPlaceholderFlowDetector $placeholderFlowDetector,
+    ) {
     }
 
     #[Route('/api/athletes/{id}/result-summary', name: 'api_athlete_result_summary', methods: ['GET'])]
@@ -161,7 +164,7 @@ final class AthleteResultSummaryController extends AbstractController
                 '@id' => '/api/workouts/'.$workout->getId(),
                 'id' => (string) $workout->getId(),
                 'name' => $workout->getName(),
-                'flow' => $this->workoutFlow($workout),
+                'flow' => $this->placeholderFlowDetector->displayableFlow($workout, $event->getName()),
                 'sourceName' => $workout->getSourceName(),
                 'externalId' => $workout->getExternalId(),
                 'sourceUrl' => $workout->getSourceUrl(),
@@ -210,13 +213,6 @@ final class AthleteResultSummaryController extends AbstractController
                 'participationType' => $competition->getParticipationType(),
             ],
         ];
-    }
-
-    private function workoutFlow(Workout $workout): ?string
-    {
-        $flow = trim($workout->getFlow());
-
-        return in_array($flow, ['*', '-', '–', '—'], true) ? null : $flow;
     }
 
     /**

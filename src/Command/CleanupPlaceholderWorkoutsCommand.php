@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Entity\Competition\CompetitionEvent;
 use App\Entity\Workout\Workout;
+use App\Services\Workout\WorkoutPlaceholderFlowDetector;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,17 +19,18 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class CleanupPlaceholderWorkoutsCommand extends Command
 {
-    private const PLACEHOLDER_FLOWS = ['*', '-', '–', '—'];
-
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly WorkoutPlaceholderFlowDetector $placeholderFlowDetector,
+    ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
         $this
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum placeholder workouts to inspect.', 500)
+            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum placeholder workouts to clean.', 500)
+            ->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Raw imported workouts to inspect per page.', 500)
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Only clean workouts from this source.')
             ->addOption('write', null, InputOption::VALUE_NONE, 'Persist the cleanup.');
     }
@@ -37,14 +39,23 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $limit = max(1, (int) $input->getOption('limit'));
+        $batchSize = max(1, (int) $input->getOption('batch-size'));
         $source = $this->stringOrNull($input->getOption('source'));
         $write = (bool) $input->getOption('write');
-        $workouts = $this->placeholderWorkouts($limit, $source);
+        $workouts = $this->placeholderWorkouts($limit, $batchSize, $source);
         $detachedEvents = 0;
+        $workoutRows = [];
 
         foreach ($workouts as $workout) {
             $events = $this->eventsForWorkout($workout);
             $detachedEvents += count($events);
+            $workoutRows[] = [
+                $workout->getName(),
+                $workout->getSourceName(),
+                $workout->getExternalId(),
+                $workout->getFlow(),
+                count($events),
+            ];
             if (!$write) {
                 continue;
             }
@@ -68,16 +79,7 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
         if ($workouts !== []) {
             $io->table(
                 ['Workout', 'Source', 'External ID', 'Flow', 'Events'],
-                array_map(
-                    fn (Workout $workout): array => [
-                        $workout->getName(),
-                        $workout->getSourceName(),
-                        $workout->getExternalId(),
-                        $workout->getFlow(),
-                        count($this->eventsForWorkout($workout)),
-                    ],
-                    array_slice($workouts, 0, 20),
-                ),
+                array_slice($workoutRows, 0, 20),
             );
         }
 
@@ -91,25 +93,54 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
     /**
      * @return list<Workout>
      */
-    private function placeholderWorkouts(int $limit, ?string $source): array
+    private function placeholderWorkouts(int $limit, int $batchSize, ?string $source): array
     {
-        $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
-            ->andWhere('workout.flow IN (:flows)')
-            ->andWhere('workout.sourceName IS NOT NULL')
-            ->setParameter('flows', self::PLACEHOLDER_FLOWS)
-            ->setMaxResults($limit)
-            ->orderBy('workout.createdAt', 'ASC');
+        $placeholders = [];
+        $offset = 0;
 
-        if ($source !== null) {
-            $queryBuilder
-                ->andWhere('workout.sourceName = :source')
-                ->setParameter('source', $source);
+        do {
+            $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
+                ->andWhere('workout.sourceName IS NOT NULL')
+                ->setFirstResult($offset)
+                ->setMaxResults($batchSize)
+                ->orderBy('workout.createdAt', 'ASC')
+                ->addOrderBy('workout.externalId', 'ASC')
+                ->addOrderBy('workout.id', 'ASC');
+
+            if ($source !== null) {
+                $queryBuilder
+                    ->andWhere('workout.sourceName = :source')
+                    ->setParameter('source', $source);
+            }
+
+            /** @var list<Workout> $workouts */
+            $workouts = $queryBuilder->getQuery()->getResult();
+            foreach ($workouts as $workout) {
+                if (!$this->isPlaceholderWorkout($workout)) {
+                    continue;
+                }
+
+                $placeholders[] = $workout;
+                if (count($placeholders) >= $limit) {
+                    return $placeholders;
+                }
+            }
+
+            $offset += $batchSize;
+        } while (count($workouts) === $batchSize);
+
+        return $placeholders;
+    }
+
+    private function isPlaceholderWorkout(Workout $workout): bool
+    {
+        foreach ($this->eventsForWorkout($workout) as $event) {
+            if ($this->placeholderFlowDetector->displayableFlow($workout, $event->getName()) === null) {
+                return true;
+            }
         }
 
-        /** @var list<Workout> $workouts */
-        $workouts = $queryBuilder->getQuery()->getResult();
-
-        return $workouts;
+        return $this->placeholderFlowDetector->displayableFlow($workout) === null;
     }
 
     /**
