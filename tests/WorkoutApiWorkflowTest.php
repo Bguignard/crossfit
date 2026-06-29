@@ -149,7 +149,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setExternalId('canonical-duplicate-corner')
             ->setSourceUrl('https://example.test/corner');
         $third = (new Workout(
-            'Canonical duplicate API test',
+            ' Canonical duplicate API test ',
             "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
             1,
             10,

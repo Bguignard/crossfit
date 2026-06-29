@@ -128,7 +128,7 @@ final class WorkoutCatalogController extends AbstractController
 
         $this->scanWorkouts($matchingQueryBuilder, function (Workout $workout) use (&$matchingFingerprints, &$matchingRepresentatives, &$matchingNames, &$matchingOrder): void {
             $fingerprint = $this->canonicalizer->fingerprint($workout);
-            $matchingNames[mb_strtolower(trim((string) $workout->getName()))] = true;
+            $matchingNames[mb_strtolower((string) $workout->getName())] = true;
 
             if (isset($matchingFingerprints[$fingerprint])) {
                 return;
