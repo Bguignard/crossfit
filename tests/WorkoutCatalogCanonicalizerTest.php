@@ -2,13 +2,21 @@
 
 namespace App\Tests;
 
+use App\Entity\Competition\Athlete;
+use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\Enum\ScoreTypeEnum;
+use App\Entity\Competition\Score;
+use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Workout;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutType;
+use App\Services\Workout\Catalog\CanonicalWorkoutCatalogEntry;
 use App\Services\Workout\Catalog\WorkoutCatalogCanonicalizer;
+use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -50,6 +58,35 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         self::assertCount(2, $entries);
     }
 
+    public function testCanonicalEntryMergesDivisionsForSameCompetitionContext(): void
+    {
+        $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
+            ->setSeason(2026);
+        $womenEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-women'))
+            ->setEventOrder(1);
+        $menEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-men'))
+            ->setEventOrder(1);
+        $athlete = new Athlete('Canonical Athlete', 'competition_corner', 'canonical-entry-athlete');
+        $womenResult = (new WorkoutResult($athlete, $womenEvent, new Score(ScoreTypeEnum::TIME, '3:01'), 'competition_corner', 'shared-event-women-result'))
+            ->setDivision('Elite Women');
+        $menResult = (new WorkoutResult($athlete, $menEvent, new Score(ScoreTypeEnum::TIME, '2:59'), 'competition_corner', 'shared-event-men-result'))
+            ->setDivision('Elite Men');
+        $womenEvent->getResults()->add($womenResult);
+        $menEvent->getResults()->add($menResult);
+
+        $womenWorkout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $menWorkout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $this->attachCompetitionEvents($womenWorkout, [$womenEvent]);
+        $this->attachCompetitionEvents($menWorkout, [$menEvent]);
+
+        $contexts = (new CanonicalWorkoutCatalogEntry('fingerprint', $womenWorkout, [$womenWorkout, $menWorkout]))
+            ->competitionContexts();
+
+        self::assertCount(1, $contexts);
+        self::assertSame('Shared Event Throwdown', $contexts[0]['competitionName']);
+        self::assertSame(['Elite Men', 'Elite Women'], $contexts[0]['divisions']);
+    }
+
     private function workout(
         string $name,
         string $flow,
@@ -66,5 +103,14 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         ))
             ->setSourceName($sourceName)
             ->setExternalId($externalId);
+    }
+
+    /**
+     * @param list<CompetitionEvent> $events
+     */
+    private function attachCompetitionEvents(Workout $workout, array $events): void
+    {
+        $property = new \ReflectionProperty(Workout::class, 'competitionEvents');
+        $property->setValue($workout, new ArrayCollection($events));
     }
 }

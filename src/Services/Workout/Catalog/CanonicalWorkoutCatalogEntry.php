@@ -123,6 +123,7 @@ final readonly class CanonicalWorkoutCatalogEntry
 
         foreach ($this->occurrences as $workout) {
             foreach ($workout->getCompetitionContexts() as $context) {
+                $contextDivisions = $context['divisions'];
                 $key = implode('|', [
                     $context['competitionId'],
                     $context['eventName'],
@@ -136,7 +137,7 @@ final readonly class CanonicalWorkoutCatalogEntry
                     $seen[$key] = true;
                 }
 
-                foreach ($context['divisions'] as $division) {
+                foreach ($contextDivisions as $division) {
                     $divisionsByKey[$key][$division] = true;
                 }
             }
