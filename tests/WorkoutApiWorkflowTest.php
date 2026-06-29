@@ -177,11 +177,14 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $gamesMenDivision = new CompetitionDivision($gamesCompetition, 'Elite Men', 'crossfit_games', 'canonical-games-elite-men');
         $cornerDivision = new CompetitionDivision($cornerCompetition, 'RX Men', 'competition_corner', 'canonical-corner-rx-men');
         $gamesResult = (new WorkoutResult($athlete, $gamesEvent, new Score(ScoreTypeEnum::TIME, '2:59'), 'crossfit_games', 'canonical-games-result'))
-            ->setCompetitionDivision($gamesDivision);
+            ->setCompetitionDivision($gamesDivision)
+            ->setDivision('Elite Women');
         $gamesMenResult = (new WorkoutResult($athlete, $gamesMenEvent, new Score(ScoreTypeEnum::TIME, '2:55'), 'crossfit_games', 'canonical-games-men-result'))
-            ->setCompetitionDivision($gamesMenDivision);
+            ->setCompetitionDivision($gamesMenDivision)
+            ->setDivision('Elite Men');
         $cornerResult = (new WorkoutResult($athlete, $cornerEvent, new Score(ScoreTypeEnum::TIME, '3:10'), 'competition_corner', 'canonical-corner-result'))
-            ->setCompetitionDivision($cornerDivision);
+            ->setCompetitionDivision($cornerDivision)
+            ->setDivision('RX Men');
 
         foreach ([$origin, $workoutType, $first, $second, $third, $athlete, $gamesCompetition, $cornerCompetition, $gamesEvent, $gamesMenEvent, $cornerEvent, $gamesDivision, $gamesMenDivision, $cornerDivision, $gamesResult, $gamesMenResult, $cornerResult] as $entity) {
             $entityManager->persist($entity);
