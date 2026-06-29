@@ -120,9 +120,9 @@ final class WorkoutCatalogController extends AbstractController
      */
     private function canonicalPage(QueryBuilder $queryBuilder, int $page, int $pageSize): array
     {
-        $targetEntryCount = $page * $pageSize + 1;
         $offset = 0;
-        $workouts = [];
+        $groups = [];
+        $order = [];
 
         do {
             /** @var list<Workout> $batch */
@@ -139,23 +139,29 @@ final class WorkoutCatalogController extends AbstractController
                 break;
             }
 
-            array_push($workouts, ...$batch);
-            $canonicalEntries = $this->canonicalizer->canonicalize($workouts);
-            if (count($canonicalEntries) >= $targetEntryCount) {
-                $pageEntries = array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize);
+            foreach ($batch as $workout) {
+                $fingerprint = $this->canonicalizer->fingerprint($workout);
+                if (!isset($groups[$fingerprint])) {
+                    $groups[$fingerprint] = [];
+                    $order[] = $fingerprint;
+                }
 
-                return [$pageEntries, count($canonicalEntries), true];
+                $groups[$fingerprint][] = $workout;
             }
 
             $offset += self::CANONICAL_SCAN_BATCH_SIZE;
         } while (count($batch) === self::CANONICAL_SCAN_BATCH_SIZE);
 
-        $canonicalEntries = $this->canonicalizer->canonicalize($workouts);
+        $canonicalEntries = [];
+        foreach ($order as $fingerprint) {
+            $occurrences = $groups[$fingerprint];
+            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $occurrences[0], $occurrences);
+        }
 
         return [
             array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize),
             count($canonicalEntries),
-            false,
+            $page * $pageSize < count($canonicalEntries),
         ];
     }
 
