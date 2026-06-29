@@ -22,6 +22,7 @@ final class WorkoutCatalogController extends AbstractController
 {
     private const DEFAULT_PAGE_SIZE = 25;
     private const MAX_PAGE_SIZE = 50;
+    private const CANONICAL_SCAN_BATCH_SIZE = 200;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -89,25 +90,17 @@ final class WorkoutCatalogController extends AbstractController
                 fn (Workout $workout): array => $this->serializeWorkout($workout, $filters),
                 $workouts,
             );
+            $hasNext = $page * $pageSize < $totalItems;
         } else {
-            /** @var list<Workout> $workouts */
-            $workouts = $queryBuilder
-                ->select('DISTINCT workout')
-                ->orderBy('workout.name', 'ASC')
-                ->addOrderBy('workout.createdAt', 'DESC')
-                ->getQuery()
-                ->getResult();
-
-            $canonicalEntries = $this->canonicalizer->canonicalize($workouts);
-            $totalItems = count($canonicalEntries);
+            [$canonicalEntries, $totalItems, $hasNext] = $this->canonicalPage($queryBuilder, $page, $pageSize);
             $members = array_map(
                 fn (CanonicalWorkoutCatalogEntry $entry): array => $this->serializeCanonicalWorkout($entry, $filters),
-                array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize),
+                $canonicalEntries,
             );
         }
 
         $next = null;
-        if ($page * $pageSize < $totalItems) {
+        if ($hasNext) {
             $query = $request->query->all();
             $query['page'] = $page + 1;
             $next = '/api/workout-catalog?'.http_build_query($query);
@@ -120,6 +113,50 @@ final class WorkoutCatalogController extends AbstractController
                 'next' => $next,
             ],
         ]);
+    }
+
+    /**
+     * @return array{0: list<CanonicalWorkoutCatalogEntry>, 1: int, 2: bool}
+     */
+    private function canonicalPage(QueryBuilder $queryBuilder, int $page, int $pageSize): array
+    {
+        $targetEntryCount = $page * $pageSize + 1;
+        $offset = 0;
+        $workouts = [];
+
+        do {
+            /** @var list<Workout> $batch */
+            $batch = (clone $queryBuilder)
+                ->select('DISTINCT workout')
+                ->orderBy('workout.name', 'ASC')
+                ->addOrderBy('workout.createdAt', 'DESC')
+                ->setFirstResult($offset)
+                ->setMaxResults(self::CANONICAL_SCAN_BATCH_SIZE)
+                ->getQuery()
+                ->getResult();
+
+            if ($batch === []) {
+                break;
+            }
+
+            array_push($workouts, ...$batch);
+            $canonicalEntries = $this->canonicalizer->canonicalize($workouts);
+            if (count($canonicalEntries) >= $targetEntryCount) {
+                $pageEntries = array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize);
+
+                return [$pageEntries, count($canonicalEntries), true];
+            }
+
+            $offset += self::CANONICAL_SCAN_BATCH_SIZE;
+        } while (count($batch) === self::CANONICAL_SCAN_BATCH_SIZE);
+
+        $canonicalEntries = $this->canonicalizer->canonicalize($workouts);
+
+        return [
+            array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize),
+            count($canonicalEntries),
+            false,
+        ];
     }
 
     /**
