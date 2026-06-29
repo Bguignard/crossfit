@@ -68,7 +68,6 @@ final class WorkoutCatalogController extends AbstractController
         $filters = $this->filtersFromRequest($request);
         $includeDuplicates = $this->booleanQuery($request->query->get('includeDuplicates'));
         $queryBuilder = $this->filteredQueryBuilder($filters);
-        $provenanceQueryBuilder = $this->filteredQueryBuilder($this->provenanceFilters($filters));
 
         if ($includeDuplicates) {
             $totalItems = (int) (clone $queryBuilder)
@@ -93,7 +92,7 @@ final class WorkoutCatalogController extends AbstractController
             );
             $hasNext = $page * $pageSize < $totalItems;
         } else {
-            [$canonicalEntries, $totalItems, $hasNext] = $this->canonicalPage($queryBuilder, $provenanceQueryBuilder, $page, $pageSize);
+            [$canonicalEntries, $totalItems, $hasNext] = $this->canonicalPage($queryBuilder, $this->provenanceFilters($filters), $page, $pageSize);
             $members = array_map(
                 fn (CanonicalWorkoutCatalogEntry $entry): array => $this->serializeCanonicalWorkout($entry, $filters),
                 $canonicalEntries,
@@ -119,25 +118,33 @@ final class WorkoutCatalogController extends AbstractController
     /**
      * @return array{0: list<CanonicalWorkoutCatalogEntry>, 1: int, 2: bool}
      */
-    private function canonicalPage(QueryBuilder $matchingQueryBuilder, QueryBuilder $provenanceQueryBuilder, int $page, int $pageSize): array
+    private function canonicalPage(QueryBuilder $matchingQueryBuilder, array $provenanceFilters, int $page, int $pageSize): array
     {
         $matchingFingerprints = [];
+        $matchingRepresentatives = [];
+        $matchingNames = [];
         $matchingOrder = [];
         $groups = [];
 
-        $this->scanWorkouts($matchingQueryBuilder, function (Workout $workout) use (&$matchingFingerprints, &$matchingOrder): void {
+        $this->scanWorkouts($matchingQueryBuilder, function (Workout $workout) use (&$matchingFingerprints, &$matchingRepresentatives, &$matchingNames, &$matchingOrder): void {
             $fingerprint = $this->canonicalizer->fingerprint($workout);
             if (isset($matchingFingerprints[$fingerprint])) {
                 return;
             }
 
             $matchingFingerprints[$fingerprint] = true;
+            $matchingRepresentatives[$fingerprint] = $workout;
+            $matchingNames[mb_strtolower(trim((string) $workout->getName()))] = true;
             $matchingOrder[] = $fingerprint;
         });
 
         if ($matchingOrder === []) {
             return [[], 0, false];
         }
+
+        $provenanceQueryBuilder = $this->filteredQueryBuilder($provenanceFilters)
+            ->andWhere('LOWER(workout.name) IN (:canonicalCandidateNames)')
+            ->setParameter('canonicalCandidateNames', array_keys($matchingNames));
 
         $this->scanWorkouts($provenanceQueryBuilder, function (Workout $workout) use (&$groups, $matchingFingerprints): void {
             $fingerprint = $this->canonicalizer->fingerprint($workout);
@@ -156,7 +163,7 @@ final class WorkoutCatalogController extends AbstractController
             }
 
             $occurrences = $groups[$fingerprint];
-            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $occurrences[0], $occurrences);
+            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $matchingRepresentatives[$fingerprint], $occurrences);
         }
 
         return [
