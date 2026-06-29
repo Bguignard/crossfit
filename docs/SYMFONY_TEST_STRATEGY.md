@@ -114,6 +114,16 @@ The summary script reads `var/reports/phpunit-junit.xml` by default. It can also
 php scripts/summarize_phpunit_junit.php var/reports/phpunit-junit.xml 20
 ```
 
+Compare a baseline profile with a profile produced after an optimization:
+
+```bash
+cp var/reports/phpunit-junit.xml var/reports/phpunit-junit-baseline.xml
+composer test:profile
+composer test:profile:compare -- var/reports/phpunit-junit-baseline.xml var/reports/phpunit-junit.xml 20
+```
+
+Use this before changing fixture loading or splitting slow API classes. The comparison reports total runtime deltas and the largest class-level changes, which helps us verify that a local optimization improves the known bottlenecks instead of merely moving cost around.
+
 This gives us a repeatable way to identify slow tests before changing fixtures, grouping, or parallelization.
 
 ## Recommended Categories
@@ -149,6 +159,7 @@ Do not optimize fixture loading blindly. First profile the suite and identify wh
 
 Likely follow-ups:
 
+- capture a baseline/current comparison before and after each fixture-loading experiment;
 - split heavy integration fixtures from minimal API fixtures;
 - reuse fixture setup safely where tests do not mutate shared state;
 - isolate model/service tests that can avoid `AbstractIntegrationTest`;

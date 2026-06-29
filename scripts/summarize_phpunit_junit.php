@@ -95,6 +95,7 @@ function summarizeFile(string $path, int $limit = 15): array
     return [
         'source' => $path,
         'totals' => $totals,
+        'classes' => $classRows,
         'slowestClasses' => array_slice($classRows, 0, $limit),
         'slowestTests' => array_slice($testCases, 0, $limit),
     ];
@@ -147,6 +148,105 @@ function renderTextSummary(array $summary): string
     return implode("\n", $lines)."\n";
 }
 
+/**
+ * @param array<string, mixed> $baseline
+ * @param array<string, mixed> $current
+ *
+ * @return array<string, mixed>
+ */
+function compareSummaries(array $baseline, array $current, int $limit = 15): array
+{
+    $baselineClasses = indexRowsByName($baseline['classes'] ?? $baseline['slowestClasses'], 'class');
+    $currentClasses = indexRowsByName($current['classes'] ?? $current['slowestClasses'], 'class');
+    $classNames = array_unique(array_merge(array_keys($baselineClasses), array_keys($currentClasses)));
+
+    $classes = [];
+    foreach ($classNames as $className) {
+        $before = (float) ($baselineClasses[$className]['time'] ?? 0.0);
+        $after = (float) ($currentClasses[$className]['time'] ?? 0.0);
+        $classes[] = [
+            'class' => $className,
+            'before' => $before,
+            'after' => $after,
+            'delta' => $after - $before,
+            'testsBefore' => (int) ($baselineClasses[$className]['tests'] ?? 0),
+            'testsAfter' => (int) ($currentClasses[$className]['tests'] ?? 0),
+        ];
+    }
+
+    usort($classes, static function (array $left, array $right): int {
+        $deltaComparison = abs($right['delta']) <=> abs($left['delta']);
+        if ($deltaComparison !== 0) {
+            return $deltaComparison;
+        }
+
+        return $right['after'] <=> $left['after'];
+    });
+
+    return [
+        'baselineSource' => $baseline['source'],
+        'currentSource' => $current['source'],
+        'baselineTotals' => $baseline['totals'],
+        'currentTotals' => $current['totals'],
+        'classDeltas' => array_slice($classes, 0, $limit),
+    ];
+}
+
+/**
+ * @param array<string, mixed> $comparison
+ */
+function renderTextComparison(array $comparison): string
+{
+    $baselineTotals = $comparison['baselineTotals'];
+    $currentTotals = $comparison['currentTotals'];
+    $totalDelta = (float) $currentTotals['time'] - (float) $baselineTotals['time'];
+
+    $lines = [
+        'PHPUnit JUnit duration comparison',
+        sprintf('Baseline: %s', $comparison['baselineSource']),
+        sprintf('Current: %s', $comparison['currentSource']),
+        sprintf(
+            'Totals: %.3fs -> %.3fs (%+.3fs), %d -> %d tests',
+            $baselineTotals['time'],
+            $currentTotals['time'],
+            $totalDelta,
+            $baselineTotals['tests'],
+            $currentTotals['tests'],
+        ),
+        '',
+        'Largest class deltas:',
+    ];
+
+    foreach ($comparison['classDeltas'] as $row) {
+        $lines[] = sprintf(
+            '- %+.3fs %.3fs -> %.3fs %s (%d -> %d tests)',
+            $row['delta'],
+            $row['before'],
+            $row['after'],
+            $row['class'],
+            $row['testsBefore'],
+            $row['testsAfter'],
+        );
+    }
+
+    return implode("\n", $lines)."\n";
+}
+
+/**
+ * @param array<int, array<string, mixed>> $rows
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function indexRowsByName(array $rows, string $nameKey): array
+{
+    $indexed = [];
+    foreach ($rows as $row) {
+        $indexed[(string) $row[$nameKey]] = $row;
+    }
+
+    return $indexed;
+}
+
 function statusForTestCase(\DOMElement $testCase): string
 {
     if ($testCase->getElementsByTagName('failure')->length > 0) {
@@ -163,10 +263,23 @@ function statusForTestCase(\DOMElement $testCase): string
 }
 
 if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
-    $path = $argv[1] ?? 'var/reports/phpunit-junit.xml';
-    $limit = isset($argv[2]) ? max(1, (int) $argv[2]) : 15;
-
     try {
+        if (($argv[1] ?? null) === '--compare') {
+            $baselinePath = $argv[2] ?? null;
+            $currentPath = $argv[3] ?? null;
+            if ($baselinePath === null || $currentPath === null) {
+                throw new \InvalidArgumentException('Usage: php scripts/summarize_phpunit_junit.php --compare baseline.xml current.xml [limit]');
+            }
+            $limit = isset($argv[4]) ? max(1, (int) $argv[4]) : 15;
+
+            echo renderTextComparison(compareSummaries(summarizeFile($baselinePath, PHP_INT_MAX), summarizeFile($currentPath, PHP_INT_MAX), $limit));
+
+            return;
+        }
+
+        $path = $argv[1] ?? 'var/reports/phpunit-junit.xml';
+        $limit = isset($argv[2]) ? max(1, (int) $argv[2]) : 15;
+
         echo renderTextSummary(summarizeFile($path, $limit));
     } catch (\Throwable $exception) {
         fwrite(STDERR, $exception->getMessage()."\n");
