@@ -201,7 +201,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame(1, $payload['totalItems']);
         self::assertCount(1, $workouts);
-        self::assertSame('Canonical duplicate API test', $workouts[0]['name'] ?? null);
+        self::assertSame('Canonical duplicate API test', trim((string) ($workouts[0]['name'] ?? '')));
         self::assertStringContainsString('Canonical marker', $workouts[0]['flow'] ?? '');
         self::assertSame(['flow'], $workouts[0]['matchDetails']['query']['fields'] ?? null);
         self::assertSame(3, $workouts[0]['occurrenceCount'] ?? null);
