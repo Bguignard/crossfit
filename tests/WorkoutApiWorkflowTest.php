@@ -148,6 +148,17 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setSourceName('competition_corner')
             ->setExternalId('canonical-duplicate-corner')
             ->setSourceUrl('https://example.test/corner');
+        $third = (new Workout(
+            'Canonical duplicate API test',
+            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('crossfit_games')
+            ->setExternalId('canonical-duplicate-games-men')
+            ->setSourceUrl('https://example.test/games-men');
         $athlete = new Athlete('Canonical Athlete', 'crossfit_games', 'canonical-athlete');
         $gamesCompetition = (new Competition('Canonical Games', 'crossfit_games', 'canonical-games'))
             ->setSeason(2026);
@@ -156,23 +167,29 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $gamesEvent = (new CompetitionEvent($gamesCompetition, 'Final Fran', 'crossfit_games', 'canonical-games-final'))
             ->setEventOrder(1)
             ->setWorkout($first);
+        $gamesMenEvent = (new CompetitionEvent($gamesCompetition, 'Final Fran', 'crossfit_games', 'canonical-games-final-men'))
+            ->setEventOrder(1)
+            ->setWorkout($third);
         $cornerEvent = (new CompetitionEvent($cornerCompetition, 'Qualifier Fran', 'competition_corner', 'canonical-corner-qualifier'))
             ->setEventOrder(2)
             ->setWorkout($second);
         $gamesDivision = new CompetitionDivision($gamesCompetition, 'Elite Women', 'crossfit_games', 'canonical-games-elite-women');
+        $gamesMenDivision = new CompetitionDivision($gamesCompetition, 'Elite Men', 'crossfit_games', 'canonical-games-elite-men');
         $cornerDivision = new CompetitionDivision($cornerCompetition, 'RX Men', 'competition_corner', 'canonical-corner-rx-men');
         $gamesResult = (new WorkoutResult($athlete, $gamesEvent, new Score(ScoreTypeEnum::TIME, '2:59'), 'crossfit_games', 'canonical-games-result'))
             ->setCompetitionDivision($gamesDivision);
+        $gamesMenResult = (new WorkoutResult($athlete, $gamesMenEvent, new Score(ScoreTypeEnum::TIME, '2:55'), 'crossfit_games', 'canonical-games-men-result'))
+            ->setCompetitionDivision($gamesMenDivision);
         $cornerResult = (new WorkoutResult($athlete, $cornerEvent, new Score(ScoreTypeEnum::TIME, '3:10'), 'competition_corner', 'canonical-corner-result'))
             ->setCompetitionDivision($cornerDivision);
 
-        foreach ([$origin, $workoutType, $first, $second, $athlete, $gamesCompetition, $cornerCompetition, $gamesEvent, $cornerEvent, $gamesDivision, $cornerDivision, $gamesResult, $cornerResult] as $entity) {
+        foreach ([$origin, $workoutType, $first, $second, $third, $athlete, $gamesCompetition, $cornerCompetition, $gamesEvent, $gamesMenEvent, $cornerEvent, $gamesDivision, $gamesMenDivision, $cornerDivision, $gamesResult, $gamesMenResult, $cornerResult] as $entity) {
             $entityManager->persist($entity);
         }
         $entityManager->flush();
         $entityManager->clear();
 
-        $this->browser()->request('GET', '/api/workout-catalog?name=canonical%20duplicate%20api%20test&itemsPerPage=1000');
+        $this->browser()->request('GET', '/api/workout-catalog?name=canonical%20duplicate%20api%20test&q=pull%20ups&itemsPerPage=1000');
 
         self::assertResponseIsSuccessful();
 
@@ -182,13 +199,13 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['totalItems']);
         self::assertCount(1, $workouts);
         self::assertSame('Canonical duplicate API test', $workouts[0]['name'] ?? null);
-        self::assertSame(2, $workouts[0]['occurrenceCount'] ?? null);
-        self::assertCount(2, $workouts[0]['workoutIds'] ?? []);
+        self::assertSame(3, $workouts[0]['occurrenceCount'] ?? null);
+        self::assertCount(3, $workouts[0]['workoutIds'] ?? []);
         self::assertSame(['competition_corner', 'crossfit_games'], $workouts[0]['sources'] ?? null);
-        self::assertCount(2, $workouts[0]['sourceReferences'] ?? []);
+        self::assertCount(3, $workouts[0]['sourceReferences'] ?? []);
         self::assertCount(2, $workouts[0]['competitionContexts'] ?? []);
         self::assertSame(['Canonical Games', 'Canonical Throwdown'], array_column($workouts[0]['competitionContexts'], 'competitionName'));
-        self::assertSame([['Elite Women'], ['RX Men']], array_column($workouts[0]['competitionContexts'], 'divisions'));
+        self::assertSame([['Elite Men', 'Elite Women'], ['RX Men']], array_column($workouts[0]['competitionContexts'], 'divisions'));
     }
 
     public function testWorkoutCatalogKeepsSameNameDifferentContentAsSeparateCanonicalWorkouts(): void

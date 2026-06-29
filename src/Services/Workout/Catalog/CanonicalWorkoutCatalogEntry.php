@@ -117,7 +117,8 @@ final readonly class CanonicalWorkoutCatalogEntry
      */
     public function competitionContexts(): array
     {
-        $contexts = [];
+        $contextsByKey = [];
+        $divisionsByKey = [];
         $seen = [];
 
         foreach ($this->occurrences as $workout) {
@@ -127,18 +128,27 @@ final readonly class CanonicalWorkoutCatalogEntry
                     $context['eventName'],
                     (string) ($context['eventOrder'] ?? ''),
                     $context['sourceName'],
-                    implode(',', $context['divisions']),
                 ]);
-                if (isset($seen[$key])) {
-                    continue;
+                if (!isset($seen[$key])) {
+                    $context['divisions'] = [];
+                    $contextsByKey[$key] = $context;
+                    $divisionsByKey[$key] = [];
+                    $seen[$key] = true;
                 }
 
-                $contexts[] = $context;
-                $seen[$key] = true;
+                foreach ($context['divisions'] as $division) {
+                    $divisionsByKey[$key][$division] = true;
+                }
             }
         }
 
-        return $contexts;
+        foreach ($contextsByKey as $key => $context) {
+            $divisions = array_keys($divisionsByKey[$key]);
+            sort($divisions, SORT_NATURAL | SORT_FLAG_CASE);
+            $contextsByKey[$key]['divisions'] = $divisions;
+        }
+
+        return array_values($contextsByKey);
     }
 
     /**
