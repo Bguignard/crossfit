@@ -128,7 +128,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
         $first = (new Workout(
             'Canonical duplicate API test',
-            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
             1,
             10,
             $workoutType,
@@ -138,8 +138,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setExternalId('canonical-duplicate-games')
             ->setSourceUrl('https://example.test/games');
         $second = (new Workout(
-            'Canonical duplicate API test',
-            "For time:\n\n21 15 9\nThrusters 95/65 lb\nPull Ups",
+            'Canonical duplicate API-test',
+            "For time:\nCanonical marker\n\n21 15 9\nThrusters 95/65 lb\nPull Ups",
             1,
             10,
             $workoutType,
@@ -150,7 +150,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setSourceUrl('https://example.test/corner');
         $third = (new Workout(
             'Canonical duplicate API test',
-            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
             1,
             10,
             $workoutType,
@@ -192,7 +192,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $entityManager->flush();
         $entityManager->clear();
 
-        $this->browser()->request('GET', '/api/workout-catalog?name=canonical%20duplicate%20api%20test&q=pull%20ups&itemsPerPage=1000');
+        $this->browser()->request('GET', '/api/workout-catalog?q=canonical%20marker&itemsPerPage=1000');
 
         self::assertResponseIsSuccessful();
 
@@ -202,7 +202,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['totalItems']);
         self::assertCount(1, $workouts);
         self::assertSame('Canonical duplicate API test', $workouts[0]['name'] ?? null);
-        self::assertStringContainsString('Pull Ups', $workouts[0]['flow'] ?? '');
+        self::assertStringContainsString('Canonical marker', $workouts[0]['flow'] ?? '');
         self::assertSame(['flow'], $workouts[0]['matchDetails']['query']['fields'] ?? null);
         self::assertSame(3, $workouts[0]['occurrenceCount'] ?? null);
         self::assertCount(3, $workouts[0]['workoutIds'] ?? []);
