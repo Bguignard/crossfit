@@ -103,7 +103,9 @@ final class CleanupPlaceholderWorkoutsCommand extends Command
                 ->andWhere('workout.sourceName IS NOT NULL')
                 ->setFirstResult($offset)
                 ->setMaxResults($batchSize)
-                ->orderBy('workout.createdAt', 'ASC');
+                ->orderBy('workout.createdAt', 'ASC')
+                ->addOrderBy('workout.externalId', 'ASC')
+                ->addOrderBy('workout.id', 'ASC');
 
             if ($source !== null) {
                 $queryBuilder
