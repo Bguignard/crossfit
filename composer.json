@@ -106,7 +106,8 @@
             "php -r \"is_dir('var/reports') || mkdir('var/reports', 0775, true);\"",
             "php -d memory_limit=1G bin/phpunit --log-junit var/reports/phpunit-junit.xml"
         ],
-        "test:profile:summary": "php scripts/summarize_phpunit_junit.php var/reports/phpunit-junit.xml"
+        "test:profile:summary": "php scripts/summarize_phpunit_junit.php var/reports/phpunit-junit.xml",
+        "test:profile:compare": "php scripts/summarize_phpunit_junit.php --compare"
     },
     "conflict": {
         "symfony/symfony": "*"
