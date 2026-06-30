@@ -282,6 +282,50 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotContains('Competition box jump over filter ambiguity test', $names);
     }
 
+    public function testWorkoutCatalogCanFilterCrossfitGamesSourceByDoubleUnderAliasInImportedFlow(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::AMRAP);
+        $doubleUnderWorkout = (new Workout(
+            '11.1 alias filter test',
+            "AMRAP 10 minutes\n30 Double-unders\n15 Power Snatches",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('crossfit_games')
+            ->setExternalId('open-11-1-alias-filter');
+        $unrelatedWorkout = (new Workout(
+            'CrossFit Games unrelated double filter test',
+            "AMRAP 10 minutes\n30 Dumbbell Snatches\n15 Burpees",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('crossfit_games')
+            ->setExternalId('open-unrelated-double-filter');
+
+        foreach ([$origin, $workoutType, $doubleUnderWorkout, $unrelatedWorkout] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', '/api/workout-catalog?sourceName=crossfit_games&movement=Double%20Under&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('11.1 alias filter test', $names);
+        self::assertNotContains('CrossFit Games unrelated double filter test', $names);
+    }
+
     public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
     {
         $entityManager = $this->getEntityManager();
