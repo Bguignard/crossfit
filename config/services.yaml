@@ -101,3 +101,8 @@ services:
 
     App\DataProvider\WorkoutGenerationPossibleMovementsProvider:
         tags: ['api_platform.collection_data_provider']
+
+    App\ApiPlatform\Extension\PublicWorkoutCatalogVisibilityExtension:
+        tags:
+            - { name: 'api_platform.doctrine.orm.query_extension.collection' }
+            - { name: 'api_platform.doctrine.orm.query_extension.item' }
