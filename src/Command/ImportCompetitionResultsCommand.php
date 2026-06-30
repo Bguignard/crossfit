@@ -261,6 +261,9 @@ class ImportCompetitionResultsCommand extends Command
         $workout
             ->setName($name)
             ->setFlow($flow)
+            ->setNormalizedName($this->stringOrNull($row['normalizedName'] ?? null))
+            ->setNormalizedFlow($this->stringOrNull($row['normalizedFlow'] ?? null))
+            ->setCanonicalFingerprint($this->stringOrNull($row['canonicalFingerprint'] ?? null))
             ->setTimeCap($this->intOrNull($row['timeCap'] ?? null))
             ->setWorkoutType($workoutType)
             ->setWorkoutOrigin($origin)
@@ -384,6 +387,7 @@ class ImportCompetitionResultsCommand extends Command
             ->setName($name)
             ->setEventOrder($this->intOrNull($row['eventOrder'] ?? null))
             ->setWorkout($workout)
+            ->setProvenances($this->arrayListOrNull($row['provenances'] ?? null))
             ->setSourceUrl($sourceUrl);
 
         return $status;
@@ -544,6 +548,25 @@ class ImportCompetitionResultsCommand extends Command
         }
 
         return [$sourceName, $externalId, $this->stringOrNull($row['source']['url'] ?? null)];
+    }
+
+    /**
+     * @return list<array<string, mixed>>|null
+     */
+    private function arrayListOrNull(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
     }
 
     /**

@@ -128,7 +128,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
         $first = (new Workout(
             'Canonical duplicate API test',
-            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
             1,
             10,
             $workoutType,
@@ -136,10 +136,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         ))
             ->setSourceName('crossfit_games')
             ->setExternalId('canonical-duplicate-games')
-            ->setSourceUrl('https://example.test/games');
+            ->setSourceUrl('https://example.test/games')
+            ->setCanonicalFingerprint('canonical-duplicate-api-fingerprint');
         $second = (new Workout(
             'Canonical duplicate API-test',
-            "For time:\nCanonical marker\n\n21 15 9\nThrusters 95/65 lb\nPull Ups",
+            "For time:\n\n21 15 9\nThrusters 95/65 lb\nPull Ups",
             1,
             10,
             $workoutType,
@@ -147,10 +148,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         ))
             ->setSourceName('competition_corner')
             ->setExternalId('canonical-duplicate-corner')
-            ->setSourceUrl('https://example.test/corner');
+            ->setSourceUrl('https://example.test/corner')
+            ->setCanonicalFingerprint('canonical-duplicate-api-fingerprint');
         $third = (new Workout(
             ' Canonical duplicate API test ',
-            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
             1,
             10,
             $workoutType,
@@ -158,7 +160,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         ))
             ->setSourceName('crossfit_games')
             ->setExternalId('canonical-duplicate-games-men')
-            ->setSourceUrl('https://example.test/games-men');
+            ->setSourceUrl('https://example.test/games-men')
+            ->setCanonicalFingerprint('canonical-duplicate-api-fingerprint');
         $athlete = new Athlete('Canonical Athlete', 'crossfit_games', 'canonical-athlete');
         $gamesCompetition = (new Competition('Canonical Games', 'crossfit_games', 'canonical-games'))
             ->setSeason(2026);
@@ -192,7 +195,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $entityManager->flush();
         $entityManager->clear();
 
-        $this->browser()->request('GET', '/api/workout-catalog?q=canonical%20marker&itemsPerPage=1000');
+        $this->browser()->request('GET', '/api/workout-catalog?q=pull%20ups&itemsPerPage=1000');
 
         self::assertResponseIsSuccessful();
 
@@ -201,9 +204,10 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertSame(1, $payload['totalItems']);
         self::assertCount(1, $workouts);
-        self::assertSame('Canonical duplicate API test', trim((string) ($workouts[0]['name'] ?? '')));
-        self::assertStringContainsString('Canonical marker', $workouts[0]['flow'] ?? '');
+        self::assertStringStartsWith('Canonical duplicate API', trim((string) ($workouts[0]['name'] ?? '')));
+        self::assertStringContainsString('Pull Ups', $workouts[0]['flow'] ?? '');
         self::assertSame(['flow'], $workouts[0]['matchDetails']['query']['fields'] ?? null);
+        self::assertSame('canonical-duplicate-api-fingerprint', $workouts[0]['canonicalFingerprint'] ?? null);
         self::assertSame(3, $workouts[0]['occurrenceCount'] ?? null);
         self::assertCount(3, $workouts[0]['workoutIds'] ?? []);
         self::assertSame(['competition_corner', 'crossfit_games'], $workouts[0]['sources'] ?? null);
@@ -485,6 +489,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                 'eventOrder' => 5,
                 'sourceName' => 'crossfit_games',
                 'divisions' => ['Women'],
+                'provenances' => [],
             ],
         ], $payload['competitionContexts']);
     }

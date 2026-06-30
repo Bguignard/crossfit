@@ -39,6 +39,11 @@ final class WorkoutCatalogCanonicalizer
 
     public function fingerprint(Workout $workout): string
     {
+        $importedFingerprint = $workout->getCanonicalFingerprint();
+        if ($importedFingerprint !== null && trim($importedFingerprint) !== '') {
+            return trim($importedFingerprint);
+        }
+
         return hash('sha256', implode('|', [
             $this->normalizeText((string) $workout->getName()),
             $this->normalizeText($workout->getFlow()),

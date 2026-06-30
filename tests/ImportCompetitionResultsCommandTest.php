@@ -78,7 +78,10 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                 [
                     'source' => ['externalId' => 'games-2024-event-1-women'],
                     'name' => 'Event 1',
+                    'normalizedName' => 'event 1',
                     'flow' => 'For time: run, swim, run.',
+                    'normalizedFlow' => 'for time run swim run',
+                    'canonicalFingerprint' => 'analyser-event-1-fingerprint',
                     'originName' => 'CrossFit Games',
                     'originYear' => 2024,
                 ],
@@ -139,6 +142,16 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'workoutSourceId' => 'games-2024-event-1-women',
                     'name' => 'Event 1',
                     'eventOrder' => 1,
+                    'provenances' => [
+                        [
+                            'sourceWorkoutId' => 'games-2024-event-1',
+                            'sourceWorkoutUrl' => 'https://example.test/workouts/event-1',
+                            'division' => 'Women',
+                            'divisionSourceId' => 'women',
+                            'format' => 'Individual',
+                            'formatSlug' => 'individual',
+                        ],
+                    ],
                 ],
             ],
             'results' => [
@@ -240,6 +253,33 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             self::assertSame('$25', $competition->getPriceLabel());
             self::assertSame(['sourceCategory' => 'Games'], $competition->getMetadata());
             self::assertSame('2026-05-17T10:30:00+00:00', $competition->getLastDiscoveredAt()?->format(DATE_ATOM));
+
+            /** @var Workout|null $workout */
+            $workout = $this->getRepository(Workout::class)->findOneBy([
+                'sourceName' => 'crossfit_games',
+                'externalId' => 'games-2024-event-1-women',
+            ]);
+            self::assertNotNull($workout);
+            self::assertSame('event 1', $workout->getNormalizedName());
+            self::assertSame('for time run swim run', $workout->getNormalizedFlow());
+            self::assertSame('analyser-event-1-fingerprint', $workout->getCanonicalFingerprint());
+
+            /** @var CompetitionEvent|null $event */
+            $event = $this->getRepository(CompetitionEvent::class)->findOneBy([
+                'sourceName' => 'crossfit_games',
+                'externalId' => 'games-2024-event-1-women',
+            ]);
+            self::assertNotNull($event);
+            self::assertSame([
+                [
+                    'sourceWorkoutId' => 'games-2024-event-1',
+                    'sourceWorkoutUrl' => 'https://example.test/workouts/event-1',
+                    'division' => 'Women',
+                    'divisionSourceId' => 'women',
+                    'format' => 'Individual',
+                    'formatSlug' => 'individual',
+                ],
+            ], $event->getProvenances());
         } finally {
             @unlink($file);
         }

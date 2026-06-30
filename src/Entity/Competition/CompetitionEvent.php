@@ -47,6 +47,9 @@ class CompetitionEvent
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $sourceUrl = null;
 
+    #[ORM\Column(type: 'json', nullable: true, options: ['jsonb' => true])]
+    private ?array $provenances = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -134,6 +137,25 @@ class CompetitionEvent
     public function setSourceUrl(?string $sourceUrl): self
     {
         $this->sourceUrl = $sourceUrl;
+        $this->touch();
+
+        return $this;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getProvenances(): array
+    {
+        return is_array($this->provenances) ? $this->provenances : [];
+    }
+
+    /**
+     * @param list<array<string, mixed>>|null $provenances
+     */
+    public function setProvenances(?array $provenances): self
+    {
+        $this->provenances = $provenances;
         $this->touch();
 
         return $this;
