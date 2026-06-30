@@ -394,7 +394,7 @@ final class WorkoutCatalogController extends AbstractController
         $patterns = [];
         foreach (array_values(array_unique($terms)) as $term) {
             foreach ($this->movementFlowLeftBoundaries() as $leftBoundary) {
-                foreach (["\n", "\r", ',', '.', ':', ';', ')'] as $rightBoundary) {
+                foreach (["\n", "\r", ',', '.', ':', ';', ')', ' ('] as $rightBoundary) {
                     $patterns[] = '%'.$leftBoundary.$term.$rightBoundary.'%';
                 }
             }

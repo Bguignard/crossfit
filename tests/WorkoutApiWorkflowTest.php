@@ -130,7 +130,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setSeason(2026);
         $publicWorkout = (new Workout(
             'Competition thruster filter test',
-            "For time:\n21 Thrusters\n21 Pull-Ups",
+            "For time:\n21 Thrusters (95/65 lb)\n21 Pull-Ups",
             1,
             10,
             $workoutType,
