@@ -6,6 +6,9 @@
 parameters:
     env(CHAT_GPT_API_KEY): ''
     env(OPENAI_MODEL): 'gpt-5.4-mini'
+    env(WORKOUT_AI_ANONYMOUS_DAILY_LIMIT): '5'
+    env(WORKOUT_AI_FREE_USER_DAILY_LIMIT): '10'
+    env(WORKOUT_AI_QUOTA_TIMEZONE): 'Europe/Paris'
     env(PYTHON_WORKER_TIMEOUT_SECONDS): '300'
     env(COMPETITION_GEOCODING_NOMINATIM_BASE_URL): 'https://nominatim.openstreetmap.org'
     env(COMPETITION_GEOCODING_USER_AGENT): 'MonWOD geocoder (https://www.monwod.fr)'
@@ -77,6 +80,16 @@ services:
     App\Services\Workout\WorkoutOriginServiceInterface:
         class: App\Services\Workout\WorkoutOriginService
         public: true
+
+    App\Services\Workout\AiGeneration\WorkoutAiGenerationActorResolver:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
+    App\Services\Workout\AiGeneration\WorkoutAiGenerationUsageTracker:
+        arguments:
+            $anonymousDailyLimit: '%env(int:WORKOUT_AI_ANONYMOUS_DAILY_LIMIT)%'
+            $freeUserDailyLimit: '%env(int:WORKOUT_AI_FREE_USER_DAILY_LIMIT)%'
+            $quotaTimezone: '%env(WORKOUT_AI_QUOTA_TIMEZONE)%'
 
     App\Services\PythonWorker\PythonWorkerClient:
         arguments:

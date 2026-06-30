@@ -32,6 +32,7 @@ use App\Entity\Workout\WorkoutMovementGenerationType;
 use App\Entity\Workout\WorkoutOrigin;
 use App\Entity\Workout\WorkoutOriginName;
 use App\Entity\Workout\WorkoutType;
+use App\Entity\WorkoutGeneration\WorkoutAiGenerationUsage;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Services\Workout\WorkoutCreatorServiceInterface;
 
@@ -1727,6 +1728,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             {
                 return [];
             }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
         });
 
         $this->browser()->request(
@@ -1818,6 +1824,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
                     ],
                 ];
             }
+
+            public function getLastAiUsage(): ?array
+            {
+                return [
+                    'request_type' => 'workout_generation_variants',
+                    'model' => 'gpt-5.4-mini',
+                    'prompt_tokens' => 800,
+                    'completion_tokens' => 200,
+                    'total_tokens' => 1000,
+                    'duration_ms' => 600,
+                    'status' => 'success',
+                    'estimated_cost_usd' => null,
+                ];
+            }
         });
 
         $this->browser()->request(
@@ -1872,6 +1892,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             {
                 return [];
             }
+
+            public function getLastAiUsage(): ?array
+            {
+                return [
+                    'request_type' => 'workout_generation',
+                    'model' => 'gpt-5.4-mini',
+                    'prompt_tokens' => 700,
+                    'completion_tokens' => 120,
+                    'total_tokens' => 820,
+                    'duration_ms' => 500,
+                    'status' => 'success',
+                    'estimated_cost_usd' => null,
+                ];
+            }
         });
 
         $this->browser()->request(
@@ -1908,6 +1942,112 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.', $payload['error']);
         $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
         self::assertSame(0, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
+        $usage = $this->getRepository(WorkoutAiGenerationUsage::class)->findOneBy(['endpoint' => WorkoutAiGenerationUsage::ENDPOINT_WORKOUT]);
+        self::assertInstanceOf(WorkoutAiGenerationUsage::class, $usage);
+        self::assertSame('failure', $usage->getStatus());
+        self::assertTrue($usage->isQuotaCounted());
+        self::assertSame(820, $usage->getTotalTokens());
+    }
+
+    public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void
+    {
+        $this->browser()->disableReboot();
+        $this->installSuccessfulWorkoutCreator();
+        $draft = $this->createWorkoutGenerationDraft('Anonymous quota WOD');
+
+        for ($i = 0; $i < 5; ++$i) {
+            $this->browser()->request(
+                'POST',
+                sprintf('/api/workout-generation-flow/%s/workout', $draft['id']),
+                [],
+                [],
+                ['HTTP_X_MONWOD_VISITOR_ID' => 'anonymous-quota-device']
+            );
+
+            self::assertResponseStatusCodeSame(201);
+        }
+
+        $this->browser()->request(
+            'POST',
+            sprintf('/api/workout-generation-flow/%s/workout', $draft['id']),
+            [],
+            [],
+            ['HTTP_X_MONWOD_VISITOR_ID' => 'anonymous-quota-device']
+        );
+
+        self::assertResponseStatusCodeSame(429);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('workout_generation_quota_reached', $payload['code']);
+        self::assertSame(5, $payload['quota']['limit']);
+        self::assertSame(5, $payload['quota']['used']);
+        self::assertSame(0, $payload['quota']['remaining']);
+        self::assertFalse($payload['quota']['isAllowed']);
+        self::assertSame(5, $this->getRepository(WorkoutAiGenerationUsage::class)->count(['endpoint' => WorkoutAiGenerationUsage::ENDPOINT_WORKOUT]));
+
+        $this->browser()->request(
+            'GET',
+            '/api/workout-generation-flow/quota',
+            [],
+            [],
+            ['HTTP_X_MONWOD_VISITOR_ID' => 'anonymous-quota-device']
+        );
+
+        self::assertResponseIsSuccessful();
+        $quotaPayload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('Europe/Paris', $quotaPayload['timezone']);
+        self::assertSame(5, $quotaPayload['quota']['limit']);
+        self::assertSame(5, $quotaPayload['quota']['used']);
+        self::assertSame(0, $quotaPayload['quota']['remaining']);
+    }
+
+    public function testLoggedInFreeUserWorkoutGenerationQuotaAllowsTenPerDayAndThenReturns429(): void
+    {
+        $this->browser()->disableReboot();
+        $this->installSuccessfulWorkoutCreator();
+        $user = (new User('quota-user@example.com'))->setPassword('test-password');
+        $this->getEntityManager()->persist($user);
+        $this->getEntityManager()->flush();
+        $this->browser()->loginUser($user);
+        $draft = $this->createWorkoutGenerationDraft('User quota WOD');
+
+        for ($i = 0; $i < 10; ++$i) {
+            $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+            self::assertResponseStatusCodeSame(201);
+        }
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(429);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(10, $payload['quota']['limit']);
+        self::assertSame(10, $payload['quota']['used']);
+        self::assertSame(0, $payload['quota']['remaining']);
+        self::assertSame(10, $this->getRepository(WorkoutAiGenerationUsage::class)->count(['user' => $user]));
+    }
+
+    public function testAdminWorkoutGenerationQuotaIsUnlimited(): void
+    {
+        $this->browser()->disableReboot();
+        $this->installSuccessfulWorkoutCreator();
+        $admin = (new User('quota-admin@example.com'))
+            ->setPassword('test-password')
+            ->setRoles(['ROLE_ADMIN']);
+        $this->getEntityManager()->persist($admin);
+        $this->getEntityManager()->flush();
+        $this->browser()->loginUser($admin);
+        $draft = $this->createWorkoutGenerationDraft('Admin quota WOD');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(201);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertNull($payload['quota']['limit']);
+        self::assertNull($payload['quota']['remaining']);
+        self::assertTrue($payload['quota']['isAllowed']);
+        $usage = $this->getRepository(WorkoutAiGenerationUsage::class)->findOneBy(['user' => $admin]);
+        self::assertInstanceOf(WorkoutAiGenerationUsage::class, $usage);
+        self::assertSame(WorkoutAiGenerationUsage::ACTOR_ADMIN, $usage->getActorType());
     }
 
     public function testWorkoutGenerationMatchesCatalogFiltersByNameWhenCatalogRowsAreDuplicated(): void
@@ -1961,5 +2101,83 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertContains('Deadlift', $movementNames);
         self::assertContains('Run', $movementNames);
+    }
+
+    private function installSuccessfulWorkoutCreator(): void
+    {
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            private ?array $lastUsage = null;
+
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                $this->lastUsage = [
+                    'request_type' => 'workout_generation',
+                    'model' => 'gpt-5.4-mini',
+                    'prompt_tokens' => 1000,
+                    'completion_tokens' => 250,
+                    'total_tokens' => 1250,
+                    'duration_ms' => 700,
+                    'status' => 'success',
+                    'estimated_cost_usd' => null,
+                ];
+
+                return (new Workout(
+                    $workoutGeneration->getName(),
+                    'Generated quota flow',
+                    $workoutGeneration->getNumberOfRounds(),
+                    $workoutGeneration->getTimeCap(),
+                    $workoutGeneration->getWorkoutType(),
+                    new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), 2026),
+                    $workoutGeneration->getAvailableImplements()->toArray(),
+                    $workoutGeneration->getMandatoryMovements()->toArray(),
+                ))
+                    ->setWorkoutGeneration($workoutGeneration)
+                    ->setAiUsage($this->lastUsage);
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return $this->lastUsage;
+            }
+        });
+    }
+
+    /**
+     * @return array{id: string}
+     */
+    private function createWorkoutGenerationDraft(string $name): array
+    {
+        $this->browser()->request(
+            'POST',
+            '/api/workout-generation-flow',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'name' => $name,
+                'timeCap' => 15,
+                'movementGenerationType' => 'selected movements',
+                'workoutType' => 'AMRAP',
+                'numberOfRounds' => 1,
+                'movementTypes' => ['Weightlifting'],
+                'isTeamWorkout' => false,
+                'movementDifficulty' => 'Intermediate',
+                'mandatoryBodyParts' => [],
+                'availableImplements' => ['barbell'],
+                'numberOfDifferentMovements' => 1,
+                'bannedMovements' => [],
+                'mandatoryMovements' => [],
+                'intervalsTime' => null,
+                'intervalsRestTime' => null,
+            ], JSON_THROW_ON_ERROR)
+        );
+        self::assertResponseStatusCodeSame(201);
+
+        return json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
     }
 }
