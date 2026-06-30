@@ -121,6 +121,56 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
     }
 
+    public function testWorkoutCatalogCanFilterCompetitionSourceByMovementInImportedFlow(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $competition = (new Competition('Thruster Competition', 'competition_corner', 'thruster-competition'))
+            ->setSeason(2026);
+        $publicWorkout = (new Workout(
+            'Competition thruster filter test',
+            "For time:\n21 Thrusters\n21 Pull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-thruster-filter-public');
+        $publicEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'thruster-competition-workout-1'))
+            ->setWorkout($publicWorkout);
+        $auditWorkout = (new Workout(
+            'Audit competition thruster filter test',
+            "For time:\n21 Thrusters",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('monwod_audit')
+            ->setExternalId('competition-thruster-filter-audit');
+        $auditEvent = (new CompetitionEvent($competition, 'Audit Workout', 'monwod_audit', 'thruster-competition-audit-workout'))
+            ->setWorkout($auditWorkout);
+
+        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $publicEvent, $auditEvent] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', '/api/workout-catalog?source=competition&movement=thruster&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Competition thruster filter test', $names);
+        self::assertNotContains('Audit competition thruster filter test', $names);
+    }
+
     public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
     {
         $entityManager = $this->getEntityManager();

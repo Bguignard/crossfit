@@ -310,7 +310,9 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         if ($filters['sourceName'] !== null) {
-            if ($filters['sourceName'] === 'monwod_catalog') {
+            if ($this->isCompetitionSourceAlias($filters['sourceName'])) {
+                $queryBuilder->innerJoin('workout.competitionEvents', 'sourceCompetitionEvent');
+            } elseif ($filters['sourceName'] === 'monwod_catalog') {
                 $queryBuilder
                     ->innerJoin('workout.workoutOrigin', 'sourceWorkoutOrigin')
                     ->innerJoin('sourceWorkoutOrigin.name', 'sourceWorkoutOriginName')
@@ -328,10 +330,13 @@ final class WorkoutCatalogController extends AbstractController
 
         foreach ($filters['movementNames'] as $index => $movementName) {
             $alias = sprintf('movement%d', $index);
+            $parameterName = sprintf('movementName%d', $index);
+            $flowParameterName = sprintf('movementFlow%d', $index);
             $queryBuilder
-                ->innerJoin('workout.movements', $alias)
-                ->andWhere(sprintf('LOWER(%s.name) = :movementName%d', $alias, $index))
-                ->setParameter(sprintf('movementName%d', $index), $movementName);
+                ->leftJoin('workout.movements', $alias)
+                ->andWhere(sprintf('(LOWER(%s.name) = :%s OR LOWER(workout.flow) LIKE :%s)', $alias, $parameterName, $flowParameterName))
+                ->setParameter($parameterName, $movementName)
+                ->setParameter($flowParameterName, '%'.$movementName.'%');
         }
 
         foreach ($filters['implementNames'] as $index => $implementName) {
@@ -343,6 +348,11 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         return $queryBuilder;
+    }
+
+    private function isCompetitionSourceAlias(string $sourceName): bool
+    {
+        return in_array($sourceName, ['competition', 'competitions'], true);
     }
 
     /**
@@ -369,7 +379,8 @@ final class WorkoutCatalogController extends AbstractController
             'timeCap' => $this->nullablePositiveInt($request->query->get('timeCap')),
             'timeCapMin' => $this->nullablePositiveInt($request->query->get('timeCapMin')),
             'timeCapMax' => $this->nullablePositiveInt($request->query->get('timeCapMax')),
-            'sourceName' => $this->normalizedString($request->query->get('sourceName')),
+            'sourceName' => $this->normalizedString($request->query->get('sourceName'))
+                ?? $this->normalizedString($request->query->get('source')),
             'movementNames' => $this->queryStringList($request, 'movements.name', 'movement'),
             'implementNames' => $this->queryStringList($request, 'implements.name', 'implement'),
         ];
