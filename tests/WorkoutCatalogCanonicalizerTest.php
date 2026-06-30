@@ -72,6 +72,27 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         self::assertSame(2, $entries[0]->occurrenceCount());
     }
 
+    public function testFingerprintFromPartsMatchesEntityFingerprint(): void
+    {
+        $workout = $this->workout(
+            'Fran',
+            "For time:\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+        );
+        $canonicalizer = new WorkoutCatalogCanonicalizer();
+
+        self::assertSame(
+            $canonicalizer->fingerprint($workout),
+            $canonicalizer->fingerprintFromParts(
+                $workout->getCanonicalFingerprint(),
+                $workout->getName(),
+                $workout->getFlow(),
+                $workout->getWorkoutType()?->getName(),
+                $workout->getNumberOfRounds(),
+                $workout->getTimeCap(),
+            ),
+        );
+    }
+
     public function testCanonicalEntryMergesDivisionsForSameCompetitionContext(): void
     {
         $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
