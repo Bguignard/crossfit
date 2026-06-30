@@ -349,10 +349,15 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
     private function workoutKeySql(bool $deduplicateCanonical, string $workoutAlias): string
     {
         if (!$deduplicateCanonical) {
-            return sprintf('%s.id::TEXT', $workoutAlias);
+            return sprintf('CONCAT(\'workout:\', %s.id::TEXT)', $workoutAlias);
         }
 
-        return sprintf('COALESCE(NULLIF(%s.canonical_fingerprint, \'\'), %s.id::TEXT)', $workoutAlias, $workoutAlias);
+        return sprintf(
+            'CASE WHEN NULLIF(%s.canonical_fingerprint, \'\') IS NOT NULL THEN CONCAT(\'fingerprint:\', %s.canonical_fingerprint) ELSE CONCAT(\'workout:\', %s.id::TEXT) END',
+            $workoutAlias,
+            $workoutAlias,
+            $workoutAlias,
+        );
     }
 
     /**

@@ -69,9 +69,9 @@ final class AuditCompetitionMovementFrequenciesCommandTest extends TestCase
         $workoutKeySql = new \ReflectionMethod($command, 'workoutKeySql');
         $workoutKeySql->setAccessible(true);
 
-        self::assertSame('w.id::TEXT', $workoutKeySql->invoke($command, false, 'w'));
+        self::assertSame('CONCAT(\'workout:\', w.id::TEXT)', $workoutKeySql->invoke($command, false, 'w'));
         self::assertSame(
-            'COALESCE(NULLIF(w.canonical_fingerprint, \'\'), w.id::TEXT)',
+            'CASE WHEN NULLIF(w.canonical_fingerprint, \'\') IS NOT NULL THEN CONCAT(\'fingerprint:\', w.canonical_fingerprint) ELSE CONCAT(\'workout:\', w.id::TEXT) END',
             $workoutKeySql->invoke($command, true, 'w'),
         );
     }
