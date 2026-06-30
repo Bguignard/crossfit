@@ -13,4 +13,9 @@ interface WorkoutCreatorServiceInterface
      * @return list<array{title: string, intent: string, format: string, movementNames: list<string>, summary: string}>
      */
     public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getLastAiUsage(): ?array;
 }

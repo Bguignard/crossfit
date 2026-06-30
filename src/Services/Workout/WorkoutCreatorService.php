@@ -403,6 +403,14 @@ EOD;
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function getLastAiUsage(): ?array
+    {
+        return $this->lastOpenAiUsage();
+    }
+
+    /**
      * @param Movement[] $movements
      */
     private function formatMovementPromptSection(array $movements): string
