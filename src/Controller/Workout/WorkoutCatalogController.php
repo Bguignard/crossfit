@@ -382,7 +382,7 @@ final class WorkoutCatalogController extends AbstractController
      */
     private function movementFlowFallbackPatterns(string $movementName): array
     {
-        if (str_contains($movementName, ' ') || in_array($movementName, self::AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS, true)) {
+        if (in_array($movementName, self::AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS, true)) {
             return [];
         }
 
@@ -393,12 +393,41 @@ final class WorkoutCatalogController extends AbstractController
 
         $patterns = [];
         foreach (array_values(array_unique($terms)) as $term) {
-            foreach ([' ', "\n", "\r", ',', '.', ':', ';', ')'] as $rightBoundary) {
-                $patterns[] = '% '.$term.$rightBoundary.'%';
+            foreach ($this->movementFlowLeftBoundaries() as $leftBoundary) {
+                foreach (["\n", "\r", ',', '.', ':', ';', ')'] as $rightBoundary) {
+                    $patterns[] = '%'.$leftBoundary.$term.$rightBoundary.'%';
+                }
             }
         }
 
         return array_values(array_unique($patterns));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementFlowLeftBoundaries(): array
+    {
+        return [
+            "\n",
+            "\r",
+            '(',
+            '[',
+            ': ',
+            '; ',
+            ', ',
+            '. ',
+            '0 ',
+            '1 ',
+            '2 ',
+            '3 ',
+            '4 ',
+            '5 ',
+            '6 ',
+            '7 ',
+            '8 ',
+            '9 ',
+        ];
     }
 
     /**
