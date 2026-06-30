@@ -328,6 +328,19 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setBannedMovements([])
             ->setMandatoryMovements([])
             ->setIsTeamWorkout(false);
+        $latestGeneration = (new WorkoutGeneration())
+            ->setName('Latest Strength')
+            ->setTimeCap(12)
+            ->setNumberOfDifferentMovements(1)
+            ->setWorkoutType($workoutType)
+            ->setMovementDifficulty($difficulty)
+            ->setMovementGenerationType($movementGenerationType)
+            ->setMovementTypes([])
+            ->setAvailableImplements([])
+            ->setMandatoryBodyParts([])
+            ->setBannedMovements([])
+            ->setMandatoryMovements([])
+            ->setIsTeamWorkout(false);
         $auditWorkout = (new Workout(
             'Audit post-fix - Strength',
             "For quality:\n5 Back Squats",
@@ -344,6 +357,14 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             $workoutType,
             $origin,
         ))->setWorkoutGeneration($publicGeneration);
+        $latestWorkout = (new Workout(
+            'Latest Strength',
+            "For quality:\n5 Back Squats",
+            5,
+            12,
+            $workoutType,
+            $origin,
+        ))->setWorkoutGeneration($latestGeneration);
         $internalSourceWorkout = (new Workout(
             'Internal source catalogue check',
             "For time:\n10 Burpees",
@@ -353,7 +374,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             $origin,
         ))->setSourceName('monwod_audit');
 
-        foreach ([$origin, $workoutType, $difficulty, $movementGenerationType, $auditGeneration, $publicGeneration, $auditWorkout, $publicWorkout, $internalSourceWorkout] as $entity) {
+        foreach ([$origin, $workoutType, $difficulty, $movementGenerationType, $auditGeneration, $publicGeneration, $latestGeneration, $auditWorkout, $publicWorkout, $latestWorkout, $internalSourceWorkout] as $entity) {
             $entityManager->persist($entity);
         }
         $entityManager->flush();
@@ -368,6 +389,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
 
         self::assertContains('Visible Strength', $names);
+        self::assertContains('Latest Strength', $names);
         self::assertNotContains('Audit post-fix - Strength', $names);
 
         $this->browser()->request('GET', '/api/workout-catalog?name=internal%20source%20catalogue%20check&includeDuplicates=true&itemsPerPage=1000');

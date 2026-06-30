@@ -21,10 +21,10 @@ final class PublicWorkoutCatalogVisibility
     ];
 
     private const INTERNAL_GENERATION_MARKERS = [
-        '%audit%',
-        '%diagnostic%',
-        '%sample%',
-        '%test%',
+        'audit',
+        'diagnostic',
+        'sample',
+        'test',
     ];
 
     public function applyPublicConstraint(
@@ -39,11 +39,15 @@ final class PublicWorkoutCatalogVisibility
             ->setParameter(sprintf('%sPrivateSourceNames', $parameterPrefix), self::PRIVATE_SOURCE_NAMES);
 
         $markerConditions = [];
-        foreach (self::INTERNAL_GENERATION_MARKERS as $index => $marker) {
-            $parameterName = sprintf('%sInternalMarker%d', $parameterPrefix, $index);
-            $markerConditions[] = sprintf('LOWER(%s.name) NOT LIKE :%s', $workoutAlias, $parameterName);
-            $markerConditions[] = sprintf('LOWER(%s.name) NOT LIKE :%s', $generationAlias, $parameterName);
-            $queryBuilder->setParameter($parameterName, $marker);
+        $patternIndex = 0;
+        foreach (self::INTERNAL_GENERATION_MARKERS as $marker) {
+            foreach ($this->markerLikePatterns($marker) as $pattern) {
+                $parameterName = sprintf('%sInternalMarker%d', $parameterPrefix, $patternIndex);
+                $markerConditions[] = sprintf('LOWER(%s.name) NOT LIKE :%s', $workoutAlias, $parameterName);
+                $markerConditions[] = sprintf('LOWER(%s.name) NOT LIKE :%s', $generationAlias, $parameterName);
+                $queryBuilder->setParameter($parameterName, $pattern);
+                ++$patternIndex;
+            }
         }
 
         $queryBuilder->andWhere(sprintf(
@@ -51,5 +55,26 @@ final class PublicWorkoutCatalogVisibility
             $generationAlias,
             implode(' AND ', $markerConditions),
         ));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function markerLikePatterns(string $marker): array
+    {
+        return [
+            $marker,
+            $marker.' %',
+            $marker.'-%',
+            $marker.':%',
+            '% '.$marker,
+            '% '.$marker.' %',
+            '% '.$marker.'-%',
+            '% '.$marker.':%',
+            '%-'.$marker,
+            '%-'.$marker.' %',
+            '%-'.$marker.'-%',
+            '%-'.$marker.':%',
+        ];
     }
 }
