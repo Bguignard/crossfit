@@ -24,6 +24,13 @@ final class WorkoutCatalogController extends AbstractController
     private const DEFAULT_PAGE_SIZE = 25;
     private const MAX_PAGE_SIZE = 50;
     private const CANONICAL_SCAN_BATCH_SIZE = 200;
+    private const AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS = [
+        'clean',
+        'jerk',
+        'press',
+        'snatch',
+        'squat',
+    ];
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -310,7 +317,9 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         if ($filters['sourceName'] !== null) {
-            if ($filters['sourceName'] === 'monwod_catalog') {
+            if ($this->isCompetitionSourceAlias($filters['sourceName'])) {
+                $queryBuilder->innerJoin('workout.competitionEvents', 'sourceCompetitionEvent');
+            } elseif ($filters['sourceName'] === 'monwod_catalog') {
                 $queryBuilder
                     ->innerJoin('workout.workoutOrigin', 'sourceWorkoutOrigin')
                     ->innerJoin('sourceWorkoutOrigin.name', 'sourceWorkoutOriginName')
@@ -328,10 +337,25 @@ final class WorkoutCatalogController extends AbstractController
 
         foreach ($filters['movementNames'] as $index => $movementName) {
             $alias = sprintf('movement%d', $index);
+            $parameterName = sprintf('movementName%d', $index);
+            $flowConditions = [];
             $queryBuilder
-                ->innerJoin('workout.movements', $alias)
-                ->andWhere(sprintf('LOWER(%s.name) = :movementName%d', $alias, $index))
-                ->setParameter(sprintf('movementName%d', $index), $movementName);
+                ->leftJoin('workout.movements', $alias)
+                ->setParameter($parameterName, $movementName);
+
+            foreach ($this->movementFlowFallbackPatterns($movementName) as $patternIndex => $pattern) {
+                $flowParameterName = sprintf('movementFlow%d_%d', $index, $patternIndex);
+                $flowConditions[] = sprintf('LOWER(CONCAT(CONCAT(\' \', workout.flow), \' \')) LIKE :%s', $flowParameterName);
+                $queryBuilder->setParameter($flowParameterName, $pattern);
+            }
+
+            if ($flowConditions === []) {
+                $queryBuilder->andWhere(sprintf('LOWER(%s.name) = :%s', $alias, $parameterName));
+
+                continue;
+            }
+
+            $queryBuilder->andWhere(sprintf('(LOWER(%s.name) = :%s OR (workout.movements IS EMPTY AND (%s)))', $alias, $parameterName, implode(' OR ', $flowConditions)));
         }
 
         foreach ($filters['implementNames'] as $index => $implementName) {
@@ -343,6 +367,67 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         return $queryBuilder;
+    }
+
+    private function isCompetitionSourceAlias(string $sourceName): bool
+    {
+        return in_array($sourceName, ['competition', 'competitions'], true);
+    }
+
+    /**
+     * Imported competition workouts may not have structured movements yet. Use
+     * bounded flow patterns only as a fallback for those flow-only workouts.
+     *
+     * @return list<string>
+     */
+    private function movementFlowFallbackPatterns(string $movementName): array
+    {
+        if (in_array($movementName, self::AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS, true)) {
+            return [];
+        }
+
+        $terms = [$movementName];
+        if (!str_ends_with($movementName, 's')) {
+            $terms[] = $movementName.'s';
+        }
+
+        $patterns = [];
+        foreach (array_values(array_unique($terms)) as $term) {
+            foreach ($this->movementFlowLeftBoundaries() as $leftBoundary) {
+                foreach (["\n", "\r", ',', '.', ':', ';', ')', ' ('] as $rightBoundary) {
+                    $patterns[] = '%'.$leftBoundary.$term.$rightBoundary.'%';
+                }
+            }
+        }
+
+        return array_values(array_unique($patterns));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementFlowLeftBoundaries(): array
+    {
+        return [
+            "\n",
+            "\r",
+            '(',
+            '[',
+            ': ',
+            '; ',
+            ', ',
+            '. ',
+            '0 ',
+            '1 ',
+            '2 ',
+            '3 ',
+            '4 ',
+            '5 ',
+            '6 ',
+            '7 ',
+            '8 ',
+            '9 ',
+        ];
     }
 
     /**
@@ -369,7 +454,8 @@ final class WorkoutCatalogController extends AbstractController
             'timeCap' => $this->nullablePositiveInt($request->query->get('timeCap')),
             'timeCapMin' => $this->nullablePositiveInt($request->query->get('timeCapMin')),
             'timeCapMax' => $this->nullablePositiveInt($request->query->get('timeCapMax')),
-            'sourceName' => $this->normalizedString($request->query->get('sourceName')),
+            'sourceName' => $this->normalizedString($request->query->get('sourceName'))
+                ?? $this->normalizedString($request->query->get('source')),
             'movementNames' => $this->queryStringList($request, 'movements.name', 'movement'),
             'implementNames' => $this->queryStringList($request, 'implements.name', 'implement'),
         ];

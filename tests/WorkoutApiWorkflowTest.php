@@ -121,6 +121,113 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
     }
 
+    public function testWorkoutCatalogCanFilterCompetitionSourceByMovementInImportedFlow(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $competition = (new Competition('Thruster Competition', 'competition_corner', 'thruster-competition'))
+            ->setSeason(2026);
+        $publicWorkout = (new Workout(
+            'Competition thruster filter test',
+            "For time:\n21 Thrusters (95/65 lb)\n21 Pull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-thruster-filter-public');
+        $publicEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'thruster-competition-workout-1'))
+            ->setWorkout($publicWorkout);
+        $auditWorkout = (new Workout(
+            'Audit competition thruster filter test',
+            "For time:\n21 Thrusters",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('monwod_audit')
+            ->setExternalId('competition-thruster-filter-audit');
+        $auditEvent = (new CompetitionEvent($competition, 'Audit Workout', 'monwod_audit', 'thruster-competition-audit-workout'))
+            ->setWorkout($auditWorkout);
+        $hangPowerCleanWorkout = (new Workout(
+            'Competition hang power clean filter ambiguity test',
+            "For time:\n21 Hang Power Cleans",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-hang-power-clean-filter');
+        $hangPowerCleanEvent = (new CompetitionEvent($competition, 'Workout 2', 'competition_corner', 'thruster-competition-workout-2'))
+            ->setWorkout($hangPowerCleanWorkout);
+        $boxJumpWorkout = (new Workout(
+            'Competition box jump filter test',
+            "For time:\n21 Box Jumps\n21 Sit-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-box-jump-filter');
+        $boxJumpEvent = (new CompetitionEvent($competition, 'Workout 3', 'competition_corner', 'thruster-competition-workout-3'))
+            ->setWorkout($boxJumpWorkout);
+        $boxJumpOverWorkout = (new Workout(
+            'Competition box jump over filter ambiguity test',
+            "For time:\n21 Box Jumps Over\n21 Sit-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-box-jump-over-filter');
+        $boxJumpOverEvent = (new CompetitionEvent($competition, 'Workout 4', 'competition_corner', 'thruster-competition-workout-4'))
+            ->setWorkout($boxJumpOverWorkout);
+
+        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $hangPowerCleanWorkout, $boxJumpWorkout, $boxJumpOverWorkout, $publicEvent, $auditEvent, $hangPowerCleanEvent, $boxJumpEvent, $boxJumpOverEvent] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', '/api/workout-catalog?source=competition&movement=thruster&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Competition thruster filter test', $names);
+        self::assertNotContains('Audit competition thruster filter test', $names);
+
+        $this->browser()->request('GET', '/api/workout-catalog?source=competition&movement=clean&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertNotContains('Competition hang power clean filter ambiguity test', $names);
+
+        $this->browser()->request('GET', '/api/workout-catalog?source=competition&movement=box%20jump&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Competition box jump filter test', $names);
+        self::assertNotContains('Competition box jump over filter ambiguity test', $names);
+    }
+
     public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
     {
         $entityManager = $this->getEntityManager();
