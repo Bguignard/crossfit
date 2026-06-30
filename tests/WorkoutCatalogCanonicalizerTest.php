@@ -131,6 +131,33 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         ], $contexts[0]['provenances']);
     }
 
+    public function testWorkoutCompetitionContextsMergeProvenancesWhenEventsDeduplicate(): void
+    {
+        $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
+            ->setSeason(2026);
+        $firstEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-women'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ]);
+        $secondEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-men'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+            ]);
+
+        $workout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $this->attachCompetitionEvents($workout, [$firstEvent, $secondEvent]);
+
+        $contexts = $workout->getCompetitionContexts();
+
+        self::assertCount(1, $contexts);
+        self::assertSame([
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+        ], $contexts[0]['provenances']);
+    }
+
     private function workout(
         string $name,
         string $flow,

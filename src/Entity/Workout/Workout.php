@@ -377,7 +377,13 @@ class Workout
 
             if (!isset($seen[$key])) {
                 $contexts[] = $context;
-                $seen[$key] = true;
+                $seen[$key] = count($contexts) - 1;
+            } else {
+                $contextIndex = $seen[$key];
+                $contexts[$contextIndex]['provenances'] = self::mergeProvenances(
+                    $contexts[$contextIndex]['provenances'],
+                    $context['provenances'],
+                );
             }
         }
 
@@ -396,6 +402,30 @@ class Workout
         });
 
         return $contexts;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $current
+     * @param list<array<string, mixed>> $additional
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function mergeProvenances(array $current, array $additional): array
+    {
+        $merged = [];
+        $seen = [];
+
+        foreach (array_merge($current, $additional) as $provenance) {
+            $key = json_encode($provenance, JSON_THROW_ON_ERROR);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $merged[] = $provenance;
+            $seen[$key] = true;
+        }
+
+        return $merged;
     }
 
     public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): static
