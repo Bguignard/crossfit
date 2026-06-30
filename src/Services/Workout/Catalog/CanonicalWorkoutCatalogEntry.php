@@ -112,18 +112,22 @@ final readonly class CanonicalWorkoutCatalogEntry
      *     eventName: string,
      *     eventOrder: int|null,
      *     sourceName: string,
-     *     divisions: list<string>
+     *     divisions: list<string>,
+     *     provenances: list<array<string, mixed>>
      * }>
      */
     public function competitionContexts(): array
     {
         $contextsByKey = [];
         $divisionsByKey = [];
+        $provenancesByKey = [];
         $seen = [];
+        $seenProvenances = [];
 
         foreach ($this->occurrences as $workout) {
             foreach ($workout->getCompetitionContexts() as $context) {
                 $contextDivisions = $context['divisions'];
+                $contextProvenances = $context['provenances'];
                 $key = implode('|', [
                     $context['competitionId'],
                     $context['eventName'],
@@ -132,13 +136,26 @@ final readonly class CanonicalWorkoutCatalogEntry
                 ]);
                 if (!isset($seen[$key])) {
                     $context['divisions'] = [];
+                    $context['provenances'] = [];
                     $contextsByKey[$key] = $context;
                     $divisionsByKey[$key] = [];
+                    $provenancesByKey[$key] = [];
+                    $seenProvenances[$key] = [];
                     $seen[$key] = true;
                 }
 
                 foreach ($contextDivisions as $division) {
                     $divisionsByKey[$key][$division] = true;
+                }
+
+                foreach ($contextProvenances as $provenance) {
+                    $provenanceKey = json_encode($provenance, JSON_THROW_ON_ERROR);
+                    if (isset($seenProvenances[$key][$provenanceKey])) {
+                        continue;
+                    }
+
+                    $provenancesByKey[$key][] = $provenance;
+                    $seenProvenances[$key][$provenanceKey] = true;
                 }
             }
         }
@@ -147,6 +164,7 @@ final readonly class CanonicalWorkoutCatalogEntry
             $divisions = array_keys($divisionsByKey[$key]);
             sort($divisions, SORT_NATURAL | SORT_FLAG_CASE);
             $contextsByKey[$key]['divisions'] = $divisions;
+            $contextsByKey[$key]['provenances'] = $provenancesByKey[$key];
         }
 
         return array_values($contextsByKey);

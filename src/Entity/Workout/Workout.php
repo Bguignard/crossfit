@@ -18,6 +18,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: WorkoutRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_WORKOUT_SOURCE_EXTERNAL', columns: ['source_name', 'external_id'])]
+#[ORM\Index(name: 'IDX_WORKOUT_CANONICAL_FINGERPRINT', columns: ['canonical_fingerprint'])]
 #[ApiResource(operations: [new Get(), new GetCollection()])]
 #[ApiFilter(SearchFilter::class, properties: [
     'name' => 'ipartial',
@@ -43,6 +44,15 @@ class Workout
 
     #[ORM\Column(type: 'text')]
     private string $flow;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $normalizedName = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $normalizedFlow = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $canonicalFingerprint = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $timeCap; // time cap in minutes
@@ -136,6 +146,42 @@ class Workout
     public function setFlow(string $flow): static
     {
         $this->flow = $flow;
+
+        return $this;
+    }
+
+    public function getNormalizedName(): ?string
+    {
+        return $this->normalizedName;
+    }
+
+    public function setNormalizedName(?string $normalizedName): static
+    {
+        $this->normalizedName = $normalizedName;
+
+        return $this;
+    }
+
+    public function getNormalizedFlow(): ?string
+    {
+        return $this->normalizedFlow;
+    }
+
+    public function setNormalizedFlow(?string $normalizedFlow): static
+    {
+        $this->normalizedFlow = $normalizedFlow;
+
+        return $this;
+    }
+
+    public function getCanonicalFingerprint(): ?string
+    {
+        return $this->canonicalFingerprint;
+    }
+
+    public function setCanonicalFingerprint(?string $canonicalFingerprint): static
+    {
+        $this->canonicalFingerprint = $canonicalFingerprint;
 
         return $this;
     }
@@ -285,7 +331,8 @@ class Workout
      *     eventName: string,
      *     eventOrder: int|null,
      *     sourceName: string,
-     *     divisions: list<string>
+     *     divisions: list<string>,
+     *     provenances: list<array<string, mixed>>
      * }>
      */
     public function getCompetitionContexts(): array
@@ -317,6 +364,7 @@ class Workout
                 'eventOrder' => $event->getEventOrder(),
                 'sourceName' => $event->getSourceName(),
                 'divisions' => $divisionNames,
+                'provenances' => $event->getProvenances(),
             ];
             $key = implode('|', [
                 $context['competitionName'],
@@ -329,7 +377,13 @@ class Workout
 
             if (!isset($seen[$key])) {
                 $contexts[] = $context;
-                $seen[$key] = true;
+                $seen[$key] = count($contexts) - 1;
+            } else {
+                $contextIndex = $seen[$key];
+                $contexts[$contextIndex]['provenances'] = self::mergeProvenances(
+                    $contexts[$contextIndex]['provenances'],
+                    $context['provenances'],
+                );
             }
         }
 
@@ -348,6 +402,30 @@ class Workout
         });
 
         return $contexts;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $current
+     * @param list<array<string, mixed>> $additional
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function mergeProvenances(array $current, array $additional): array
+    {
+        $merged = [];
+        $seen = [];
+
+        foreach (array_merge($current, $additional) as $provenance) {
+            $key = json_encode($provenance, JSON_THROW_ON_ERROR);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $merged[] = $provenance;
+            $seen[$key] = true;
+        }
+
+        return $merged;
     }
 
     public function setWorkoutGeneration(?WorkoutGeneration $workoutGeneration): static

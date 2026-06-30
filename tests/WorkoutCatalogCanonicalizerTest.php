@@ -58,6 +58,20 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         self::assertCount(2, $entries);
     }
 
+    public function testCanonicalizeUsesImportedFingerprintWhenAvailable(): void
+    {
+        $first = $this->workout('Open 25.1 RX', "For time:\n10 Cleans")
+            ->setCanonicalFingerprint('imported-workout-fingerprint');
+        $second = $this->workout('Open 25 1 RX', "For time:\n10 cleans")
+            ->setCanonicalFingerprint('imported-workout-fingerprint');
+
+        $entries = (new WorkoutCatalogCanonicalizer())->canonicalize([$first, $second]);
+
+        self::assertCount(1, $entries);
+        self::assertSame('imported-workout-fingerprint', $entries[0]->fingerprint);
+        self::assertSame(2, $entries[0]->occurrenceCount());
+    }
+
     public function testCanonicalEntryMergesDivisionsForSameCompetitionContext(): void
     {
         $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
@@ -85,6 +99,63 @@ final class WorkoutCatalogCanonicalizerTest extends TestCase
         self::assertCount(1, $contexts);
         self::assertSame('Shared Event Throwdown', $contexts[0]['competitionName']);
         self::assertSame(['Elite Men', 'Elite Women'], $contexts[0]['divisions']);
+    }
+
+    public function testCanonicalEntryMergesEventProvenancesForSameCompetitionContext(): void
+    {
+        $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
+            ->setSeason(2026);
+        $womenEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-women'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ]);
+        $menEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-men'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+            ]);
+
+        $womenWorkout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $menWorkout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $this->attachCompetitionEvents($womenWorkout, [$womenEvent]);
+        $this->attachCompetitionEvents($menWorkout, [$menEvent]);
+
+        $contexts = (new CanonicalWorkoutCatalogEntry('fingerprint', $womenWorkout, [$womenWorkout, $menWorkout]))
+            ->competitionContexts();
+
+        self::assertCount(1, $contexts);
+        self::assertSame([
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+        ], $contexts[0]['provenances']);
+    }
+
+    public function testWorkoutCompetitionContextsMergeProvenancesWhenEventsDeduplicate(): void
+    {
+        $competition = (new Competition('Shared Event Throwdown', 'competition_corner', 'shared-event'))
+            ->setSeason(2026);
+        $firstEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-women'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ]);
+        $secondEvent = (new CompetitionEvent($competition, 'Workout 1', 'competition_corner', 'shared-event-men'))
+            ->setEventOrder(1)
+            ->setProvenances([
+                ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+            ]);
+
+        $workout = $this->workout('Shared Event', "For time:\n10 Burpees");
+        $this->attachCompetitionEvents($workout, [$firstEvent, $secondEvent]);
+
+        $contexts = $workout->getCompetitionContexts();
+
+        self::assertCount(1, $contexts);
+        self::assertSame([
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Women'],
+            ['sourceWorkoutId' => 'workout-1', 'division' => 'Elite Men'],
+        ], $contexts[0]['provenances']);
     }
 
     private function workout(

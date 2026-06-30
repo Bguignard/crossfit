@@ -148,8 +148,9 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         $provenanceQueryBuilder = $this->filteredQueryBuilder($provenanceFilters)
-            ->andWhere('LOWER(workout.name) IN (:canonicalCandidateNames)')
-            ->setParameter('canonicalCandidateNames', array_keys($matchingNames));
+            ->andWhere('(LOWER(workout.name) IN (:canonicalCandidateNames) OR workout.canonicalFingerprint IN (:canonicalCandidateFingerprints))')
+            ->setParameter('canonicalCandidateNames', array_keys($matchingNames))
+            ->setParameter('canonicalCandidateFingerprints', $matchingOrder);
 
         $this->scanWorkouts($provenanceQueryBuilder, function (Workout $workout) use (&$groups, $matchingFingerprints): void {
             $fingerprint = $this->canonicalizer->fingerprint($workout);
