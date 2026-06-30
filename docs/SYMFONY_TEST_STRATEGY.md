@@ -122,9 +122,29 @@ composer test:profile
 composer test:profile:compare -- var/reports/phpunit-junit-baseline.xml var/reports/phpunit-junit.xml 20
 ```
 
+For the current bottleneck classes only, use the `slow` group to keep the feedback loop shorter:
+
+```bash
+composer test:profile:slow
+cp var/reports/phpunit-junit-slow.xml var/reports/phpunit-junit-slow-baseline.xml
+composer test:profile:slow
+composer test:profile:slow:compare
+```
+
 Use this before changing fixture loading or splitting slow API classes. The comparison reports total runtime deltas and the largest class-level changes, which helps us verify that a local optimization improves the known bottlenecks instead of merely moving cost around.
 
 This gives us a repeatable way to identify slow tests before changing fixtures, grouping, or parallelization.
+
+## Fixture Experiment Log
+
+2026-06-30 local slow-group experiment:
+
+- Baseline, current `ORMPurger` delete mode: 66 tests, 525 assertions, 48.383s PHPUnit wall time, 48.305s JUnit time.
+- Experiment, `ORMPurger::PURGE_MODE_TRUNCATE`: 66 tests, 525 assertions, 83.153s PHPUnit wall time, 82.909s JUnit time.
+- JUnit comparison: +34.604s total, with `WorkoutApiWorkflowTest` +23.271s and `PrivateUserProfileApiTest` +11.333s.
+- Result: do not switch integration fixture purge mode to `TRUNCATE`; it preserves coverage but is slower for the current PostgreSQL/DAMA setup.
+
+The attempted optimization was intentionally not kept. The next safe fixture-loading experiment should focus on reducing fixture volume for the slow API classes or designing a class-level fixture strategy that is compatible with DAMA's active transaction lifecycle.
 
 ## Recommended Categories
 
