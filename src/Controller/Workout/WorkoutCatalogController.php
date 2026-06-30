@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Workout;
 
+use App\Entity\Competition\CompetitionEvent;
+use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
@@ -87,32 +89,36 @@ final class WorkoutCatalogController extends AbstractController
                 ->getQuery()
                 ->getSingleScalarResult();
 
-            /** @var list<Workout> $workouts */
-            $workouts = $queryBuilder
-                ->select('DISTINCT workout')
-                ->orderBy('workout.name', 'ASC')
-                ->addOrderBy('workout.createdAt', 'DESC')
-                ->setFirstResult(($page - 1) * $pageSize)
-                ->setMaxResults($pageSize)
-                ->getQuery()
-                ->getResult();
+            $pageWorkoutIds = $this->workoutPageIds($queryBuilder, ($page - 1) * $pageSize, $pageSize);
+            $workouts = $this->sortWorkoutsByIds($this->loadCatalogWorkoutsByIds($pageWorkoutIds), $pageWorkoutIds);
 
+            $competitionContextsByWorkoutId = $this->competitionContextsByWorkoutId($workouts);
             $members = array_map(
-                fn (Workout $workout): array => $this->serializeWorkout($workout, $filters),
+                fn (Workout $workout): array => $this->serializeWorkout(
+                    $workout,
+                    $filters,
+                    $competitionContextsByWorkoutId[(string) $workout->getId()] ?? [],
+                ),
                 $workouts,
             );
             $hasNext = $page * $pageSize < $totalItems;
         } else {
             [$canonicalEntries, $totalItems, $hasNext] = $this->canonicalPage($queryBuilder, $this->provenanceFilters($filters), $page, $pageSize);
+            $occurrences = [];
+            foreach ($canonicalEntries as $entry) {
+                array_push($occurrences, ...$entry->occurrences());
+            }
+
+            $competitionContextsByWorkoutId = $this->competitionContextsByWorkoutId($occurrences);
             $members = array_map(
-                fn (CanonicalWorkoutCatalogEntry $entry): array => $this->serializeCanonicalWorkout($entry, $filters),
+                fn (CanonicalWorkoutCatalogEntry $entry): array => $this->serializeCanonicalWorkout($entry, $filters, $competitionContextsByWorkoutId),
                 $canonicalEntries,
             );
         }
 
         $next = null;
         if ($hasNext) {
-            $query = $request->query->all();
+            $query = $this->paginationQuery($request, $filters);
             $query['page'] = $page + 1;
             $next = '/api/workout-catalog?'.http_build_query($query);
         }
@@ -132,21 +138,21 @@ final class WorkoutCatalogController extends AbstractController
     private function canonicalPage(QueryBuilder $matchingQueryBuilder, array $provenanceFilters, int $page, int $pageSize): array
     {
         $matchingFingerprints = [];
-        $matchingRepresentatives = [];
         $matchingNames = [];
+        $matchingRepresentativeIds = [];
         $matchingOrder = [];
         $groups = [];
 
-        $this->scanWorkouts($matchingQueryBuilder, function (Workout $workout) use (&$matchingFingerprints, &$matchingRepresentatives, &$matchingNames, &$matchingOrder): void {
-            $fingerprint = $this->canonicalizer->fingerprint($workout);
-            $matchingNames[mb_strtolower((string) $workout->getName())] = true;
+        $this->scanWorkoutRows($matchingQueryBuilder, function (array $row) use (&$matchingFingerprints, &$matchingNames, &$matchingRepresentativeIds, &$matchingOrder): void {
+            $fingerprint = $this->fingerprintFromWorkoutRow($row);
+            $matchingNames[$fingerprint][mb_strtolower((string) $row['name'])] = true;
 
             if (isset($matchingFingerprints[$fingerprint])) {
                 return;
             }
 
             $matchingFingerprints[$fingerprint] = true;
-            $matchingRepresentatives[$fingerprint] = $workout;
+            $matchingRepresentativeIds[$fingerprint] = (string) $row['id'];
             $matchingOrder[] = $fingerprint;
         });
 
@@ -154,14 +160,29 @@ final class WorkoutCatalogController extends AbstractController
             return [[], 0, false];
         }
 
+        $totalItems = count($matchingOrder);
+        $pageFingerprints = array_slice($matchingOrder, ($page - 1) * $pageSize, $pageSize);
+        if ($pageFingerprints === []) {
+            return [[], $totalItems, false];
+        }
+
+        $pageFingerprintLookup = array_fill_keys($pageFingerprints, true);
+        $pageNames = [];
+        $pageRepresentativeIds = [];
+        foreach ($pageFingerprints as $fingerprint) {
+            $pageNames = array_merge($pageNames, array_keys($matchingNames[$fingerprint] ?? []));
+            $pageRepresentativeIds[] = $matchingRepresentativeIds[$fingerprint];
+        }
+
+        $representativesById = $this->loadCatalogWorkoutsByIds($pageRepresentativeIds);
         $provenanceQueryBuilder = $this->filteredQueryBuilder($provenanceFilters)
             ->andWhere('(LOWER(workout.name) IN (:canonicalCandidateNames) OR workout.canonicalFingerprint IN (:canonicalCandidateFingerprints))')
-            ->setParameter('canonicalCandidateNames', array_keys($matchingNames))
-            ->setParameter('canonicalCandidateFingerprints', $matchingOrder);
+            ->setParameter('canonicalCandidateNames', array_values(array_unique($pageNames)))
+            ->setParameter('canonicalCandidateFingerprints', $pageFingerprints);
 
-        $this->scanWorkouts($provenanceQueryBuilder, function (Workout $workout) use (&$groups, $matchingFingerprints): void {
+        $this->scanWorkouts($provenanceQueryBuilder, function (Workout $workout) use (&$groups, $pageFingerprintLookup): void {
             $fingerprint = $this->canonicalizer->fingerprint($workout);
-            if (!isset($matchingFingerprints[$fingerprint])) {
+            if (!isset($pageFingerprintLookup[$fingerprint])) {
                 return;
             }
 
@@ -170,20 +191,66 @@ final class WorkoutCatalogController extends AbstractController
         });
 
         $canonicalEntries = [];
-        foreach ($matchingOrder as $fingerprint) {
+        foreach ($pageFingerprints as $fingerprint) {
             if (!isset($groups[$fingerprint])) {
                 continue;
             }
 
             $occurrences = $groups[$fingerprint];
-            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $matchingRepresentatives[$fingerprint], $occurrences);
+            $representative = $representativesById[$matchingRepresentativeIds[$fingerprint]] ?? $occurrences[0];
+            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $representative, $occurrences);
         }
 
         return [
-            array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize),
-            count($canonicalEntries),
-            $page * $pageSize < count($canonicalEntries),
+            $canonicalEntries,
+            $totalItems,
+            $page * $pageSize < $totalItems,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function fingerprintFromWorkoutRow(array $row): string
+    {
+        return $this->canonicalizer->fingerprintFromParts(
+            is_string($row['canonicalFingerprint'] ?? null) ? $row['canonicalFingerprint'] : null,
+            is_string($row['name'] ?? null) ? $row['name'] : null,
+            is_string($row['flow'] ?? null) ? $row['flow'] : null,
+            is_string($row['workoutTypeName'] ?? null) ? $row['workoutTypeName'] : null,
+            $row['numberOfRounds'] === null ? null : (int) $row['numberOfRounds'],
+            $row['timeCap'] === null ? null : (int) $row['timeCap'],
+        );
+    }
+
+    /**
+     * @param callable(array<string, mixed>): void $consume
+     */
+    private function scanWorkoutRows(QueryBuilder $queryBuilder, callable $consume): void
+    {
+        $offset = 0;
+        do {
+            /** @var list<array<string, mixed>> $batch */
+            $batch = (clone $queryBuilder)
+                ->select('DISTINCT workout.id AS id, workout.name AS name, workout.flow AS flow, workout.numberOfRounds AS numberOfRounds, workout.timeCap AS timeCap, workout.canonicalFingerprint AS canonicalFingerprint, catalogScalarWorkoutType.name AS workoutTypeName, workout.createdAt AS createdAt')
+                ->leftJoin('workout.workoutType', 'catalogScalarWorkoutType')
+                ->orderBy('workout.name', 'ASC')
+                ->addOrderBy('workout.createdAt', 'DESC')
+                ->setFirstResult($offset)
+                ->setMaxResults(self::CANONICAL_SCAN_BATCH_SIZE)
+                ->getQuery()
+                ->getArrayResult();
+
+            if ($batch === []) {
+                break;
+            }
+
+            foreach ($batch as $row) {
+                $consume($row);
+            }
+
+            $offset += self::CANONICAL_SCAN_BATCH_SIZE;
+        } while (count($batch) === self::CANONICAL_SCAN_BATCH_SIZE);
     }
 
     /**
@@ -193,26 +260,303 @@ final class WorkoutCatalogController extends AbstractController
     {
         $offset = 0;
         do {
-            /** @var list<Workout> $batch */
-            $batch = (clone $queryBuilder)
-                ->select('DISTINCT workout')
-                ->orderBy('workout.name', 'ASC')
-                ->addOrderBy('workout.createdAt', 'DESC')
-                ->setFirstResult($offset)
-                ->setMaxResults(self::CANONICAL_SCAN_BATCH_SIZE)
-                ->getQuery()
-                ->getResult();
+            $batchIds = $this->workoutPageIds($queryBuilder, $offset, self::CANONICAL_SCAN_BATCH_SIZE);
 
-            if ($batch === []) {
+            if ($batchIds === []) {
                 break;
             }
 
-            foreach ($batch as $workout) {
-                $consume($workout);
+            $workoutsById = $this->loadCatalogWorkoutsByIds($batchIds);
+            foreach ($batchIds as $workoutId) {
+                if (!isset($workoutsById[$workoutId])) {
+                    continue;
+                }
+
+                $consume($workoutsById[$workoutId]);
             }
 
             $offset += self::CANONICAL_SCAN_BATCH_SIZE;
-        } while (count($batch) === self::CANONICAL_SCAN_BATCH_SIZE);
+        } while (count($batchIds) === self::CANONICAL_SCAN_BATCH_SIZE);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function workoutPageIds(QueryBuilder $queryBuilder, int $offset, int $limit): array
+    {
+        /** @var list<array{id: mixed}> $rows */
+        $rows = (clone $queryBuilder)
+            ->select('DISTINCT workout.id AS id, workout.name AS name, workout.createdAt AS createdAt')
+            ->orderBy('workout.name', 'ASC')
+            ->addOrderBy('workout.createdAt', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[] = (string) $row['id'];
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param list<string> $ids
+     *
+     * @return array<string, Workout>
+     */
+    private function loadCatalogWorkoutsByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<Workout> $workouts */
+        $workouts = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
+            ->select('DISTINCT workout')
+            ->leftJoin('workout.workoutType', 'catalogWorkoutType')
+            ->addSelect('catalogWorkoutType')
+            ->leftJoin('workout.workoutOrigin', 'catalogWorkoutOrigin')
+            ->addSelect('catalogWorkoutOrigin')
+            ->leftJoin('catalogWorkoutOrigin.name', 'catalogWorkoutOriginName')
+            ->addSelect('catalogWorkoutOriginName')
+            ->leftJoin('workout.implements', 'catalogImplement')
+            ->addSelect('catalogImplement')
+            ->leftJoin('workout.movements', 'catalogMovement')
+            ->addSelect('catalogMovement')
+            ->andWhere('workout.id IN (:catalogWorkoutIds)')
+            ->setParameter('catalogWorkoutIds', array_values(array_unique($ids)))
+            ->getQuery()
+            ->getResult();
+
+        $byId = [];
+        foreach ($workouts as $workout) {
+            $byId[(string) $workout->getId()] = $workout;
+        }
+
+        return $byId;
+    }
+
+    /**
+     * @param array<string, Workout> $workoutsById
+     * @param list<string>           $ids
+     *
+     * @return list<Workout>
+     */
+    private function sortWorkoutsByIds(array $workoutsById, array $ids): array
+    {
+        $workouts = [];
+        foreach ($ids as $id) {
+            if (!isset($workoutsById[$id])) {
+                continue;
+            }
+
+            $workouts[] = $workoutsById[$id];
+        }
+
+        return $workouts;
+    }
+
+    /**
+     * @param list<Workout> $workouts
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function competitionContextsByWorkoutId(array $workouts): array
+    {
+        $workoutIds = [];
+        foreach ($workouts as $workout) {
+            $workoutIds[] = (string) $workout->getId();
+        }
+
+        $workoutIds = array_values(array_unique($workoutIds));
+        if ($workoutIds === []) {
+            return [];
+        }
+
+        /** @var list<array<string, mixed>> $eventRows */
+        $eventRows = $this->entityManager->createQueryBuilder()
+            ->select('event.id AS eventId, IDENTITY(event.workout) AS workoutId, competition.id AS competitionId, competition.name AS competitionName, competition.season AS competitionSeason, competition.logoUrl AS competitionLogoUrl, event.name AS eventName, event.eventOrder AS eventOrder, event.sourceName AS sourceName, event.provenances AS provenances')
+            ->from(CompetitionEvent::class, 'event')
+            ->innerJoin('event.competition', 'competition')
+            ->andWhere('event.workout IN (:catalogContextWorkoutIds)')
+            ->setParameter('catalogContextWorkoutIds', $workoutIds)
+            ->getQuery()
+            ->getArrayResult();
+
+        if ($eventRows === []) {
+            return [];
+        }
+
+        $eventIds = [];
+        foreach ($eventRows as $row) {
+            $eventIds[] = (string) $row['eventId'];
+        }
+
+        $divisionsByEventId = [];
+        /** @var list<array<string, mixed>> $divisionRows */
+        $divisionRows = $this->entityManager->createQueryBuilder()
+            ->select('IDENTITY(result.event) AS eventId, competitionDivision.name AS competitionDivisionName, result.division AS resultDivision')
+            ->from(WorkoutResult::class, 'result')
+            ->leftJoin('result.competitionDivision', 'competitionDivision')
+            ->andWhere('result.event IN (:catalogContextEventIds)')
+            ->groupBy('result.event', 'competitionDivision.name', 'result.division')
+            ->setParameter('catalogContextEventIds', array_values(array_unique($eventIds)))
+            ->getQuery()
+            ->getArrayResult();
+
+        foreach ($divisionRows as $row) {
+            $eventId = (string) $row['eventId'];
+            $division = $row['competitionDivisionName'] ?? $row['resultDivision'] ?? null;
+            if (!is_string($division) || $division === '') {
+                continue;
+            }
+
+            $divisionsByEventId[$eventId][$division] = true;
+        }
+
+        $contextsByWorkoutId = [];
+        foreach ($eventRows as $row) {
+            $workoutId = (string) $row['workoutId'];
+            $eventId = (string) $row['eventId'];
+            $divisions = array_keys($divisionsByEventId[$eventId] ?? []);
+            sort($divisions, SORT_NATURAL | SORT_FLAG_CASE);
+
+            $context = [
+                'competitionId' => (string) $row['competitionId'],
+                'competitionName' => (string) $row['competitionName'],
+                'competitionSeason' => $row['competitionSeason'] === null ? null : (int) $row['competitionSeason'],
+                'competitionLogoUrl' => is_string($row['competitionLogoUrl'] ?? null) ? $row['competitionLogoUrl'] : null,
+                'eventName' => (string) $row['eventName'],
+                'eventOrder' => $row['eventOrder'] === null ? null : (int) $row['eventOrder'],
+                'sourceName' => (string) $row['sourceName'],
+                'divisions' => $divisions,
+                'provenances' => is_array($row['provenances'] ?? null) ? $row['provenances'] : [],
+            ];
+
+            $contextsByWorkoutId[$workoutId] ??= [];
+            $this->mergeCompetitionContext($contextsByWorkoutId[$workoutId], $context);
+        }
+
+        foreach ($contextsByWorkoutId as &$contexts) {
+            $this->sortCompetitionContexts($contexts);
+        }
+
+        return $contextsByWorkoutId;
+    }
+
+    /**
+     * @param array<string, list<array<string, mixed>>> $competitionContextsByWorkoutId
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function canonicalCompetitionContexts(CanonicalWorkoutCatalogEntry $entry, array $competitionContextsByWorkoutId): array
+    {
+        $contexts = [];
+        foreach ($entry->occurrences() as $workout) {
+            foreach ($competitionContextsByWorkoutId[(string) $workout->getId()] ?? [] as $context) {
+                $this->mergeCompetitionContext($contexts, $context);
+            }
+        }
+
+        $this->sortCompetitionContexts($contexts);
+
+        return $contexts;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $contexts
+     * @param array<string, mixed>       $context
+     */
+    private function mergeCompetitionContext(array &$contexts, array $context): void
+    {
+        $key = implode('|', [
+            $context['competitionId'],
+            $context['eventName'],
+            (string) ($context['eventOrder'] ?? ''),
+            $context['sourceName'],
+        ]);
+
+        foreach ($contexts as &$existingContext) {
+            $existingKey = implode('|', [
+                $existingContext['competitionId'],
+                $existingContext['eventName'],
+                (string) ($existingContext['eventOrder'] ?? ''),
+                $existingContext['sourceName'],
+            ]);
+
+            if ($existingKey !== $key) {
+                continue;
+            }
+
+            $existingContext['divisions'] = $this->mergeSortedStrings($existingContext['divisions'], $context['divisions']);
+            $existingContext['provenances'] = $this->mergeProvenances($existingContext['provenances'], $context['provenances']);
+
+            return;
+        }
+
+        $contexts[] = $context;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $contexts
+     */
+    private function sortCompetitionContexts(array &$contexts): void
+    {
+        usort($contexts, static function (array $left, array $right): int {
+            return [
+                $right['competitionSeason'] ?? 0,
+                $left['competitionName'],
+                $left['eventOrder'] ?? PHP_INT_MAX,
+                $left['eventName'],
+            ] <=> [
+                $left['competitionSeason'] ?? 0,
+                $right['competitionName'],
+                $right['eventOrder'] ?? PHP_INT_MAX,
+                $right['eventName'],
+            ];
+        });
+    }
+
+    /**
+     * @param list<string> $left
+     * @param list<string> $right
+     *
+     * @return list<string>
+     */
+    private function mergeSortedStrings(array $left, array $right): array
+    {
+        $values = array_fill_keys(array_merge($left, $right), true);
+        $strings = array_keys($values);
+        sort($strings, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $strings;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $current
+     * @param list<array<string, mixed>> $additional
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function mergeProvenances(array $current, array $additional): array
+    {
+        $merged = [];
+        $seen = [];
+
+        foreach (array_merge($current, $additional) as $provenance) {
+            $key = json_encode($provenance, JSON_THROW_ON_ERROR);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $merged[] = $provenance;
+            $seen[$key] = true;
+        }
+
+        return $merged;
     }
 
     /**
@@ -228,6 +572,7 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * } $filters
@@ -241,6 +586,7 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * }
@@ -264,6 +610,7 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * } $filters
@@ -316,23 +663,40 @@ final class WorkoutCatalogController extends AbstractController
                 ->setParameter('timeCapMax', $filters['timeCapMax']);
         }
 
-        if ($filters['sourceName'] !== null) {
-            if ($this->isCompetitionSourceAlias($filters['sourceName'])) {
-                $queryBuilder->innerJoin('workout.competitionEvents', 'sourceCompetitionEvent');
-            } elseif ($filters['sourceName'] === 'monwod_catalog') {
+        if ($filters['sourceNames'] !== []) {
+            $sourceConditions = [];
+            $exactSourceNames = [];
+
+            if (array_any($filters['sourceNames'], fn (string $sourceName): bool => $this->isCompetitionSourceAlias($sourceName))) {
+                $sourceConditions[] = 'workout.competitionEvents IS NOT EMPTY';
+            }
+
+            if (in_array('monwod_catalog', $filters['sourceNames'], true)) {
                 $queryBuilder
-                    ->innerJoin('workout.workoutOrigin', 'sourceWorkoutOrigin')
-                    ->innerJoin('sourceWorkoutOrigin.name', 'sourceWorkoutOriginName')
-                    ->andWhere('sourceWorkoutOriginName.name IN (:monwodCatalogOrigins)')
+                    ->leftJoin('workout.workoutOrigin', 'sourceWorkoutOrigin')
+                    ->leftJoin('sourceWorkoutOrigin.name', 'sourceWorkoutOriginName')
                     ->setParameter('monwodCatalogOrigins', [
                         WorkoutOriginNameEnum::GIRLS_WORKOUT->value,
                         WorkoutOriginNameEnum::HERO_WORKOUT->value,
                     ]);
-            } else {
-                $queryBuilder
-                    ->andWhere('LOWER(workout.sourceName) = :sourceName')
-                    ->setParameter('sourceName', $filters['sourceName']);
+                $sourceConditions[] = 'sourceWorkoutOriginName.name IN (:monwodCatalogOrigins)';
             }
+
+            foreach ($filters['sourceNames'] as $sourceName) {
+                if ($this->isCompetitionSourceAlias($sourceName) || $sourceName === 'monwod_catalog') {
+                    continue;
+                }
+
+                $exactSourceNames[] = $sourceName;
+            }
+
+            if ($exactSourceNames !== []) {
+                $queryBuilder
+                    ->setParameter('sourceNames', array_values(array_unique($exactSourceNames)));
+                $sourceConditions[] = 'LOWER(workout.sourceName) IN (:sourceNames)';
+            }
+
+            $queryBuilder->andWhere('('.implode(' OR ', $sourceConditions).')');
         }
 
         foreach ($filters['movementNames'] as $index => $movementName) {
@@ -440,12 +804,15 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * }
      */
     private function filtersFromRequest(Request $request): array
     {
+        $sourceNames = $this->queryStringList($request, 'sourceNames', 'sourceName', 'source');
+
         return [
             'query' => $this->normalizedString($request->query->get('q')),
             'name' => $this->normalizedString($request->query->get('name')),
@@ -454,8 +821,8 @@ final class WorkoutCatalogController extends AbstractController
             'timeCap' => $this->nullablePositiveInt($request->query->get('timeCap')),
             'timeCapMin' => $this->nullablePositiveInt($request->query->get('timeCapMin')),
             'timeCapMax' => $this->nullablePositiveInt($request->query->get('timeCapMax')),
-            'sourceName' => $this->normalizedString($request->query->get('sourceName'))
-                ?? $this->normalizedString($request->query->get('source')),
+            'sourceName' => $sourceNames[0] ?? null,
+            'sourceNames' => $sourceNames,
             'movementNames' => $this->queryStringList($request, 'movements.name', 'movement'),
             'implementNames' => $this->queryStringList($request, 'implements.name', 'implement'),
         ];
@@ -471,13 +838,44 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
-     * }|null $filters
+     * } $filters
      *
      * @return array<string, mixed>
      */
-    private function serializeWorkout(Workout $workout, ?array $filters = null): array
+    private function paginationQuery(Request $request, array $filters): array
+    {
+        $query = $request->query->all();
+        unset($query['source'], $query['sourceName'], $query['sourceNames']);
+
+        if ($filters['sourceNames'] !== []) {
+            $query['sourceNames'] = $filters['sourceNames'];
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param array{
+     *     query: ?string,
+     *     name: ?string,
+     *     flow: ?string,
+     *     workoutType: ?string,
+     *     timeCap: ?int,
+     *     timeCapMin: ?int,
+     *     timeCapMax: ?int,
+     *     sourceName: ?string,
+     *     sourceNames: list<string>,
+     *     movementNames: list<string>,
+     *     implementNames: list<string>,
+     * }|null $filters
+     * @param list<array<string, mixed>>|null $competitionContexts
+     *
+     * @return array<string, mixed>
+     */
+    private function serializeWorkout(Workout $workout, ?array $filters = null, ?array $competitionContexts = null): array
     {
         return [
             '@id' => '/api/workouts/'.$workout->getId(),
@@ -499,7 +897,7 @@ final class WorkoutCatalogController extends AbstractController
             'sourceName' => $workout->getSourceName(),
             'externalId' => $workout->getExternalId(),
             'sourceUrl' => $workout->getSourceUrl(),
-            'competitionContexts' => $workout->getCompetitionContexts(),
+            'competitionContexts' => $competitionContexts ?? $workout->getCompetitionContexts(),
             'matchDetails' => $filters === null ? [] : $this->matchDetails($workout, $filters),
         ];
     }
@@ -514,22 +912,28 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * } $filters
+     * @param array<string, list<array<string, mixed>>> $competitionContextsByWorkoutId
      *
      * @return array<string, mixed>
      */
-    private function serializeCanonicalWorkout(CanonicalWorkoutCatalogEntry $entry, array $filters): array
+    private function serializeCanonicalWorkout(CanonicalWorkoutCatalogEntry $entry, array $filters, array $competitionContextsByWorkoutId): array
     {
-        $payload = $this->serializeWorkout($entry->representative, $filters);
+        $payload = $this->serializeWorkout(
+            $entry->representative,
+            $filters,
+            $competitionContextsByWorkoutId[(string) $entry->representative->getId()] ?? [],
+        );
         $payload['canonicalFingerprint'] = $entry->fingerprint;
         $payload['occurrenceCount'] = $entry->occurrenceCount();
         $payload['workoutIds'] = $entry->workoutIds();
         $payload['sources'] = $entry->sourceNames();
         $payload['workoutOrigins'] = $entry->workoutOrigins();
         $payload['sourceReferences'] = $entry->sourceReferences();
-        $payload['competitionContexts'] = $entry->competitionContexts();
+        $payload['competitionContexts'] = $this->canonicalCompetitionContexts($entry, $competitionContextsByWorkoutId);
 
         return $payload;
     }
@@ -544,6 +948,7 @@ final class WorkoutCatalogController extends AbstractController
      *     timeCapMin: ?int,
      *     timeCapMax: ?int,
      *     sourceName: ?string,
+     *     sourceNames: list<string>,
      *     movementNames: list<string>,
      *     implementNames: list<string>,
      * } $filters
@@ -663,6 +1068,22 @@ final class WorkoutCatalogController extends AbstractController
             foreach (is_array($value) ? $value : [$value] as $item) {
                 $values[] = $item;
             }
+        }
+
+        $rawQueryString = (string) $request->server->get('QUERY_STRING', '');
+        foreach (explode('&', $rawQueryString) as $rawPair) {
+            if ($rawPair === '') {
+                continue;
+            }
+
+            [$rawKey, $rawValue] = array_pad(explode('=', $rawPair, 2), 2, '');
+            $key = urldecode($rawKey);
+            $key = str_ends_with($key, '[]') ? substr($key, 0, -2) : $key;
+            if (!in_array($key, $keys, true)) {
+                continue;
+            }
+
+            $values[] = urldecode($rawValue);
         }
 
         return $this->normalizedStringList($values);

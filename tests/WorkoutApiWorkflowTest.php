@@ -103,8 +103,24 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             $workoutType,
             $origin,
         ))->setSourceName('competition_corner');
+        $crossfitGamesPaginationWorkout = (new Workout(
+            'A source pagination test',
+            "For time:\n10 Thrusters",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))->setSourceName('crossfit_games');
+        $competitionCornerPaginationWorkout = (new Workout(
+            'B source pagination test',
+            "For time:\n10 Pull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))->setSourceName('competition_corner');
 
-        foreach ([$origin, $workoutType, $crossfitGamesWorkout, $competitionCornerWorkout] as $entity) {
+        foreach ([$origin, $workoutType, $crossfitGamesWorkout, $competitionCornerWorkout, $crossfitGamesPaginationWorkout, $competitionCornerPaginationWorkout] as $entity) {
             $entityManager->persist($entity);
         }
         $entityManager->flush();
@@ -119,6 +135,43 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['totalItems']);
         self::assertSame('Source filter classic test', $workouts[0]['name'] ?? null);
         self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=source%20filter%20classic&sourceNames=crossfit_games&sourceNames=competition_corner&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+
+        self::assertSame(1, $payload['totalItems']);
+        self::assertSame(['competition_corner', 'crossfit_games'], $workouts[0]['sources'] ?? null);
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=source%20pagination%20test&sourceNames=crossfit_games&sourceNames=competition_corner&itemsPerPage=1');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $next = $payload['view']['next'] ?? null;
+
+        self::assertSame(2, $payload['totalItems']);
+        self::assertCount(1, $workouts);
+        self::assertSame('A source pagination test', $workouts[0]['name'] ?? null);
+        self::assertIsString($next);
+        self::assertStringContainsString('sourceNames%5B', $next);
+        self::assertStringContainsString('=crossfit_games', $next);
+        self::assertStringContainsString('=competition_corner', $next);
+
+        $this->browser()->request('GET', $next);
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+
+        self::assertSame(2, $payload['totalItems']);
+        self::assertCount(1, $workouts);
+        self::assertSame('B source pagination test', $workouts[0]['name'] ?? null);
     }
 
     public function testWorkoutCatalogCanFilterCompetitionSourceByMovementInImportedFlow(): void
