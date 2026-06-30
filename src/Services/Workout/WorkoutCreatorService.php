@@ -2,7 +2,6 @@
 
 namespace App\Services\Workout;
 
-use App\Entity\Workout\Enum\MovementDifficultyEnum;
 use App\Entity\Workout\Enum\WorkoutMovementGenerationTypeEnum;
 use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Enum\WorkoutTypeEnum;
@@ -94,7 +93,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= $this->prescriptionStandardGuidance($workoutGeneration, array_merge($mandatoryMovements, $candidateMovementsForPrompt));
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
-Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription.
+Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription. Scaling options or adaptations do not count as the main workout load prescription.
 Create a short "Scaling options" section in the JSON scalingOptions field with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
 Do not prescribe strict toes to bar in the main workout flow. Normal Toes to Bar is allowed; strict toes to bar belongs only to accessory/strength notes outside the main metcon or competition flow.
@@ -1124,22 +1123,9 @@ EOD;
             throw new \RuntimeException('OpenAI workout generation prescribed strict toes to bar in the main workout flow.');
         }
 
-        if (!$this->requiresMainFlowLoadPrescription($workoutGeneration)) {
-            return;
-        }
-
         foreach ($this->loadPrescriptionValidator->movementsMissingMainFlowLoadPrescription($flow, $selectedMovements) as $movement) {
             throw new \RuntimeException(sprintf('OpenAI workout generation included loaded movement "%s" without a main workout load prescription.', $movement->getName()));
         }
-    }
-
-    private function requiresMainFlowLoadPrescription(WorkoutGeneration $workoutGeneration): bool
-    {
-        return in_array(
-            $workoutGeneration->getMovementDifficulty()->getNameAsEnum(),
-            [MovementDifficultyEnum::ELITE, MovementDifficultyEnum::RX],
-            true
-        );
     }
 
     private function flowWithoutScalingOptions(string $flow): string

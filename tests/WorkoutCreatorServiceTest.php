@@ -1863,6 +1863,40 @@ class WorkoutCreatorServiceTest extends TestCase
         );
     }
 
+    /**
+     * @dataProvider generatedDifficultyCases
+     */
+    public function testWorkoutGenerationRejectsDeadliftWithoutMainFlowLoadForEveryLevel(MovementDifficultyEnum $difficultyEnum): void
+    {
+        $difficulty = new MovementDifficulty($difficultyEnum);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "For time:\n3 rounds of:\n- 10 Deadlift\n- 12 Box Jump\n- 9 Handstand Push Up",
+                'scalingOptions' => "RX: moderate Deadlift\nIntermediate: light Deadlift\nScaled: lighter load",
+                'movements' => ['Deadlift'],
+            ],
+        );
+    }
+
+    /**
+     * @return iterable<string, array{MovementDifficultyEnum}>
+     */
+    public function generatedDifficultyCases(): iterable
+    {
+        yield 'beginner' => [MovementDifficultyEnum::BEGINNER];
+        yield 'intermediate' => [MovementDifficultyEnum::INTERMEDIATE];
+        yield 'rx' => [MovementDifficultyEnum::RX];
+        yield 'elite' => [MovementDifficultyEnum::ELITE];
+    }
+
     public function testEliteWorkoutGenerationAcceptsLoadedMovementWithMainFlowLoad(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::ELITE);
@@ -2581,7 +2615,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "AMRAP 16 minutes\n- 250 m Row\n- 12 Thruster\n- 9 Pull Up\n- 12 Box Step Up",
+                    'flow' => "AMRAP 16 minutes\n- 250 m Row\n- 12 Thruster (35/25 kg)\n- 9 Pull Up\n- 12 Box Step Up",
                     'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: reduce volume",
                     'movements' => ['Row', 'Thruster', 'Pull Up', 'Box Jump'],
                 ], JSON_THROW_ON_ERROR);
@@ -3089,7 +3123,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "AMRAP 10 minutes\n10 dumbbell cleans",
+                    'flow' => "AMRAP 10 minutes\n10 dumbbell cleans (2x15/10 kg)",
                     'scalingOptions' => "RX: as written\nIntermediate: 8 dumbbell cleans\nScaled: lighter dumbbell cleans",
                     'movements' => ['Clean'],
                 ], JSON_THROW_ON_ERROR);
@@ -3174,7 +3208,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "AMRAP 15 minutes\n10 C2B\n5 BMU\n20 wall balls",
+                    'flow' => "AMRAP 15 minutes\n10 C2B\n5 BMU\n20 wall balls (9/6 kg)",
                     'scalingOptions' => "RX: as written\nIntermediate: 8 C2B, 3 RMU, 16 wall balls\nScaled: jumping pull-ups, transitions and light wall balls",
                     'movements' => ['Chest to Bar Pull Up', 'Muscle Up', 'Wall Ball Shot'],
                 ], JSON_THROW_ON_ERROR);
@@ -3259,7 +3293,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "AMRAP 15 minutes\n10 C2B\n5 BMU\n20 wall balls",
+                    'flow' => "AMRAP 15 minutes\n10 C2B\n5 BMU\n20 wall balls (9/6 kg)",
                     'scalingOptions' => "RX: as written\nIntermediate: 8 C2B, 3 BMU, 16 wall balls\nScaled: jumping pull-ups, transitions and light wall balls",
                     'movements' => ['C2B', 'BMU', 'Wall Balls'],
                 ], JSON_THROW_ON_ERROR);
@@ -3507,7 +3541,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "For time:\n21 S2OH\n15 C&J\n9 OHS",
+                    'flow' => "For time:\n21 S2OH (50/35 kg)\n15 C&J (50/35 kg)\n9 OHS (50/35 kg)",
                     'scalingOptions' => "RX: as written\nIntermediate: 15 STOH, 12 Clean & Jerk, 9 overhead squats\nScaled: reduce load",
                     'movements' => ['S2OH', 'C&J', 'OHS'],
                 ], JSON_THROW_ON_ERROR);
@@ -3679,7 +3713,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "4 rounds for time:\n20 pistols\n30 GHD sit-ups\n100-ft farmer's carry\n50-ft sled pushes",
+                    'flow' => "4 rounds for time:\n20 pistols\n30 GHD sit-ups\n100-ft farmer's carry (2x24/16 kg)\n50-ft sled pushes (moderate load)",
                     'scalingOptions' => "RX: as written\nIntermediate: assisted pistols, reduced GHD sit-ups, lighter farmers carry and sled-pushes\nScaled: air squats, abmat sit-ups, light carry and sled work",
                     'movements' => ['Pistols', 'GHD Sit-Ups', 'Farmer\'s Carry', 'Sled Pushes'],
                 ], JSON_THROW_ON_ERROR);
@@ -3766,7 +3800,7 @@ class WorkoutCreatorServiceTest extends TestCase
             public function getWorkoutFlowFromPrompt(string $prompt): string
             {
                 return json_encode([
-                    'flow' => "For time:\n400 m runs\n30 burpees\n20 box jumps\n10 cleans",
+                    'flow' => "For time:\n400 m runs\n30 burpees\n20 box jumps\n10 cleans (40/30 kg)",
                     'scalingOptions' => "RX: as written\nIntermediate: shorter runs, 20 burpees, 15 box jumps, 8 cleans\nScaled: shorter distance, fewer reps and lighter load",
                     'movements' => ['Runs', 'Burpees', 'Box Jumps', 'Cleans'],
                 ], JSON_THROW_ON_ERROR);
