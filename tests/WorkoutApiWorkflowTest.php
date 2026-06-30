@@ -119,6 +119,16 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(1, $payload['totalItems']);
         self::assertSame('Source filter classic test', $workouts[0]['name'] ?? null);
         self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=source%20filter%20classic&sourceNames=crossfit_games&sourceNames=competition_corner&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+
+        self::assertSame(1, $payload['totalItems']);
+        self::assertSame(['competition_corner', 'crossfit_games'], $workouts[0]['sources'] ?? null);
     }
 
     public function testWorkoutCatalogCanFilterCompetitionSourceByMovementInImportedFlow(): void

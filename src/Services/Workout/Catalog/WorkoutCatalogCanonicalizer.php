@@ -39,17 +39,34 @@ final class WorkoutCatalogCanonicalizer
 
     public function fingerprint(Workout $workout): string
     {
-        $importedFingerprint = $workout->getCanonicalFingerprint();
+        return $this->fingerprintFromParts(
+            $workout->getCanonicalFingerprint(),
+            (string) $workout->getName(),
+            $workout->getFlow(),
+            (string) ($workout->getWorkoutType()?->getName() ?? ''),
+            $workout->getNumberOfRounds(),
+            $workout->getTimeCap(),
+        );
+    }
+
+    public function fingerprintFromParts(
+        ?string $importedFingerprint,
+        ?string $name,
+        ?string $flow,
+        ?string $workoutTypeName,
+        ?int $numberOfRounds,
+        ?int $timeCap,
+    ): string {
         if ($importedFingerprint !== null && trim($importedFingerprint) !== '') {
             return trim($importedFingerprint);
         }
 
         return hash('sha256', implode('|', [
-            $this->normalizeText((string) $workout->getName()),
-            $this->normalizeText($workout->getFlow()),
-            $this->normalizeText((string) ($workout->getWorkoutType()?->getName() ?? '')),
-            (string) ($workout->getNumberOfRounds() ?? ''),
-            (string) ($workout->getTimeCap() ?? ''),
+            $this->normalizeText((string) $name),
+            $this->normalizeText((string) $flow),
+            $this->normalizeText((string) $workoutTypeName),
+            (string) ($numberOfRounds ?? ''),
+            (string) ($timeCap ?? ''),
         ]));
     }
 
