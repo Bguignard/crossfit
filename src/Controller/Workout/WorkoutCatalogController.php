@@ -349,12 +349,13 @@ final class WorkoutCatalogController extends AbstractController
                 $queryBuilder->setParameter($flowParameterName, $pattern);
             }
 
-            $queryBuilder->andWhere(sprintf(
-                '(LOWER(%s.name) = :%s OR (workout.movements IS EMPTY AND (%s)))',
-                $alias,
-                $parameterName,
-                implode(' OR ', $flowConditions),
-            ));
+            if ($flowConditions === []) {
+                $queryBuilder->andWhere(sprintf('LOWER(%s.name) = :%s', $alias, $parameterName));
+
+                continue;
+            }
+
+            $queryBuilder->andWhere(sprintf('(LOWER(%s.name) = :%s OR (workout.movements IS EMPTY AND (%s)))', $alias, $parameterName, implode(' OR ', $flowConditions)));
         }
 
         foreach ($filters['implementNames'] as $index => $implementName) {
@@ -377,12 +378,16 @@ final class WorkoutCatalogController extends AbstractController
      * Imported competition workouts may not have structured movements yet. Use
      * bounded flow patterns only as a fallback for those flow-only workouts.
      *
-     * @return non-empty-list<string>
+     * @return list<string>
      */
     private function movementFlowFallbackPatterns(string $movementName): array
     {
+        if (str_contains($movementName, ' ') || in_array($movementName, self::AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS, true)) {
+            return [];
+        }
+
         $terms = [$movementName];
-        if (!in_array($movementName, self::AMBIGUOUS_FLOW_FALLBACK_MOVEMENTS, true) && !str_ends_with($movementName, 's')) {
+        if (!str_ends_with($movementName, 's')) {
             $terms[] = $movementName.'s';
         }
 

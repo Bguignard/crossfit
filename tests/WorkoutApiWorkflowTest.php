@@ -152,20 +152,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setExternalId('competition-thruster-filter-audit');
         $auditEvent = (new CompetitionEvent($competition, 'Audit Workout', 'monwod_audit', 'thruster-competition-audit-workout'))
             ->setWorkout($auditWorkout);
-        $powerCleanWorkout = (new Workout(
-            'Competition power clean filter ambiguity test',
-            "For time:\n21 Power Cleans",
+        $hangPowerCleanWorkout = (new Workout(
+            'Competition hang power clean filter ambiguity test',
+            "For time:\n21 Hang Power Cleans",
             1,
             10,
             $workoutType,
             $origin,
         ))
             ->setSourceName('competition_corner')
-            ->setExternalId('competition-power-clean-filter');
-        $powerCleanEvent = (new CompetitionEvent($competition, 'Workout 2', 'competition_corner', 'thruster-competition-workout-2'))
-            ->setWorkout($powerCleanWorkout);
+            ->setExternalId('competition-hang-power-clean-filter');
+        $hangPowerCleanEvent = (new CompetitionEvent($competition, 'Workout 2', 'competition_corner', 'thruster-competition-workout-2'))
+            ->setWorkout($hangPowerCleanWorkout);
 
-        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $powerCleanWorkout, $publicEvent, $auditEvent, $powerCleanEvent] as $entity) {
+        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $hangPowerCleanWorkout, $publicEvent, $auditEvent, $hangPowerCleanEvent] as $entity) {
             $entityManager->persist($entity);
         }
         $entityManager->flush();
@@ -190,7 +190,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
         $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
 
-        self::assertNotContains('Competition power clean filter ambiguity test', $names);
+        self::assertNotContains('Competition hang power clean filter ambiguity test', $names);
     }
 
     public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
