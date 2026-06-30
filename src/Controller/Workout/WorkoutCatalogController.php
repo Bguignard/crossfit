@@ -750,10 +750,7 @@ final class WorkoutCatalogController extends AbstractController
             return [];
         }
 
-        $terms = [$movementName];
-        if (!str_ends_with($movementName, 's')) {
-            $terms[] = $movementName.'s';
-        }
+        $terms = $this->movementFlowFallbackTerms($movementName);
 
         $patterns = [];
         foreach (array_values(array_unique($terms)) as $term) {
@@ -765,6 +762,26 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         return array_values(array_unique($patterns));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function movementFlowFallbackTerms(string $movementName): array
+    {
+        $terms = [$movementName];
+        if (!str_ends_with($movementName, 's')) {
+            $terms[] = $movementName.'s';
+        }
+
+        $hyphenatedTerms = [];
+        foreach ($terms as $term) {
+            if (str_contains($term, ' ')) {
+                $hyphenatedTerms[] = str_replace(' ', '-', $term);
+            }
+        }
+
+        return array_values(array_unique(array_merge($terms, $hyphenatedTerms)));
     }
 
     /**
