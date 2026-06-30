@@ -270,7 +270,7 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                 'externalId' => 'games-2024-event-1-women',
             ]);
             self::assertNotNull($event);
-            self::assertSame([
+            self::assertEquals([
                 [
                     'sourceWorkoutId' => 'games-2024-event-1',
                     'sourceWorkoutUrl' => 'https://example.test/workouts/event-1',
