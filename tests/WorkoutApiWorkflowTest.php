@@ -152,8 +152,20 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setExternalId('competition-thruster-filter-audit');
         $auditEvent = (new CompetitionEvent($competition, 'Audit Workout', 'monwod_audit', 'thruster-competition-audit-workout'))
             ->setWorkout($auditWorkout);
+        $powerCleanWorkout = (new Workout(
+            'Competition power clean filter ambiguity test',
+            "For time:\n21 Power Cleans",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('competition-power-clean-filter');
+        $powerCleanEvent = (new CompetitionEvent($competition, 'Workout 2', 'competition_corner', 'thruster-competition-workout-2'))
+            ->setWorkout($powerCleanWorkout);
 
-        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $publicEvent, $auditEvent] as $entity) {
+        foreach ([$origin, $workoutType, $competition, $publicWorkout, $auditWorkout, $powerCleanWorkout, $publicEvent, $auditEvent, $powerCleanEvent] as $entity) {
             $entityManager->persist($entity);
         }
         $entityManager->flush();
@@ -169,6 +181,16 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertContains('Competition thruster filter test', $names);
         self::assertNotContains('Audit competition thruster filter test', $names);
+
+        $this->browser()->request('GET', '/api/workout-catalog?source=competition&movement=clean&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertNotContains('Competition power clean filter ambiguity test', $names);
     }
 
     public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
