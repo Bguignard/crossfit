@@ -118,7 +118,7 @@ final class WorkoutCatalogController extends AbstractController
 
         $next = null;
         if ($hasNext) {
-            $query = $request->query->all();
+            $query = $this->paginationQuery($request, $filters);
             $query['page'] = $page + 1;
             $next = '/api/workout-catalog?'.http_build_query($query);
         }
@@ -826,6 +826,35 @@ final class WorkoutCatalogController extends AbstractController
             'movementNames' => $this->queryStringList($request, 'movements.name', 'movement'),
             'implementNames' => $this->queryStringList($request, 'implements.name', 'implement'),
         ];
+    }
+
+    /**
+     * @param array{
+     *     query: ?string,
+     *     name: ?string,
+     *     flow: ?string,
+     *     workoutType: ?string,
+     *     timeCap: ?int,
+     *     timeCapMin: ?int,
+     *     timeCapMax: ?int,
+     *     sourceName: ?string,
+     *     sourceNames: list<string>,
+     *     movementNames: list<string>,
+     *     implementNames: list<string>,
+     * } $filters
+     *
+     * @return array<string, mixed>
+     */
+    private function paginationQuery(Request $request, array $filters): array
+    {
+        $query = $request->query->all();
+        unset($query['source'], $query['sourceName'], $query['sourceNames']);
+
+        if ($filters['sourceNames'] !== []) {
+            $query['sourceNames'] = $filters['sourceNames'];
+        }
+
+        return $query;
     }
 
     /**
