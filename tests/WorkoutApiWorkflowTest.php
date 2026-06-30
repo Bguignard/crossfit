@@ -121,6 +121,180 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('crossfit_games', $workouts[0]['sourceName'] ?? null);
     }
 
+    public function testWorkoutCatalogDeduplicatesExactCanonicalDuplicatesByDefault(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $first = (new Workout(
+            'Canonical duplicate API test',
+            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('crossfit_games')
+            ->setExternalId('canonical-duplicate-games')
+            ->setSourceUrl('https://example.test/games');
+        $second = (new Workout(
+            'Canonical duplicate API-test',
+            "For time:\nCanonical marker\n\n21 15 9\nThrusters 95/65 lb\nPull Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('competition_corner')
+            ->setExternalId('canonical-duplicate-corner')
+            ->setSourceUrl('https://example.test/corner');
+        $third = (new Workout(
+            ' Canonical duplicate API test ',
+            "For time:\nCanonical marker\n21-15-9\nThrusters (95/65 lb)\nPull-Ups",
+            1,
+            10,
+            $workoutType,
+            $origin,
+        ))
+            ->setSourceName('crossfit_games')
+            ->setExternalId('canonical-duplicate-games-men')
+            ->setSourceUrl('https://example.test/games-men');
+        $athlete = new Athlete('Canonical Athlete', 'crossfit_games', 'canonical-athlete');
+        $gamesCompetition = (new Competition('Canonical Games', 'crossfit_games', 'canonical-games'))
+            ->setSeason(2026);
+        $cornerCompetition = (new Competition('Canonical Throwdown', 'competition_corner', 'canonical-throwdown'))
+            ->setSeason(2025);
+        $gamesEvent = (new CompetitionEvent($gamesCompetition, 'Final Fran', 'crossfit_games', 'canonical-games-final'))
+            ->setEventOrder(1)
+            ->setWorkout($first);
+        $gamesMenEvent = (new CompetitionEvent($gamesCompetition, 'Final Fran', 'crossfit_games', 'canonical-games-final-men'))
+            ->setEventOrder(1)
+            ->setWorkout($third);
+        $cornerEvent = (new CompetitionEvent($cornerCompetition, 'Qualifier Fran', 'competition_corner', 'canonical-corner-qualifier'))
+            ->setEventOrder(2)
+            ->setWorkout($second);
+        $gamesDivision = new CompetitionDivision($gamesCompetition, 'Elite Women', 'crossfit_games', 'canonical-games-elite-women');
+        $gamesMenDivision = new CompetitionDivision($gamesCompetition, 'Elite Men', 'crossfit_games', 'canonical-games-elite-men');
+        $cornerDivision = new CompetitionDivision($cornerCompetition, 'RX Men', 'competition_corner', 'canonical-corner-rx-men');
+        $gamesResult = (new WorkoutResult($athlete, $gamesEvent, new Score(ScoreTypeEnum::TIME, '2:59'), 'crossfit_games', 'canonical-games-result'))
+            ->setCompetitionDivision($gamesDivision)
+            ->setDivision('Elite Women');
+        $gamesMenResult = (new WorkoutResult($athlete, $gamesMenEvent, new Score(ScoreTypeEnum::TIME, '2:55'), 'crossfit_games', 'canonical-games-men-result'))
+            ->setCompetitionDivision($gamesMenDivision)
+            ->setDivision('Elite Men');
+        $cornerResult = (new WorkoutResult($athlete, $cornerEvent, new Score(ScoreTypeEnum::TIME, '3:10'), 'competition_corner', 'canonical-corner-result'))
+            ->setCompetitionDivision($cornerDivision)
+            ->setDivision('RX Men');
+
+        foreach ([$origin, $workoutType, $first, $second, $third, $athlete, $gamesCompetition, $cornerCompetition, $gamesEvent, $gamesMenEvent, $cornerEvent, $gamesDivision, $gamesMenDivision, $cornerDivision, $gamesResult, $gamesMenResult, $cornerResult] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', '/api/workout-catalog?q=canonical%20marker&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+
+        self::assertSame(1, $payload['totalItems']);
+        self::assertCount(1, $workouts);
+        self::assertSame('Canonical duplicate API test', trim((string) ($workouts[0]['name'] ?? '')));
+        self::assertStringContainsString('Canonical marker', $workouts[0]['flow'] ?? '');
+        self::assertSame(['flow'], $workouts[0]['matchDetails']['query']['fields'] ?? null);
+        self::assertSame(3, $workouts[0]['occurrenceCount'] ?? null);
+        self::assertCount(3, $workouts[0]['workoutIds'] ?? []);
+        self::assertSame(['competition_corner', 'crossfit_games'], $workouts[0]['sources'] ?? null);
+        self::assertCount(3, $workouts[0]['sourceReferences'] ?? []);
+        self::assertCount(2, $workouts[0]['competitionContexts'] ?? []);
+        self::assertSame(['Canonical Games', 'Canonical Throwdown'], array_column($workouts[0]['competitionContexts'], 'competitionName'));
+        self::assertContainsOnly('array', array_column($workouts[0]['competitionContexts'], 'divisions'));
+    }
+
+    public function testWorkoutCatalogKeepsSameNameDifferentContentAsSeparateCanonicalWorkouts(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $cleanWorkout = (new Workout(
+            'Canonical variant API test',
+            "For time:\n30 Cleans",
+            1,
+            12,
+            $workoutType,
+            $origin,
+        ))->setSourceName('crossfit_games');
+        $snatchWorkout = (new Workout(
+            'Canonical variant API test',
+            "For time:\n30 Snatches",
+            1,
+            12,
+            $workoutType,
+            $origin,
+        ))->setSourceName('competition_corner');
+
+        foreach ([$origin, $workoutType, $cleanWorkout, $snatchWorkout] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=canonical%20variant%20api%20test&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $flows = array_map(static fn (array $workout): ?string => $workout['flow'] ?? null, $workouts);
+
+        self::assertSame(2, $payload['totalItems']);
+        self::assertContains("For time:\n30 Cleans", $flows);
+        self::assertContains("For time:\n30 Snatches", $flows);
+    }
+
+    public function testWorkoutCatalogCanIncludeRawDuplicatesForAudit(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $first = (new Workout(
+            'Canonical raw duplicate API test',
+            "For time:\n10 Burpees",
+            1,
+            8,
+            $workoutType,
+            $origin,
+        ))->setSourceName('crossfit_games');
+        $second = (new Workout(
+            'Canonical raw duplicate API test',
+            "For time:\n10 Burpees",
+            1,
+            8,
+            $workoutType,
+            $origin,
+        ))->setSourceName('competition_corner');
+
+        foreach ([$origin, $workoutType, $first, $second] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=canonical%20raw%20duplicate%20api%20test&includeDuplicates=true&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $sources = array_map(static fn (array $workout): ?string => $workout['sourceName'] ?? null, $workouts);
+
+        self::assertSame(2, $payload['totalItems']);
+        self::assertCount(2, $workouts);
+        self::assertContains('competition_corner', $sources);
+        self::assertContains('crossfit_games', $sources);
+        self::assertArrayNotHasKey('occurrenceCount', $workouts[0]);
+    }
+
     public function testFrontendCanSearchWorkoutCatalogWithAdvancedFiltersAndMatchDetails(): void
     {
         $this->browser()->request(

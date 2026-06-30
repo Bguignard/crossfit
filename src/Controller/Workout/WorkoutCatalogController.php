@@ -8,6 +8,8 @@ use App\Entity\Workout\Enum\WorkoutOriginNameEnum;
 use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
+use App\Services\Workout\Catalog\CanonicalWorkoutCatalogEntry;
+use App\Services\Workout\Catalog\WorkoutCatalogCanonicalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,9 +22,12 @@ final class WorkoutCatalogController extends AbstractController
 {
     private const DEFAULT_PAGE_SIZE = 25;
     private const MAX_PAGE_SIZE = 50;
+    private const CANONICAL_SCAN_BATCH_SIZE = 200;
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly WorkoutCatalogCanonicalizer $canonicalizer,
+    ) {
     }
 
     #[Route('/api/workout-catalog/random-generated', name: 'workout_catalog_random_generated', methods: ['GET'])]
@@ -61,25 +66,41 @@ final class WorkoutCatalogController extends AbstractController
         $page = $this->positiveInt($request->query->get('page'), 1);
         $pageSize = min($this->positiveInt($request->query->get('itemsPerPage'), self::DEFAULT_PAGE_SIZE), self::MAX_PAGE_SIZE);
         $filters = $this->filtersFromRequest($request);
+        $includeDuplicates = $this->booleanQuery($request->query->get('includeDuplicates'));
         $queryBuilder = $this->filteredQueryBuilder($filters);
-        $totalItems = (int) (clone $queryBuilder)
-            ->select('COUNT(DISTINCT workout.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()
-            ->getSingleScalarResult();
 
-        /** @var list<Workout> $workouts */
-        $workouts = $queryBuilder
-            ->select('DISTINCT workout')
-            ->orderBy('workout.name', 'ASC')
-            ->addOrderBy('workout.createdAt', 'DESC')
-            ->setFirstResult(($page - 1) * $pageSize)
-            ->setMaxResults($pageSize)
-            ->getQuery()
-            ->getResult();
+        if ($includeDuplicates) {
+            $totalItems = (int) (clone $queryBuilder)
+                ->select('COUNT(DISTINCT workout.id)')
+                ->resetDQLPart('orderBy')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            /** @var list<Workout> $workouts */
+            $workouts = $queryBuilder
+                ->select('DISTINCT workout')
+                ->orderBy('workout.name', 'ASC')
+                ->addOrderBy('workout.createdAt', 'DESC')
+                ->setFirstResult(($page - 1) * $pageSize)
+                ->setMaxResults($pageSize)
+                ->getQuery()
+                ->getResult();
+
+            $members = array_map(
+                fn (Workout $workout): array => $this->serializeWorkout($workout, $filters),
+                $workouts,
+            );
+            $hasNext = $page * $pageSize < $totalItems;
+        } else {
+            [$canonicalEntries, $totalItems, $hasNext] = $this->canonicalPage($queryBuilder, $this->provenanceFilters($filters), $page, $pageSize);
+            $members = array_map(
+                fn (CanonicalWorkoutCatalogEntry $entry): array => $this->serializeCanonicalWorkout($entry, $filters),
+                $canonicalEntries,
+            );
+        }
 
         $next = null;
-        if ($page * $pageSize < $totalItems) {
+        if ($hasNext) {
             $query = $request->query->all();
             $query['page'] = $page + 1;
             $next = '/api/workout-catalog?'.http_build_query($query);
@@ -87,14 +108,138 @@ final class WorkoutCatalogController extends AbstractController
 
         return $this->json([
             'totalItems' => $totalItems,
-            'member' => array_map(
-                fn (Workout $workout): array => $this->serializeWorkout($workout, $filters),
-                $workouts,
-            ),
+            'member' => $members,
             'view' => [
                 'next' => $next,
             ],
         ]);
+    }
+
+    /**
+     * @return array{0: list<CanonicalWorkoutCatalogEntry>, 1: int, 2: bool}
+     */
+    private function canonicalPage(QueryBuilder $matchingQueryBuilder, array $provenanceFilters, int $page, int $pageSize): array
+    {
+        $matchingFingerprints = [];
+        $matchingRepresentatives = [];
+        $matchingNames = [];
+        $matchingOrder = [];
+        $groups = [];
+
+        $this->scanWorkouts($matchingQueryBuilder, function (Workout $workout) use (&$matchingFingerprints, &$matchingRepresentatives, &$matchingNames, &$matchingOrder): void {
+            $fingerprint = $this->canonicalizer->fingerprint($workout);
+            $matchingNames[mb_strtolower((string) $workout->getName())] = true;
+
+            if (isset($matchingFingerprints[$fingerprint])) {
+                return;
+            }
+
+            $matchingFingerprints[$fingerprint] = true;
+            $matchingRepresentatives[$fingerprint] = $workout;
+            $matchingOrder[] = $fingerprint;
+        });
+
+        if ($matchingOrder === []) {
+            return [[], 0, false];
+        }
+
+        $provenanceQueryBuilder = $this->filteredQueryBuilder($provenanceFilters)
+            ->andWhere('LOWER(workout.name) IN (:canonicalCandidateNames)')
+            ->setParameter('canonicalCandidateNames', array_keys($matchingNames));
+
+        $this->scanWorkouts($provenanceQueryBuilder, function (Workout $workout) use (&$groups, $matchingFingerprints): void {
+            $fingerprint = $this->canonicalizer->fingerprint($workout);
+            if (!isset($matchingFingerprints[$fingerprint])) {
+                return;
+            }
+
+            $groups[$fingerprint] ??= [];
+            $groups[$fingerprint][] = $workout;
+        });
+
+        $canonicalEntries = [];
+        foreach ($matchingOrder as $fingerprint) {
+            if (!isset($groups[$fingerprint])) {
+                continue;
+            }
+
+            $occurrences = $groups[$fingerprint];
+            $canonicalEntries[] = new CanonicalWorkoutCatalogEntry($fingerprint, $matchingRepresentatives[$fingerprint], $occurrences);
+        }
+
+        return [
+            array_slice($canonicalEntries, ($page - 1) * $pageSize, $pageSize),
+            count($canonicalEntries),
+            $page * $pageSize < count($canonicalEntries),
+        ];
+    }
+
+    /**
+     * @param callable(Workout): void $consume
+     */
+    private function scanWorkouts(QueryBuilder $queryBuilder, callable $consume): void
+    {
+        $offset = 0;
+        do {
+            /** @var list<Workout> $batch */
+            $batch = (clone $queryBuilder)
+                ->select('DISTINCT workout')
+                ->orderBy('workout.name', 'ASC')
+                ->addOrderBy('workout.createdAt', 'DESC')
+                ->setFirstResult($offset)
+                ->setMaxResults(self::CANONICAL_SCAN_BATCH_SIZE)
+                ->getQuery()
+                ->getResult();
+
+            if ($batch === []) {
+                break;
+            }
+
+            foreach ($batch as $workout) {
+                $consume($workout);
+            }
+
+            $offset += self::CANONICAL_SCAN_BATCH_SIZE;
+        } while (count($batch) === self::CANONICAL_SCAN_BATCH_SIZE);
+    }
+
+    /**
+     * Text filters select matching canonical fingerprints. Provenance then comes
+     * from the full canonical group so formatting variants remain visible.
+     *
+     * @param array{
+     *     query: ?string,
+     *     name: ?string,
+     *     flow: ?string,
+     *     workoutType: ?string,
+     *     timeCap: ?int,
+     *     timeCapMin: ?int,
+     *     timeCapMax: ?int,
+     *     sourceName: ?string,
+     *     movementNames: list<string>,
+     *     implementNames: list<string>,
+     * } $filters
+     *
+     * @return array{
+     *     query: ?string,
+     *     name: ?string,
+     *     flow: ?string,
+     *     workoutType: ?string,
+     *     timeCap: ?int,
+     *     timeCapMin: ?int,
+     *     timeCapMax: ?int,
+     *     sourceName: ?string,
+     *     movementNames: list<string>,
+     *     implementNames: list<string>,
+     * }
+     */
+    private function provenanceFilters(array $filters): array
+    {
+        $filters['query'] = null;
+        $filters['name'] = null;
+        $filters['flow'] = null;
+
+        return $filters;
     }
 
     /**
@@ -283,6 +428,36 @@ final class WorkoutCatalogController extends AbstractController
      *
      * @return array<string, mixed>
      */
+    private function serializeCanonicalWorkout(CanonicalWorkoutCatalogEntry $entry, array $filters): array
+    {
+        $payload = $this->serializeWorkout($entry->representative, $filters);
+        $payload['canonicalFingerprint'] = $entry->fingerprint;
+        $payload['occurrenceCount'] = $entry->occurrenceCount();
+        $payload['workoutIds'] = $entry->workoutIds();
+        $payload['sources'] = $entry->sourceNames();
+        $payload['workoutOrigins'] = $entry->workoutOrigins();
+        $payload['sourceReferences'] = $entry->sourceReferences();
+        $payload['competitionContexts'] = $entry->competitionContexts();
+
+        return $payload;
+    }
+
+    /**
+     * @param array{
+     *     query: ?string,
+     *     name: ?string,
+     *     flow: ?string,
+     *     workoutType: ?string,
+     *     timeCap: ?int,
+     *     timeCapMin: ?int,
+     *     timeCapMax: ?int,
+     *     sourceName: ?string,
+     *     movementNames: list<string>,
+     *     implementNames: list<string>,
+     * } $filters
+     *
+     * @return array<string, mixed>
+     */
     private function matchDetails(Workout $workout, array $filters): array
     {
         $details = [];
@@ -434,5 +609,14 @@ final class WorkoutCatalogController extends AbstractController
         }
 
         return max(1, (int) $value);
+    }
+
+    private function booleanQuery(mixed $value): bool
+    {
+        if (!is_scalar($value)) {
+            return false;
+        }
+
+        return filter_var((string) $value, FILTER_VALIDATE_BOOL);
     }
 }
