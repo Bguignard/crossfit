@@ -33,6 +33,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum movements to display.', 30)
             ->addOption('pair-limit', null, InputOption::VALUE_REQUIRED, 'Maximum movement pairs to display.', 30)
             ->addOption('generation-guidance', null, InputOption::VALUE_NONE, 'Include movement frequency bands and pair warnings for workout generation prompts.')
+            ->addOption('deduplicate-canonical', null, InputOption::VALUE_NONE, 'Count workouts by canonical_fingerprint when available, so duplicate catalog occurrences do not over-weight guidance.')
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output the report as JSON.');
     }
 
@@ -42,12 +43,13 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         $limit = max(1, (int) $input->getOption('limit'));
         $pairLimit = max(1, (int) $input->getOption('pair-limit'));
         [$filters, $whereSql, $parameters] = $this->filters($input);
+        $deduplicateCanonical = (bool) $input->getOption('deduplicate-canonical');
 
         $summary = $this->summary($whereSql, $parameters);
         $detection = $this->detectionMode($input, (int) $summary['structuredWorkoutCount']);
         $detectedWorkoutMovements = $detection === 'flow'
-            ? $this->flowDetectedWorkoutMovements($whereSql, $parameters)
-            : $this->structuredWorkoutMovements($whereSql, $parameters);
+            ? $this->flowDetectedWorkoutMovements($whereSql, $parameters, $deduplicateCanonical)
+            : $this->structuredWorkoutMovements($whereSql, $parameters, $deduplicateCanonical);
         $analyzedWorkoutCount = count($detectedWorkoutMovements);
         $summary['flowMatchedWorkoutCount'] = $detection === 'flow' ? $analyzedWorkoutCount : null;
         $summary['analyzedWorkoutCount'] = $analyzedWorkoutCount;
@@ -63,6 +65,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             'kind' => 'competition_movement_frequency_audit_v1',
             'filters' => $filters,
             'detection' => $detection,
+            'workoutCounting' => $deduplicateCanonical ? 'canonical' : 'occurrence',
             'summary' => $summary,
             'movements' => $movements,
             'pairs' => $pairs,
@@ -87,6 +90,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ['Flow-matched workouts' => $summary['flowMatchedWorkoutCount'] ?? '-'],
             ['Analyzed workouts' => $summary['analyzedWorkoutCount']],
             ['Detection' => $detection],
+            ['Workout counting' => $deduplicateCanonical ? 'canonical fingerprint when available' : 'raw workout occurrence'],
             ['Filters' => $this->formatFilters($filters)],
         );
 
@@ -124,7 +128,10 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
             ),
         );
 
-        $io->note('Percentages use only analyzed competition workouts as denominator. In flow mode, movement detection is approximate and should guide, not replace, later structured enrichment.');
+        $io->note(sprintf(
+            'Percentages use analyzed %s as denominator. In flow mode, movement detection is approximate and should guide, not replace, later structured enrichment.',
+            $deduplicateCanonical ? 'canonical workout samples' : 'competition workouts',
+        ));
 
         if ($generationGuidance !== null) {
             $io->section('Generation guidance');
@@ -258,13 +265,16 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
      *
      * @return array<string, list<array{id: string, name: string, movementType: ?string}>>
      */
-    private function structuredWorkoutMovements(string $whereSql, array $parameters): array
+    private function structuredWorkoutMovements(string $whereSql, array $parameters, bool $deduplicateCanonical): array
     {
+        $workoutKeySql = $this->workoutKeySql($deduplicateCanonical, 'w');
         $rows = $this->connection->fetchAllAssociative(
             sprintf(
                 <<<'SQL'
                     WITH base_workouts AS (
-                        SELECT DISTINCT w.id
+                        SELECT DISTINCT
+                            %s AS workout_key,
+                            w.id
                         FROM competition_event ce
                         INNER JOIN competition c ON c.id = ce.competition_id
                         INNER JOIN workout w ON w.id = ce.workout_id
@@ -272,6 +282,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                         WHERE %s
                     )
                     SELECT
+                        bw.workout_key,
                         bw.id::TEXT AS workout_id,
                         m.id::TEXT AS movement_id,
                         m.name AS movement,
@@ -282,6 +293,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                     LEFT JOIN movement_type mt ON mt.id = m.movement_type_id
                     ORDER BY bw.id::TEXT ASC, m.name ASC
                     SQL,
+                $workoutKeySql,
                 $whereSql,
             ),
             $parameters,
@@ -295,13 +307,15 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
      *
      * @return array<string, list<array{id: string, name: string, movementType: ?string}>>
      */
-    private function flowDetectedWorkoutMovements(string $whereSql, array $parameters): array
+    private function flowDetectedWorkoutMovements(string $whereSql, array $parameters, bool $deduplicateCanonical): array
     {
         $catalog = $this->movementCatalog();
+        $workoutKeySql = $this->workoutKeySql($deduplicateCanonical, 'w');
         $workouts = $this->connection->fetchAllAssociative(
             sprintf(
                 <<<'SQL'
                     SELECT
+                        %s AS workout_key,
                         w.id::TEXT AS workout_id,
                         w.flow
                     FROM competition_event ce
@@ -311,6 +325,7 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                     WHERE %s
                     ORDER BY w.id::TEXT ASC
                     SQL,
+                $workoutKeySql,
                 $whereSql,
             ),
             $parameters,
@@ -324,10 +339,20 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
                 continue;
             }
 
-            $detected[(string) $workout['workout_id']] = $movements;
+            $workoutKey = (string) ($workout['workout_key'] ?? $workout['workout_id']);
+            $detected[$workoutKey] = $this->mergeDetectedMovements($detected[$workoutKey] ?? [], $movements);
         }
 
         return $detected;
+    }
+
+    private function workoutKeySql(bool $deduplicateCanonical, string $workoutAlias): string
+    {
+        if (!$deduplicateCanonical) {
+            return sprintf('%s.id::TEXT', $workoutAlias);
+        }
+
+        return sprintf('COALESCE(NULLIF(%s.canonical_fingerprint, \'\'), %s.id::TEXT)', $workoutAlias, $workoutAlias);
     }
 
     /**
@@ -568,16 +593,40 @@ final class AuditCompetitionMovementFrequenciesCommand extends Command
         $detected = [];
 
         foreach ($rows as $row) {
-            $workoutId = (string) $row['workout_id'];
-            $detected[$workoutId] ??= [];
-            $detected[$workoutId][] = [
+            $workoutKey = (string) ($row['workout_key'] ?? $row['workout_id']);
+            $detected[$workoutKey] = $this->mergeDetectedMovements($detected[$workoutKey] ?? [], [[
                 'id' => (string) $row['movement_id'],
                 'name' => (string) $row['movement'],
                 'movementType' => $row['movement_type'] === null ? null : (string) $row['movement_type'],
-            ];
+            ]]);
         }
 
         return $detected;
+    }
+
+    /**
+     * @param list<array{id: string, name: string, movementType: ?string}> $current
+     * @param list<array{id: string, name: string, movementType: ?string}> $additional
+     *
+     * @return list<array{id: string, name: string, movementType: ?string}>
+     */
+    private function mergeDetectedMovements(array $current, array $additional): array
+    {
+        $merged = [];
+        $seenMovementIds = [];
+
+        foreach (array_merge($current, $additional) as $movement) {
+            if (isset($seenMovementIds[$movement['id']])) {
+                continue;
+            }
+
+            $merged[] = $movement;
+            $seenMovementIds[$movement['id']] = true;
+        }
+
+        usort($merged, static fn (array $left, array $right): int => $left['name'] <=> $right['name']);
+
+        return $merged;
     }
 
     /**
