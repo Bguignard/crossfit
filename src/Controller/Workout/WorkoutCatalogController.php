@@ -9,6 +9,7 @@ use App\Entity\Workout\Implement;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
 use App\Services\Workout\Catalog\CanonicalWorkoutCatalogEntry;
+use App\Services\Workout\Catalog\PublicWorkoutCatalogVisibility;
 use App\Services\Workout\Catalog\WorkoutCatalogCanonicalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -27,6 +28,7 @@ final class WorkoutCatalogController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly WorkoutCatalogCanonicalizer $canonicalizer,
+        private readonly PublicWorkoutCatalogVisibility $publicWorkoutCatalogVisibility,
     ) {
     }
 
@@ -35,6 +37,8 @@ final class WorkoutCatalogController extends AbstractController
     {
         $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout')
             ->andWhere('workout.workoutGeneration IS NOT NULL');
+        $this->publicWorkoutCatalogVisibility->applyPublicConstraint($queryBuilder, 'workout', 'randomGeneratedWorkoutGeneration', 'randomGeneratedWorkout');
+
         $totalItems = (int) (clone $queryBuilder)
             ->select('COUNT(workout.id)')
             ->getQuery()
@@ -259,6 +263,7 @@ final class WorkoutCatalogController extends AbstractController
     private function filteredQueryBuilder(array $filters): QueryBuilder
     {
         $queryBuilder = $this->entityManager->getRepository(Workout::class)->createQueryBuilder('workout');
+        $this->publicWorkoutCatalogVisibility->applyPublicConstraint($queryBuilder, 'workout');
 
         if ($filters['query'] !== null) {
             $queryBuilder

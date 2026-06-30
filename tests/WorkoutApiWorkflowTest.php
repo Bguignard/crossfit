@@ -295,6 +295,97 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertArrayNotHasKey('occurrenceCount', $workouts[0]);
     }
 
+    public function testPublicWorkoutCatalogHidesInternalAuditWorkouts(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $origin = new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::OTHER), 2026);
+        $workoutType = new WorkoutType(WorkoutTypeEnum::FOR_TIME);
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $movementGenerationType = new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT);
+        $auditGeneration = (new WorkoutGeneration())
+            ->setName('Audit post-fix - Strength')
+            ->setTimeCap(12)
+            ->setNumberOfDifferentMovements(1)
+            ->setWorkoutType($workoutType)
+            ->setMovementDifficulty($difficulty)
+            ->setMovementGenerationType($movementGenerationType)
+            ->setMovementTypes([])
+            ->setAvailableImplements([])
+            ->setMandatoryBodyParts([])
+            ->setBannedMovements([])
+            ->setMandatoryMovements([])
+            ->setIsTeamWorkout(false);
+        $publicGeneration = (new WorkoutGeneration())
+            ->setName('Visible Strength')
+            ->setTimeCap(12)
+            ->setNumberOfDifferentMovements(1)
+            ->setWorkoutType($workoutType)
+            ->setMovementDifficulty($difficulty)
+            ->setMovementGenerationType($movementGenerationType)
+            ->setMovementTypes([])
+            ->setAvailableImplements([])
+            ->setMandatoryBodyParts([])
+            ->setBannedMovements([])
+            ->setMandatoryMovements([])
+            ->setIsTeamWorkout(false);
+        $auditWorkout = (new Workout(
+            'Audit post-fix - Strength',
+            "For quality:\n5 Back Squats",
+            5,
+            12,
+            $workoutType,
+            $origin,
+        ))->setWorkoutGeneration($auditGeneration);
+        $publicWorkout = (new Workout(
+            'Visible Strength',
+            "For quality:\n5 Back Squats",
+            5,
+            12,
+            $workoutType,
+            $origin,
+        ))->setWorkoutGeneration($publicGeneration);
+        $internalSourceWorkout = (new Workout(
+            'Internal source catalogue check',
+            "For time:\n10 Burpees",
+            1,
+            8,
+            $workoutType,
+            $origin,
+        ))->setSourceName('monwod_audit');
+
+        foreach ([$origin, $workoutType, $difficulty, $movementGenerationType, $auditGeneration, $publicGeneration, $auditWorkout, $publicWorkout, $internalSourceWorkout] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', '/api/workout-catalog?q=strength&includeDuplicates=true&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        $names = array_map(static fn (array $workout): ?string => $workout['name'] ?? null, $workouts);
+
+        self::assertContains('Visible Strength', $names);
+        self::assertNotContains('Audit post-fix - Strength', $names);
+
+        $this->browser()->request('GET', '/api/workout-catalog?name=internal%20source%20catalogue%20check&includeDuplicates=true&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(0, $payload['totalItems']);
+
+        $this->browser()->request('GET', '/api/workouts?name=Audit%20post-fix%20-%20Strength&itemsPerPage=1000');
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $workouts = $payload['member'] ?? $payload['hydra:member'] ?? [];
+        self::assertCount(0, $workouts);
+    }
+
     public function testFrontendCanSearchWorkoutCatalogWithAdvancedFiltersAndMatchDetails(): void
     {
         $this->browser()->request(
