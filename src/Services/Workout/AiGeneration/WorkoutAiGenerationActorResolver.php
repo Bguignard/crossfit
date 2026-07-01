@@ -27,13 +27,15 @@ readonly class WorkoutAiGenerationActorResolver
 
     private function visitorHash(Request $request): string
     {
+        $clientIp = trim((string) ($request->getClientIp() ?? ''));
         $visitorId = trim((string) $request->headers->get('X-MonWOD-Visitor-Id', ''));
-        if ($visitorId === '') {
-            $visitorId = 'ip:'.($request->getClientIp() ?? 'unknown');
-        } else {
-            $visitorId = 'visitor:'.$visitorId;
-        }
 
-        return hash_hmac('sha256', $visitorId, $this->appSecret);
+        // Do not trust the client visitor id alone for anonymous quotas: bind quota to
+        // the server-observed IP whenever Symfony can resolve one.
+        $identity = $clientIp !== ''
+            ? 'ip:'.strtolower($clientIp)
+            : 'visitor:'.$visitorId;
+
+        return hash_hmac('sha256', $identity, $this->appSecret);
     }
 }
