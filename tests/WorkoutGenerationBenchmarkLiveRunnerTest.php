@@ -155,15 +155,15 @@ final class WorkoutGenerationBenchmarkLiveRunnerTest extends TestCase
         ?MockHttpClient $httpClient = null,
     ): WorkoutGenerationBenchmarkLiveRunner {
         return new WorkoutGenerationBenchmarkLiveRunner(
-            $movementService,
-            new class implements WorkoutOriginServiceInterface {
+            movementService: $movementService,
+            workoutOriginService: new class implements WorkoutOriginServiceInterface {
                 public function getExistingOrInsertNewWorkoutOrigin(string $name, int $year): WorkoutOrigin
                 {
                     throw new \RuntimeException('Workout origin should not be needed in these tests.');
                 }
             },
-            new WorkoutStimulusAuditor(),
-            new class($implements) implements ImplementRepositoryInterface {
+            auditor: new WorkoutStimulusAuditor(),
+            implementRepository: new class($implements) implements ImplementRepositoryInterface {
                 /**
                  * @param list<Implement> $implements
                  */
@@ -176,8 +176,8 @@ final class WorkoutGenerationBenchmarkLiveRunnerTest extends TestCase
                     return $this->implements;
                 }
             },
-            $httpClient ?? new MockHttpClient([]),
-            'test-key',
+            httpClient: $httpClient ?? new MockHttpClient([]),
+            chatGPTApiKey: 'test-key',
         );
     }
 }

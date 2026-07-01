@@ -11,9 +11,14 @@ use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
 use App\Repository\Workout\ImplementRepositoryInterface;
 use App\Services\Workout\ChatGPTApiKey;
+use App\Services\Workout\CompetitionMovementFrequencyGuidanceProvider;
+use App\Services\Workout\MovementInteractionStrategyProvider;
 use App\Services\Workout\MovementServiceInterface;
+use App\Services\Workout\TeamWorkoutStructureGuidanceProvider;
 use App\Services\Workout\WorkoutCreatorService;
+use App\Services\Workout\WorkoutLoadPrescriptionValidator;
 use App\Services\Workout\WorkoutOriginServiceInterface;
+use App\Services\Workout\WorkoutPrescriptionStandardPromptBuilder;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGenerationBenchmarkLiveRunnerInterface
@@ -24,6 +29,11 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
         private WorkoutStimulusAuditor $auditor,
         private ImplementRepositoryInterface $implementRepository,
         private HttpClientInterface $httpClient,
+        private ?WorkoutPrescriptionStandardPromptBuilder $prescriptionStandardPromptBuilder = null,
+        private ?CompetitionMovementFrequencyGuidanceProvider $competitionMovementFrequencyGuidanceProvider = null,
+        private ?TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider = null,
+        private ?MovementInteractionStrategyProvider $movementInteractionStrategyProvider = null,
+        private ?WorkoutLoadPrescriptionValidator $loadPrescriptionValidator = null,
         private string $chatGPTApiKey = '',
     ) {
     }
@@ -90,6 +100,11 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 $this->movementService,
                 $chatGpt,
                 $this->workoutOriginService,
+                $this->prescriptionStandardPromptBuilder,
+                $this->competitionMovementFrequencyGuidanceProvider,
+                $this->teamWorkoutStructureGuidanceProvider,
+                $this->movementInteractionStrategyProvider,
+                $this->loadPrescriptionValidator,
             );
             $workout = $creator->createWorkout($this->workoutGenerationFromScenario($scenario));
             $usage = $workout->getAiUsage();
