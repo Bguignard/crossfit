@@ -128,10 +128,20 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         $actor = $this->aiGenerationActor($request);
-        $generationType = $this->generationUsageType('workout', $workoutGeneration);
+        $stimulusContext = $this->stimulusContext($workoutGeneration->getStimulus());
+        $generationType = $this->generationUsageType('workout', $workoutGeneration, $stimulusContext);
         $startedAt = microtime(true);
-        $baseLogContext = $this->workoutGenerationLogContext($workoutGeneration, $actor, $generationType);
+        $baseLogContext = $this->workoutGenerationLogContext($workoutGeneration, $actor, $generationType, $stimulusContext);
         $this->logger->info('monwod.workout_generation.received_request', $baseLogContext);
+        if ($stimulusContext['supported'] === false) {
+            $this->logger->warning('monwod.workout_generation.unsupported_stimulus', [
+                ...$baseLogContext,
+                'elapsedMs' => $this->elapsedMs($startedAt),
+            ]);
+
+            return $this->unsupportedStimulusResponse($stimulusContext);
+        }
+
         $quota = $this->aiGenerationUsageTracker->quotaFor($actor);
         if (!$quota->isAllowed) {
             $this->logger->info('monwod.workout_generation.quota_reached', [
@@ -204,7 +214,12 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         $actor = $this->aiGenerationActor($request);
-        $generationType = $this->generationUsageType('variants', $workoutGeneration);
+        $stimulusContext = $this->stimulusContext($workoutGeneration->getStimulus());
+        $generationType = $this->generationUsageType('variants', $workoutGeneration, $stimulusContext);
+        if ($stimulusContext['supported'] === false) {
+            return $this->unsupportedStimulusResponse($stimulusContext);
+        }
+
         $quota = $this->aiGenerationUsageTracker->quotaFor($actor);
         if (!$quota->isAllowed) {
             return $this->quotaExceededResponse($quota);
@@ -246,9 +261,12 @@ class WorkoutGenerationFlowController extends AbstractController
         return $this->aiGenerationActorResolver->resolve($request, $this->getUser(), $this->isGranted('ROLE_ADMIN'));
     }
 
-    private function generationUsageType(string $baseType, WorkoutGeneration $workoutGeneration): string
+    /**
+     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     */
+    private function generationUsageType(string $baseType, WorkoutGeneration $workoutGeneration, array $stimulusContext): string
     {
-        $stimulus = strtolower(trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $workoutGeneration->getStimulus()), '-'));
+        $stimulus = $stimulusContext['family'] ?? strtolower(trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $workoutGeneration->getStimulus()), '-'));
         if ($stimulus === '') {
             return $baseType;
         }
@@ -257,21 +275,70 @@ class WorkoutGenerationFlowController extends AbstractController
     }
 
     /**
+     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     *
      * @return array<string, mixed>
      */
-    private function workoutGenerationLogContext(WorkoutGeneration $workoutGeneration, WorkoutAiGenerationActor $actor, string $generationType): array
+    private function workoutGenerationLogContext(WorkoutGeneration $workoutGeneration, WorkoutAiGenerationActor $actor, string $generationType, array $stimulusContext): array
     {
         return [
             'draftId' => $workoutGeneration->getId() === null ? null : (string) $workoutGeneration->getId(),
             'actorType' => $actor->type,
             'generationType' => $generationType,
             'stimulus' => $workoutGeneration->getStimulus(),
-            'workoutType' => $workoutGeneration->getWorkoutType()->getName(),
-            'movementCount' => $workoutGeneration->getNumberOfDifferentMovements(),
-            'timeCap' => $workoutGeneration->getTimeCap(),
-            'level' => $workoutGeneration->getMovementDifficulty()->getName(),
-            'isTeamWorkout' => $workoutGeneration->isTeamWorkout(),
+            'normalizedStimulus' => $stimulusContext['normalized'],
+            'stimulusFamily' => $stimulusContext['family'],
+            'workoutType' => $this->workoutTypeNameForLog($workoutGeneration),
+            'movementCount' => $this->movementCountForLog($workoutGeneration),
+            'timeCap' => $this->timeCapForLog($workoutGeneration),
+            'level' => $this->movementDifficultyNameForLog($workoutGeneration),
+            'isTeamWorkout' => $this->isTeamWorkoutForLog($workoutGeneration),
         ];
+    }
+
+    private function workoutTypeNameForLog(WorkoutGeneration $workoutGeneration): ?string
+    {
+        try {
+            return $workoutGeneration->getWorkoutType()->getName();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function movementDifficultyNameForLog(WorkoutGeneration $workoutGeneration): ?string
+    {
+        try {
+            return $workoutGeneration->getMovementDifficulty()->getName();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function movementCountForLog(WorkoutGeneration $workoutGeneration): ?int
+    {
+        try {
+            return $workoutGeneration->getNumberOfDifferentMovements();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function timeCapForLog(WorkoutGeneration $workoutGeneration): ?int
+    {
+        try {
+            return $workoutGeneration->getTimeCap();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function isTeamWorkoutForLog(WorkoutGeneration $workoutGeneration): ?bool
+    {
+        try {
+            return $workoutGeneration->isTeamWorkout();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function logWorkoutGenerationException(
@@ -312,6 +379,140 @@ class WorkoutGenerationFlowController extends AbstractController
             'code' => 'workout_generation_failed',
             'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
         ], Response::HTTP_BAD_GATEWAY);
+    }
+
+    /**
+     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     */
+    private function unsupportedStimulusResponse(array $stimulusContext): JsonResponse
+    {
+        return $this->json([
+            'error' => sprintf('Unsupported workout stimulus "%s".', $stimulusContext['normalized'] ?? ''),
+            'code' => 'workout_generation_unsupported_stimulus',
+            'normalizedStimulus' => $stimulusContext['normalized'],
+            'supportedStimulusFamilies' => $this->supportedStimulusFamilies(),
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @return array{normalized: ?string, family: ?string, supported: bool}
+     */
+    private function stimulusContext(?string $stimulus): array
+    {
+        $normalized = $this->normalizeStimulus($stimulus);
+        if ($normalized === null) {
+            return [
+                'normalized' => null,
+                'family' => null,
+                'supported' => true,
+            ];
+        }
+
+        $family = $this->stimulusFamily($normalized);
+
+        return [
+            'normalized' => $normalized,
+            'family' => $family,
+            'supported' => $family !== null,
+        ];
+    }
+
+    private function normalizeStimulus(?string $stimulus): ?string
+    {
+        $stimulus = trim((string) $stimulus);
+        if ($stimulus === '') {
+            return null;
+        }
+
+        $stimulus = strtolower(strtr($stimulus, [
+            'à' => 'a',
+            'â' => 'a',
+            'ä' => 'a',
+            'ç' => 'c',
+            'é' => 'e',
+            'è' => 'e',
+            'ê' => 'e',
+            'ë' => 'e',
+            'î' => 'i',
+            'ï' => 'i',
+            'ô' => 'o',
+            'ö' => 'o',
+            'ù' => 'u',
+            'û' => 'u',
+            'ü' => 'u',
+        ]));
+        $stimulus = preg_replace('/[^a-z0-9]+/', ' ', $stimulus);
+
+        return trim((string) $stimulus);
+    }
+
+    private function stimulusFamily(string $normalizedStimulus): ?string
+    {
+        if (str_contains($normalizedStimulus, 'strength endurance')
+            || str_contains($normalizedStimulus, 'force endurance')
+            || str_contains($normalizedStimulus, 'endurance force')
+        ) {
+            return 'strength_endurance';
+        }
+        if (str_contains($normalizedStimulus, 'simulation hyrox')
+            || str_contains($normalizedStimulus, 'hyrox complet')
+            || str_contains($normalizedStimulus, 'full hyrox')
+            || str_contains($normalizedStimulus, 'complete hyrox')
+        ) {
+            return 'hyrox_simulation';
+        }
+        if (str_contains($normalizedStimulus, 'gymnastics')
+            || str_contains($normalizedStimulus, 'gym')
+            || str_contains($normalizedStimulus, 'skill')
+            || str_contains($normalizedStimulus, 'technique')
+        ) {
+            return 'gymnastics_skill';
+        }
+        if (str_contains($normalizedStimulus, 'competition')
+            || str_contains($normalizedStimulus, 'mixed modal')
+            || str_contains($normalizedStimulus, 'mixed modality')
+        ) {
+            return 'competition';
+        }
+        if (str_contains($normalizedStimulus, 'threshold') || str_contains($normalizedStimulus, 'seuil')) {
+            return 'threshold';
+        }
+        if (str_contains($normalizedStimulus, 'engine') || str_contains($normalizedStimulus, 'endurance')) {
+            return 'engine';
+        }
+        if (str_contains($normalizedStimulus, 'sprint')) {
+            return 'sprint';
+        }
+        if (str_contains($normalizedStimulus, 'hyrox')) {
+            return 'hyrox_training';
+        }
+        if (str_contains($normalizedStimulus, 'metcon')) {
+            return 'metcon';
+        }
+        if (str_contains($normalizedStimulus, 'strength') || str_contains($normalizedStimulus, 'force')) {
+            return 'strength';
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function supportedStimulusFamilies(): array
+    {
+        return [
+            'strength',
+            'sprint',
+            'threshold',
+            'engine',
+            'hyrox_training',
+            'hyrox_simulation',
+            'strength_endurance',
+            'gymnastics_skill',
+            'competition',
+            'metcon',
+        ];
     }
 
     private function recordAiGenerationFailure(WorkoutAiGenerationActor $actor, string $endpoint, string $generationType, \Throwable $exception): WorkoutAiGenerationUsage

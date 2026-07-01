@@ -2139,6 +2139,39 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         );
     }
 
+    public function testWorkoutGenerationRejectsUnknownStimulusBeforeCallingCreator(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                throw new \RuntimeException('The workout creator must not be called for an unsupported stimulus.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                throw new \RuntimeException('The workout creator must not be called for an unsupported stimulus.');
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        });
+
+        $draft = $this->createWorkoutGenerationDraft('Unsupported stimulus WOD', 'Mobile experimental grinder');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('workout_generation_unsupported_stimulus', $payload['code']);
+        self::assertSame('mobile experimental grinder', $payload['normalizedStimulus']);
+        self::assertContains('engine', $payload['supportedStimulusFamilies']);
+        self::assertContains('competition', $payload['supportedStimulusFamilies']);
+        self::assertSame(0, $this->getRepository(WorkoutAiGenerationUsage::class)->count([]));
+    }
+
     public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void
     {
         $this->browser()->disableReboot();
