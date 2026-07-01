@@ -5,15 +5,18 @@ namespace App\Services\Profile;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\WorkoutResult;
 use App\Entity\Product\UserAthleteProfile;
+use App\Services\Competition\HyroxResultPerformanceDetailsNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class PersonalAnalysisCompetitionSnapshotBuilder
 {
     private const int MAX_RESULTS = 80;
-    private const array ANALYSABLE_SOURCES = ['crossfit_games', 'competition_corner'];
+    private const array ANALYSABLE_SOURCES = ['crossfit_games', 'competition_corner', 'hyrox'];
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly HyroxResultPerformanceDetailsNormalizer $performanceDetailsNormalizer,
+    ) {
     }
 
     /**
@@ -131,6 +134,11 @@ final class PersonalAnalysisCompetitionSnapshotBuilder
             'numeric_value' => $score->getNumericValue(),
             'time_in_seconds' => $score->getTimeInSeconds(),
         ];
+
+        $performanceDetails = $this->performanceDetailsNormalizer->normalize($result);
+        if ($performanceDetails !== null) {
+            $payload['performance_details'] = $performanceDetails;
+        }
 
         if ($excludedReason !== null) {
             $payload['excluded_reason'] = $excludedReason;
