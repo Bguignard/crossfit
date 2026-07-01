@@ -9,6 +9,7 @@ use App\Entity\Workout\MovementDifficulty;
 use App\Entity\Workout\WorkoutMovementGenerationType;
 use App\Entity\Workout\WorkoutType;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use App\Repository\Workout\ImplementRepositoryInterface;
 use App\Services\Workout\ChatGPTApiKey;
 use App\Services\Workout\MovementServiceInterface;
 use App\Services\Workout\WorkoutCreatorService;
@@ -21,6 +22,7 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
         private MovementServiceInterface $movementService,
         private WorkoutOriginServiceInterface $workoutOriginService,
         private WorkoutStimulusAuditor $auditor,
+        private ImplementRepositoryInterface $implementRepository,
         private HttpClientInterface $httpClient,
         private string $chatGPTApiKey = '',
     ) {
@@ -79,6 +81,8 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
 
         $startedAt = microtime(true);
         $usage = null;
+        $chatGpt = null;
+        $creator = null;
 
         try {
             $chatGpt = new ChatGPTApiKey($this->chatGPTApiKey, $model, $this->httpClient);
@@ -104,6 +108,8 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 estimatedCostUsd: $this->estimatedCost($usage),
             );
         } catch (\Throwable $exception) {
+            $usage ??= $creator?->getLastAiUsage() ?? $chatGpt?->getLastUsage();
+
             return $this->entry(
                 model: $model,
                 strategy: $strategy,
@@ -132,6 +138,8 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
             ->setNumberOfDifferentMovements($scenario->movementCount)
             ->setMovementDifficulty(new MovementDifficulty(MovementDifficultyEnum::RX))
             ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setAvailableImplements($this->implementRepository->findAll())
+            ->setNumberOfRounds(null)
             ->setIntervalsTime($workoutType === WorkoutTypeEnum::INTERVALS ? 60 : null)
             ->setIntervalsRestTime($workoutType === WorkoutTypeEnum::INTERVALS ? 30 : null)
             ->setIsTeamWorkout(false);
