@@ -32,6 +32,8 @@ use App\Services\Workout\WorkoutPrescriptionStandardPromptBuilder;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 
 /**
  * @group unit
@@ -140,6 +142,41 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('run this validation checklist yourself', $prompt);
         self::assertStringContainsString('every JSON movement name must appear in the main flow', $prompt);
         self::assertStringContainsString('loaded movements must have a main-flow load prescription', $prompt);
+    }
+
+    public function testWorkoutGenerationLogsOpenAiAndValidationBoundaries(): void
+    {
+        $logger = new class extends AbstractLogger {
+            /**
+             * @var list<array{level: string, message: string, context: array<string, mixed>}>
+             */
+            public array $records = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->records[] = [
+                    'level' => (string) $level,
+                    'message' => (string) $message,
+                    'context' => $context,
+                ];
+            }
+        };
+
+        $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Competition',
+            2,
+            $logger,
+        );
+
+        $messages = array_column($logger->records, 'message');
+        self::assertContains('monwod.workout_generation.before_openai_call', $messages);
+        self::assertContains('monwod.workout_generation.after_openai_call', $messages);
+        self::assertContains('monwod.workout_generation.before_validation', $messages);
+        $beforeOpenAi = $logger->records[array_search('monwod.workout_generation.before_openai_call', $messages, true)];
+        self::assertSame('Competition', $beforeOpenAi['context']['stimulus']);
+        self::assertSame(2, $beforeOpenAi['context']['movementCount']);
     }
 
     public function testWorkoutPromptDiscouragesDefaultBenchmarkMovementTrio(): void
@@ -4335,6 +4372,7 @@ class WorkoutCreatorServiceTest extends TestCase
         ?int $numberOfRounds,
         ?string $stimulus = null,
         int $numberOfDifferentMovements = 1,
+        ?LoggerInterface $logger = null,
     ): array {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
         $cardio = new MovementType(MovementTypeEnum::CARDIO);
@@ -4417,7 +4455,12 @@ class WorkoutCreatorServiceTest extends TestCase
             ->setIntervalsRestTime(30)
             ->setIsTeamWorkout(false);
 
-        $workout = (new WorkoutCreatorService($movementService, $chatGpt, $workoutOriginService))->createWorkout($workoutGeneration);
+        $workout = (new WorkoutCreatorService(
+            $movementService,
+            $chatGpt,
+            $workoutOriginService,
+            logger: $logger,
+        ))->createWorkout($workoutGeneration);
 
         return [
             'workout' => $workout,

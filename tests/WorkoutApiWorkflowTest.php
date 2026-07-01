@@ -2139,6 +2139,94 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         );
     }
 
+    public function testWorkoutGenerationRejectsUnknownStimulusBeforeCallingCreator(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                throw new \RuntimeException('The workout creator must not be called for an unsupported stimulus.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                throw new \RuntimeException('The workout creator must not be called for an unsupported stimulus.');
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        });
+
+        $draft = $this->createWorkoutGenerationDraft('Unsupported stimulus WOD', 'Mobile experimental grinder');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('workout_generation_unsupported_stimulus', $payload['code']);
+        self::assertSame('mobile experimental grinder', $payload['normalizedStimulus']);
+        self::assertContains('engine', $payload['supportedStimulusFamilies']);
+        self::assertContains('competition', $payload['supportedStimulusFamilies']);
+        self::assertSame(0, $this->getRepository(WorkoutAiGenerationUsage::class)->count([]));
+    }
+
+    public function testWorkoutGenerationCanonicalizesAcceptedStimulusAliasBeforeCallingCreator(): void
+    {
+        $this->browser()->disableReboot();
+        $creator = new class implements WorkoutCreatorServiceInterface {
+            public ?string $receivedStimulus = null;
+
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                $this->receivedStimulus = $workoutGeneration->getStimulus();
+
+                return (new Workout(
+                    $workoutGeneration->getName(),
+                    'Generated strength endurance flow',
+                    $workoutGeneration->getNumberOfRounds(),
+                    $workoutGeneration->getTimeCap(),
+                    $workoutGeneration->getWorkoutType(),
+                    new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), 2026),
+                    $workoutGeneration->getAvailableImplements()->toArray(),
+                    $workoutGeneration->getMandatoryMovements()->toArray(),
+                ))
+                    ->setWorkoutGeneration($workoutGeneration)
+                    ->setAiUsage([
+                        'request_type' => 'workout_generation',
+                        'model' => 'test-model',
+                        'prompt_tokens' => 10,
+                        'completion_tokens' => 5,
+                        'total_tokens' => 15,
+                        'duration_ms' => 50,
+                        'status' => 'success',
+                        'estimated_cost_usd' => null,
+                    ]);
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        };
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, $creator);
+
+        $draft = $this->createWorkoutGenerationDraft('French stimulus alias WOD', 'Force endurance');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Strength Endurance', $creator->receivedStimulus);
+        $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
+        self::assertSame('Force endurance', $workoutGeneration->getStimulus());
+    }
+
     public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void
     {
         $this->browser()->disableReboot();
