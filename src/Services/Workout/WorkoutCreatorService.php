@@ -99,6 +99,7 @@ For high-skill movements, suggest realistic substitutions by level, for example 
 Do not prescribe strict toes to bar in the main workout flow. Normal Toes to Bar is allowed; strict toes to bar belongs only to accessory/strength notes outside the main metcon or competition flow.
 The Scaling options section is mandatory in the JSON "scalingOptions" field. Do not duplicate the Scaling options heading in the flow field.
 If the exact selected movement name is Assault Bike, write Echo Bike in the athlete-facing flow for modern WODs while keeping Assault Bike as the exact movement name in the JSON movements array.
+Before returning JSON, run this validation checklist yourself: every JSON movement name must appear in the main flow, every movement written in the main flow must be listed in the JSON movements array, loaded movements must have a main-flow load prescription, and the structure must match the requested stimulus and format.
 
 EOD;
         if ($workoutType === WorkoutTypeEnum::AMRAP) {

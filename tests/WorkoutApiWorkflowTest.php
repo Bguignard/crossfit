@@ -2080,13 +2080,63 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertResponseStatusCodeSame(502);
         $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.', $payload['error']);
+        self::assertSame('workout_generation_failed', $payload['code']);
+        self::assertNotEmpty($payload['failureId']);
         $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
         self::assertSame(0, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
         $usage = $this->getRepository(WorkoutAiGenerationUsage::class)->findOneBy(['endpoint' => WorkoutAiGenerationUsage::ENDPOINT_WORKOUT]);
         self::assertInstanceOf(WorkoutAiGenerationUsage::class, $usage);
+        self::assertSame((string) $usage->getId(), $payload['failureId']);
         self::assertSame('failure', $usage->getStatus());
         self::assertTrue($usage->isQuotaCounted());
         self::assertSame(820, $usage->getTotalTokens());
+        self::assertSame('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.', $usage->getFailureReason());
+    }
+
+    public function testWorkoutGenerationStoresValidationFailureEvenWithoutAiUsage(): void
+    {
+        $this->browser()->disableReboot();
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                throw new \RuntimeException('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        });
+
+        $draft = $this->createWorkoutGenerationDraft('Rejected generated WOD without usage', 'Competition');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(502);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('workout_generation_failed', $payload['code']);
+        self::assertSame(
+            'OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.',
+            $payload['error'],
+        );
+        self::assertNotEmpty($payload['failureId']);
+
+        $usage = $this->getRepository(WorkoutAiGenerationUsage::class)->findOneBy(['endpoint' => WorkoutAiGenerationUsage::ENDPOINT_WORKOUT]);
+        self::assertInstanceOf(WorkoutAiGenerationUsage::class, $usage);
+        self::assertSame((string) $usage->getId(), $payload['failureId']);
+        self::assertSame('failure', $usage->getStatus());
+        self::assertSame('workout:competition', $usage->getGenerationType());
+        self::assertFalse($usage->isQuotaCounted());
+        self::assertNull($usage->getTotalTokens());
+        self::assertSame(
+            'OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.',
+            $usage->getFailureReason(),
+        );
     }
 
     public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void
@@ -2351,31 +2401,36 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
     /**
      * @return array{id: string}
      */
-    private function createWorkoutGenerationDraft(string $name): array
+    private function createWorkoutGenerationDraft(string $name, ?string $stimulus = null): array
     {
+        $payload = [
+            'name' => $name,
+            'timeCap' => 15,
+            'movementGenerationType' => 'selected movements',
+            'workoutType' => 'AMRAP',
+            'numberOfRounds' => 1,
+            'movementTypes' => ['Weightlifting'],
+            'isTeamWorkout' => false,
+            'movementDifficulty' => 'Intermediate',
+            'mandatoryBodyParts' => [],
+            'availableImplements' => ['barbell'],
+            'numberOfDifferentMovements' => 1,
+            'bannedMovements' => [],
+            'mandatoryMovements' => [],
+            'intervalsTime' => null,
+            'intervalsRestTime' => null,
+        ];
+        if ($stimulus !== null) {
+            $payload['stimulus'] = $stimulus;
+        }
+
         $this->browser()->request(
             'POST',
             '/api/workout-generation-flow',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode([
-                'name' => $name,
-                'timeCap' => 15,
-                'movementGenerationType' => 'selected movements',
-                'workoutType' => 'AMRAP',
-                'numberOfRounds' => 1,
-                'movementTypes' => ['Weightlifting'],
-                'isTeamWorkout' => false,
-                'movementDifficulty' => 'Intermediate',
-                'mandatoryBodyParts' => [],
-                'availableImplements' => ['barbell'],
-                'numberOfDifferentMovements' => 1,
-                'bannedMovements' => [],
-                'mandatoryMovements' => [],
-                'intervalsTime' => null,
-                'intervalsRestTime' => null,
-            ], JSON_THROW_ON_ERROR)
+            json_encode($payload, JSON_THROW_ON_ERROR)
         );
         self::assertResponseStatusCodeSame(201);
 
