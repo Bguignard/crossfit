@@ -21,6 +21,7 @@ use App\Entity\Product\UserAthleteProfile;
 use App\Entity\Product\UserPerformanceProfile;
 use App\Entity\Security\User;
 use App\Entity\Workout\Workout;
+use App\Entity\WorkoutGeneration\WorkoutAiGenerationUsage;
 
 /**
  * @group integration
@@ -190,6 +191,203 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $this->browser()->request('GET', '/api/admin/metrics');
 
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testAdminCanReadAiGenerationCostMetricsByCategoryModelAndPeriod(): void
+    {
+        $admin = new User('ai-cost-admin@example.com');
+        $admin->setPassword('test-password');
+        $admin->setRoles(['ROLE_ADMIN']);
+
+        $member = new User('ai-cost-member@example.com');
+        $member->setPassword('test-password');
+
+        $performanceProfile = new UserPerformanceProfile($member);
+        $periodStart = new \DateTimeImmutable('2026-07-01T00:00:00+00:00');
+        $periodEnd = new \DateTimeImmutable('2026-07-02T00:00:00+00:00');
+        $inside = new \DateTimeImmutable('2026-07-01T12:00:00+00:00');
+        $outside = new \DateTimeImmutable('2026-06-30T12:00:00+00:00');
+
+        $workoutSuccess = new WorkoutAiGenerationUsage(
+            WorkoutAiGenerationUsage::ACTOR_USER,
+            WorkoutAiGenerationUsage::ENDPOINT_WORKOUT,
+            'workout',
+            'success',
+            true,
+            $member,
+            null,
+            [
+                'model' => 'gpt-5-mini',
+                'prompt_tokens' => 100,
+                'completion_tokens' => 40,
+                'total_tokens' => 140,
+                'estimated_cost_usd' => '0.030000',
+            ],
+            null,
+            $inside,
+        );
+        $workoutFailure = new WorkoutAiGenerationUsage(
+            WorkoutAiGenerationUsage::ACTOR_USER,
+            WorkoutAiGenerationUsage::ENDPOINT_WORKOUT,
+            'workout',
+            'failure',
+            true,
+            $member,
+            null,
+            [
+                'model' => 'gpt-5-mini',
+                'prompt_tokens' => 50,
+                'completion_tokens' => 10,
+                'total_tokens' => 60,
+                'estimated_cost_usd' => '0.040000',
+            ],
+            'Rejected by validation.',
+            $inside,
+        );
+        $outsideWorkoutUsage = new WorkoutAiGenerationUsage(
+            WorkoutAiGenerationUsage::ACTOR_USER,
+            WorkoutAiGenerationUsage::ENDPOINT_WORKOUT,
+            'workout',
+            'success',
+            true,
+            $member,
+            null,
+            [
+                'model' => 'gpt-5-mini',
+                'prompt_tokens' => 999,
+                'completion_tokens' => 999,
+                'total_tokens' => 1998,
+                'estimated_cost_usd' => '9.990000',
+            ],
+            null,
+            $outside,
+        );
+
+        $analysisSuccess = new PerformanceAnalysisRequest($member, $performanceProfile);
+        $analysisSuccess->markCompleted([
+            'summary' => 'Analysis.',
+            '_openai_usage' => [
+                'model' => 'gpt-5',
+                'prompt_tokens' => 200,
+                'completion_tokens' => 80,
+                'total_tokens' => 280,
+                'estimated_cost_usd' => '0.010000',
+            ],
+        ], $inside);
+        $analysisFailure = new PerformanceAnalysisRequest($member, $performanceProfile);
+        $analysisFailure->markFailed('Worker failed after dispatch.', $inside);
+
+        $athleteProgramming = new ProgrammingGenerationRequest($member, ProgrammingGenerationTypeEnum::INDIVIDUAL);
+        $athleteProgramming->markCompleted([
+            'overview' => 'Athlete programming.',
+            '_openai_usage' => [
+                'model' => 'gpt-5-mini',
+                'prompt_tokens' => 300,
+                'completion_tokens' => 120,
+                'total_tokens' => 420,
+            ],
+        ], $inside);
+        $sessionDetails = new ProgrammingSessionDetailRequest($member, $athleteProgramming);
+        $sessionDetails->markCompleted([
+            'overview' => 'Detailed sessions.',
+            '_openai_usage' => [
+                'model' => 'gpt-5-mini',
+                'prompt_tokens' => 30,
+                'completion_tokens' => 20,
+                'total_tokens' => 50,
+                'estimated_cost_usd' => 0.000012,
+            ],
+        ], $inside);
+
+        $boxProgramming = new ProgrammingGenerationRequest($member, ProgrammingGenerationTypeEnum::BOX);
+        $boxProgramming->markCompleted([
+            'overview' => 'Box programming.',
+            '_openai_usage' => [
+                'model' => 'gpt-5',
+                'prompt_tokens' => 400,
+                'completion_tokens' => 160,
+                'total_tokens' => 560,
+                'estimated_cost_usd' => '0.020000',
+            ],
+        ], $inside);
+
+        $competitionProgramming = new ProgrammingGenerationRequest($member, ProgrammingGenerationTypeEnum::COMPETITION);
+        $competitionProgramming->markFailed('Competition programming failed.', $inside);
+
+        $entityManager = $this->getEntityManager();
+        $entityManager->persist($admin);
+        $entityManager->persist($member);
+        $entityManager->persist($performanceProfile);
+        $entityManager->persist($workoutSuccess);
+        $entityManager->persist($workoutFailure);
+        $entityManager->persist($outsideWorkoutUsage);
+        $entityManager->persist($analysisSuccess);
+        $entityManager->persist($analysisFailure);
+        $entityManager->persist($athleteProgramming);
+        $entityManager->persist($sessionDetails);
+        $entityManager->persist($boxProgramming);
+        $entityManager->persist($competitionProgramming);
+        $entityManager->flush();
+
+        $this->browser()->loginUser($admin);
+        $this->browser()->request('GET', sprintf(
+            '/api/admin/ai-generation-costs?from=%s&to=%s',
+            rawurlencode($periodStart->format(\DateTimeInterface::ATOM)),
+            rawurlencode($periodEnd->format(\DateTimeInterface::ATOM)),
+        ));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode((string) $this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame($periodStart->format(\DateTimeInterface::ATOM), $payload['period']['from']);
+        self::assertSame($periodEnd->format(\DateTimeInterface::ATOM), $payload['period']['to']);
+
+        self::assertSame(5, $payload['totals']['successfulCount']);
+        self::assertSame(3, $payload['totals']['failureCount']);
+        self::assertSame('0.100012', $payload['totals']['totalEstimatedCostUsd']);
+        self::assertSame('0.040000', $payload['totals']['failedWithTokensEstimatedCostUsd']);
+        self::assertSame(1080, $payload['totals']['tokens']['prompt']);
+        self::assertSame(430, $payload['totals']['tokens']['completion']);
+        self::assertSame(1510, $payload['totals']['tokens']['total']);
+        self::assertSame('0.070012', $payload['totals']['byModel']['gpt-5-mini']['totalEstimatedCostUsd']);
+        self::assertSame('0.030000', $payload['totals']['byModel']['gpt-5']['totalEstimatedCostUsd']);
+        self::assertSame(2, $payload['totals']['byModel']['unknown']['failureCount']);
+
+        $workoutCategory = $payload['categories']['workout_generation'];
+        self::assertSame(1, $workoutCategory['successfulCount']);
+        self::assertSame(1, $workoutCategory['failureCount']);
+        self::assertSame('0.030000', $workoutCategory['averageSuccessfulEstimatedCostUsd']);
+        self::assertSame('0.070000', $workoutCategory['totalEstimatedCostUsd']);
+        self::assertSame('0.040000', $workoutCategory['failedEstimatedCostUsd']);
+        self::assertSame('0.040000', $workoutCategory['failedWithTokensEstimatedCostUsd']);
+        self::assertSame(['gpt-5-mini'], $workoutCategory['models']);
+        self::assertSame(2, $workoutCategory['byModel']['gpt-5-mini']['knownCostCount']);
+
+        $analysisCategory = $payload['categories']['athlete_analysis'];
+        self::assertSame(1, $analysisCategory['successfulCount']);
+        self::assertSame(1, $analysisCategory['failureCount']);
+        self::assertSame('0.010000', $analysisCategory['averageSuccessfulEstimatedCostUsd']);
+        self::assertSame(1, $analysisCategory['failureUnknownCostCount']);
+        self::assertContains('unknown', $analysisCategory['models']);
+
+        $athleteProgrammingCategory = $payload['categories']['athlete_programming'];
+        self::assertSame(2, $athleteProgrammingCategory['successfulCount']);
+        self::assertSame(0, $athleteProgrammingCategory['failureCount']);
+        self::assertSame('0.000012', $athleteProgrammingCategory['totalEstimatedCostUsd']);
+        self::assertSame(1, $athleteProgrammingCategory['successfulUnknownCostCount']);
+        self::assertSame(470, $athleteProgrammingCategory['tokens']['total']);
+
+        $boxProgrammingCategory = $payload['categories']['box_programming'];
+        self::assertSame(1, $boxProgrammingCategory['successfulCount']);
+        self::assertSame('0.020000', $boxProgrammingCategory['averageSuccessfulEstimatedCostUsd']);
+        self::assertSame(['gpt-5'], $boxProgrammingCategory['models']);
+
+        $competitionProgrammingCategory = $payload['categories']['competition_programming'];
+        self::assertSame(0, $competitionProgrammingCategory['successfulCount']);
+        self::assertSame(1, $competitionProgrammingCategory['failureCount']);
+        self::assertNull($competitionProgrammingCategory['totalEstimatedCostUsd']);
+        self::assertNull($competitionProgrammingCategory['failedWithTokensEstimatedCostUsd']);
+        self::assertSame(1, $competitionProgrammingCategory['failureUnknownCostCount']);
     }
 
     public function testAdminCanManageOfficialCompetitionQualifications(): void
