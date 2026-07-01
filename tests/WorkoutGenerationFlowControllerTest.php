@@ -36,15 +36,27 @@ class WorkoutGenerationFlowControllerTest extends TestCase
         self::assertSame([
             'normalized' => 'seuil threshold',
             'family' => 'threshold',
-            'canonical' => 'Threshold',
+            'canonical' => null,
             'supported' => true,
         ], $method->invoke($controller, 'Seuil/Threshold'));
         self::assertSame([
+            'normalized' => 'seuil',
+            'family' => 'threshold',
+            'canonical' => 'Threshold',
+            'supported' => true,
+        ], $method->invoke($controller, 'Seuil'));
+        self::assertSame([
             'normalized' => 'complet competition',
+            'family' => 'competition',
+            'canonical' => null,
+            'supported' => true,
+        ], $method->invoke($controller, 'Complet/Competition'));
+        self::assertSame([
+            'normalized' => 'mixed modal',
             'family' => 'competition',
             'canonical' => 'Mixed Modal / Competition',
             'supported' => true,
-        ], $method->invoke($controller, 'Complet/Competition'));
+        ], $method->invoke($controller, 'Mixed Modal'));
     }
 
     public function testWorkoutGenerationLogContextToleratesMissingCatalogRelations(): void

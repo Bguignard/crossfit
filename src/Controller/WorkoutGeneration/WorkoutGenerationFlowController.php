@@ -425,7 +425,7 @@ class WorkoutGenerationFlowController extends AbstractController
         return [
             'normalized' => $normalized,
             'family' => $family,
-            'canonical' => $family === null ? null : $this->canonicalStimulus($family),
+            'canonical' => $family === null ? null : $this->canonicalStimulusForPrompt($normalized, $family),
             'supported' => $family !== null,
         ];
     }
@@ -536,21 +536,29 @@ class WorkoutGenerationFlowController extends AbstractController
         return null;
     }
 
-    private function canonicalStimulus(string $family): string
+    private function canonicalStimulusForPrompt(string $normalizedStimulus, string $family): ?string
     {
         return match ($family) {
-            'strength' => 'Strength',
-            'sprint' => 'Sprint',
-            'threshold' => 'Threshold',
-            'engine' => 'Engine',
-            'hyrox_training' => 'Entrainement Hyrox',
-            'hyrox_simulation' => 'Simulation Hyrox',
-            'strength_endurance' => 'Strength Endurance',
-            'gymnastics_skill' => 'Gymnastics / Skill',
-            'competition' => 'Mixed Modal / Competition',
-            'metcon' => 'Metcon',
-            default => $family,
+            'strength' => str_contains($normalizedStimulus, 'strength') ? null : 'Strength',
+            'sprint' => str_contains($normalizedStimulus, 'sprint') ? null : 'Sprint',
+            'threshold' => str_contains($normalizedStimulus, 'threshold') ? null : 'Threshold',
+            'engine' => str_contains($normalizedStimulus, 'engine') ? null : 'Engine',
+            'hyrox_training' => str_contains($normalizedStimulus, 'hyrox') ? null : 'Entrainement Hyrox',
+            'hyrox_simulation' => $this->isGeneratorSupportedHyroxSimulationStimulus($normalizedStimulus) ? null : 'Simulation Hyrox',
+            'strength_endurance' => str_contains($normalizedStimulus, 'strength endurance') ? null : 'Strength Endurance',
+            'gymnastics_skill' => str_contains($normalizedStimulus, 'gymnastics') || str_contains($normalizedStimulus, 'skill') ? null : 'Gymnastics / Skill',
+            'competition' => str_contains($normalizedStimulus, 'competition') ? null : 'Mixed Modal / Competition',
+            'metcon' => str_contains($normalizedStimulus, 'metcon') ? null : 'Metcon',
+            default => null,
         };
+    }
+
+    private function isGeneratorSupportedHyroxSimulationStimulus(string $normalizedStimulus): bool
+    {
+        return str_contains($normalizedStimulus, 'simulation hyrox')
+            || str_contains($normalizedStimulus, 'hyrox complet')
+            || str_contains($normalizedStimulus, 'full hyrox')
+            || str_contains($normalizedStimulus, 'complete hyrox');
     }
 
     /**
