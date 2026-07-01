@@ -36,7 +36,7 @@ final class AiTokenCostEstimatorTest extends TestCase
         $estimator = new AiTokenCostEstimator();
 
         self::assertSame('gpt-5.4-mini', $estimator->canonicalModel('gpt-5.4-mini-2026-03-17'));
-        self::assertSame('0.009000', $estimator->estimateUsd('gpt-5.4-mini-2026-03-17', 1000, 1000));
+        self::assertSame('0.005250', $estimator->estimateUsd('gpt-5.4-mini-2026-03-17', 1000, 1000));
     }
 
     public function testUnknownModelKeepsCostUnknown(): void

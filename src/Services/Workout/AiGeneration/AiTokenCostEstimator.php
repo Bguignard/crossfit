@@ -5,7 +5,10 @@ namespace App\Services\Workout\AiGeneration;
 final class AiTokenCostEstimator
 {
     /**
-     * Pricing snapshot in USD per 1M tokens. Update this table when OpenAI pricing changes.
+     * Pricing snapshot in USD per 1M tokens for direct OpenAI API Standard short-context processing.
+     * Excludes cached-input discounts, Batch/Flex, Priority, data residency uplift, and provider-specific billing.
+     * Source: https://developers.openai.com/api/docs/pricing
+     * Update this table when OpenAI pricing changes.
      *
      * @var array<string, array{input: int, output: int}>
      */
@@ -13,7 +16,7 @@ final class AiTokenCostEstimator
         'gpt-5' => ['input' => 1_250_000, 'output' => 10_000_000],
         'gpt-5-mini' => ['input' => 250_000, 'output' => 2_000_000],
         'gpt-5-nano' => ['input' => 50_000, 'output' => 400_000],
-        'gpt-5.4-mini' => ['input' => 1_000_000, 'output' => 8_000_000],
+        'gpt-5.4-mini' => ['input' => 750_000, 'output' => 4_500_000],
     ];
 
     public function estimateUsd(?string $model, ?int $promptTokens, ?int $completionTokens): ?string

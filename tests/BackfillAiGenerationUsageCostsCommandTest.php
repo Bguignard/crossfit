@@ -45,7 +45,7 @@ final class BackfillAiGenerationUsageCostsCommandTest extends AbstractIntegratio
 
         $priceableUsage = $this->getRepository(WorkoutAiGenerationUsage::class)->find($priceableUsageId);
         self::assertInstanceOf(WorkoutAiGenerationUsage::class, $priceableUsage);
-        self::assertSame('0.009000', $priceableUsage->getEstimatedCostUsd());
+        self::assertSame('0.005250', $priceableUsage->getEstimatedCostUsd());
 
         $unknownUsage = $this->getRepository(WorkoutAiGenerationUsage::class)->find($unknownUsageId);
         self::assertInstanceOf(WorkoutAiGenerationUsage::class, $unknownUsage);
