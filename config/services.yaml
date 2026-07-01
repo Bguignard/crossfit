@@ -91,6 +91,13 @@ services:
             $freeUserDailyLimit: '%env(int:WORKOUT_AI_FREE_USER_DAILY_LIMIT)%'
             $quotaTimezone: '%env(WORKOUT_AI_QUOTA_TIMEZONE)%'
 
+    App\Services\Workout\Audit\WorkoutGenerationBenchmarkLiveRunner:
+        arguments:
+            $chatGPTApiKey: '%env(CHAT_GPT_API_KEY)%'
+
+    App\Services\Workout\Audit\WorkoutGenerationBenchmarkLiveRunnerInterface:
+        alias: App\Services\Workout\Audit\WorkoutGenerationBenchmarkLiveRunner
+
     App\Services\PythonWorker\PythonWorkerClient:
         arguments:
             $pythonWorkerBaseUrl: '%env(PYTHON_WORKER_BASE_URL)%'
