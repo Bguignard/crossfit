@@ -2146,6 +2146,26 @@ class WorkoutCreatorServiceTest extends TestCase
         );
     }
 
+    public function testThresholdWorkoutGenerationAcceptsRelativeBodyweightLoadForLoadedMovement(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10 Deadlifts (1.5x bodyweight)\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: 1.25x BW\nScaled: 1x BW",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+
+        self::assertStringContainsString('10 Deadlifts (1.5x bodyweight)', $workout->getFlow());
+    }
+
     public function testRxWorkoutGenerationDoesNotRequireLoadForBodyweightSquat(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
