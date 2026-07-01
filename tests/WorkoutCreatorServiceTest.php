@@ -142,6 +142,7 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('run this validation checklist yourself', $prompt);
         self::assertStringContainsString('every JSON movement name must appear in the main flow', $prompt);
         self::assertStringContainsString('loaded movements must have a main-flow load prescription', $prompt);
+        self::assertStringContainsString('Do not use "bodyweight" as the only load prescription for intrinsically loaded movements', $prompt);
     }
 
     public function testWorkoutGenerationLogsOpenAiAndValidationBoundaries(): void
@@ -2124,6 +2125,89 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringContainsString('10 Deadlifts 75%', $workout->getFlow());
     }
 
+    public function testThresholdWorkoutGenerationRejectsLoadedMovementWithBodyweightAsOnlyLoad(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10 Deadlifts bodyweight\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter deadlift",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+    }
+
+    public function testThresholdWorkoutGenerationRejectsLoadedMovementWithBodyweightLoadPhrase(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10 Deadlifts bodyweight load\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter deadlift",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+    }
+
+    public function testThresholdWorkoutGenerationRejectsRepCountShorthandBeforeBodyweight(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10x bodyweight Deadlifts\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter deadlift",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+    }
+
+    public function testThresholdWorkoutGenerationAcceptsRelativeBodyweightLoadForLoadedMovement(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10 Deadlifts (1.5x bodyweight)\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: 1.25x BW\nScaled: 1x BW",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+
+        self::assertStringContainsString('10 Deadlifts (1.5x bodyweight)', $workout->getFlow());
+    }
+
     public function testRxWorkoutGenerationDoesNotRequireLoadForBodyweightSquat(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
@@ -2141,6 +2225,26 @@ class WorkoutCreatorServiceTest extends TestCase
         );
 
         self::assertStringContainsString('20 Pistol Squats', $workout->getFlow());
+    }
+
+    public function testGymnasticsWorkoutGenerationAllowsBodyweightPrescriptionForBodyweightMovement(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $gymnastics = new MovementType(MovementTypeEnum::GYMNASTIC);
+        $strictHandstandPushUp = new Movement('Strict Handstand Push Up', $difficulty, $gymnastics);
+
+        $workout = $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$strictHandstandPushUp],
+            [
+                'flow' => "EMOM 12 minutes\nMinute 1: 8 bodyweight Strict Handstand Push Ups\nMinute 2: rest",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce reps\nScaled: pike push-ups",
+                'movements' => ['Strict Handstand Push Up'],
+            ],
+            'Gymnastics / Skill',
+        );
+
+        self::assertStringContainsString('bodyweight Strict Handstand Push Ups', $workout->getFlow());
     }
 
     public function testRxWorkoutGenerationRejectsLoadedMovementDetectedByImplementWithoutMainFlowLoad(): void
@@ -4697,7 +4801,7 @@ class WorkoutCreatorServiceTest extends TestCase
      * @param list<Movement>                                                       $possibleMovements
      * @param array{flow: string, scalingOptions: string, movements: list<string>} $payload
      */
-    private function createWorkoutFromGeneratedPayload(MovementDifficulty $difficulty, array $possibleMovements, array $payload): \App\Entity\Workout\Workout
+    private function createWorkoutFromGeneratedPayload(MovementDifficulty $difficulty, array $possibleMovements, array $payload, string $stimulus = 'Competition'): \App\Entity\Workout\Workout
     {
         $movementService = $this->movementServiceReturning($possibleMovements);
         $chatGpt = new class($payload) implements ChatGPTApiKeyInterface {
@@ -4716,7 +4820,7 @@ class WorkoutCreatorServiceTest extends TestCase
 
         $workoutGeneration = (new WorkoutGeneration())
             ->setName('Generated payload safety test')
-            ->setStimulus('Competition')
+            ->setStimulus($stimulus)
             ->setTimeCap(12)
             ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
             ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))

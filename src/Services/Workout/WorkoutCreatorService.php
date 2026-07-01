@@ -99,6 +99,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         $promptForChatGPT .= <<<EOD
 When prescribing loaded movements, always include level-appropriate male/female loads in kg when relevant. Use heavier and more technical prescriptions for Elite, standard competitive prescriptions for RX, sustainable prescriptions for Intermediate, and accessible prescriptions for Scaled/Beginner.
 Every loaded movement written in the main workout flow must include either kg loads for men/women, a percentage, or a clear loading instruction such as "moderate unbroken load". Do not leave loaded movements without prescription. Scaling options or adaptations do not count as the main workout load prescription.
+Do not use "bodyweight" as the only load prescription for intrinsically loaded movements such as Deadlift, Clean, Snatch, Press, Thruster, Swing, Squat or loaded carries; choose kg, percentage or a real loading instruction instead.
 Create a short "Scaling options" section in the JSON scalingOptions field with practical adaptations for RX, Intermediate and Scaled athletes. Preserve the intended stimulus when scaling: change load, range of motion, movement complexity, reps or distance before changing the workout goal.
 For high-skill movements, suggest realistic substitutions by level, for example strict HSPU may scale to kipping HSPU, pike HSPU, dumbbell press or hand-release push-ups depending on the level.
 Do not prescribe strict toes to bar in the main workout flow. Normal Toes to Bar is allowed; strict toes to bar belongs only to accessory/strength notes outside the main metcon or competition flow.
@@ -269,7 +270,7 @@ EOD;
             $attemptPrompt = $promptForChatGPT;
             if ($previousGenerationRejection instanceof \RuntimeException) {
                 $attemptPrompt .= "\nPrevious generation rejected by MonWOD validation: ".$previousGenerationRejection->getMessage()."\n";
-                $attemptPrompt .= "Correct that exact issue now. Return valid JSON only, keep the movements array and main flow consistent, include main-flow load prescriptions for loaded movements, avoid strict toes to bar, and keep the structure coherent with the requested stimulus.\n";
+                $attemptPrompt .= "Correct that exact issue now. Return valid JSON only, keep the movements array and main flow consistent, include main-flow load prescriptions for loaded movements, do not use bodyweight as the only load for intrinsically loaded movements, avoid strict toes to bar, and keep the structure coherent with the requested stimulus.\n";
                 if ($this->isRejectedCompetitionMovementCluster($previousGenerationRejection)) {
                     $attemptPrompt .= "Generate a different valid movement mix now. Keep common competition movements available, but do not return the rejected cluster again.\n";
                 }

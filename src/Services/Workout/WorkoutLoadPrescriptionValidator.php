@@ -103,10 +103,20 @@ final class WorkoutLoadPrescriptionValidator
 
     private function textHasLoadPrescription(string $text): bool
     {
-        return preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?(?:\s*-\s*|\s*)?(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
+        $hasConcreteLoad = preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?(?:\s*-\s*|\s*)?(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
             || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/', $text) === 1
             || preg_match('/\b\d+(?:[.,]\d+)?\s*%\s*(?:1\s*rm|one\s*rep\s*max)\b/i', $text) === 1
-            || preg_match('/\b(?:empty bar|bodyweight|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
+            || preg_match('/\b(?:0[.,]\d+|[1-4](?:[.,]\d+)?|5(?:[.,]0+)?)\s*x\s*(?:bodyweight|bw)\b/i', $text) === 1;
+
+        if ($hasConcreteLoad) {
+            return true;
+        }
+
+        if (preg_match('/\b(?:bodyweight|bw)\b/i', $text) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:empty bar|moderate(?:ly)?|heavy|light|challenging|loading|load|unbroken load)\b/i', $text) === 1;
     }
 
     private function hasLoadableImplement(Movement $movement): bool
