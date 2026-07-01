@@ -2172,6 +2172,59 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(0, $this->getRepository(WorkoutAiGenerationUsage::class)->count([]));
     }
 
+    public function testWorkoutGenerationCanonicalizesAcceptedStimulusAliasBeforeCallingCreator(): void
+    {
+        $this->browser()->disableReboot();
+        $creator = new class implements WorkoutCreatorServiceInterface {
+            public ?string $receivedStimulus = null;
+
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                $this->receivedStimulus = $workoutGeneration->getStimulus();
+
+                return (new Workout(
+                    $workoutGeneration->getName(),
+                    'Generated strength endurance flow',
+                    $workoutGeneration->getNumberOfRounds(),
+                    $workoutGeneration->getTimeCap(),
+                    $workoutGeneration->getWorkoutType(),
+                    new WorkoutOrigin(new WorkoutOriginName(WorkoutOriginNameEnum::CUSTOM), 2026),
+                    $workoutGeneration->getAvailableImplements()->toArray(),
+                    $workoutGeneration->getMandatoryMovements()->toArray(),
+                ))
+                    ->setWorkoutGeneration($workoutGeneration)
+                    ->setAiUsage([
+                        'request_type' => 'workout_generation',
+                        'model' => 'test-model',
+                        'prompt_tokens' => 10,
+                        'completion_tokens' => 5,
+                        'total_tokens' => 15,
+                        'duration_ms' => 50,
+                        'status' => 'success',
+                        'estimated_cost_usd' => null,
+                    ]);
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        };
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, $creator);
+
+        $draft = $this->createWorkoutGenerationDraft('French stimulus alias WOD', 'Force endurance');
+
+        $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Strength Endurance', $creator->receivedStimulus);
+    }
+
     public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void
     {
         $this->browser()->disableReboot();

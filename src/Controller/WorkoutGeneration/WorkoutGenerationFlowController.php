@@ -155,6 +155,7 @@ class WorkoutGenerationFlowController extends AbstractController
 
         try {
             $this->logger->info('monwod.workout_generation.before_create_workout', $baseLogContext);
+            $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
             $workout = $this->workoutCreator->createWorkout($workoutGeneration);
             $workout = $this->upsertGeneratedWorkout($workoutGeneration, $workout);
             $this->entityManager->persist($workout);
@@ -226,6 +227,7 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         try {
+            $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
             $variants = $this->workoutCreator->createWorkoutVariants($workoutGeneration);
             $this->aiGenerationUsageTracker->recordSuccess(
                 $actor,
@@ -262,7 +264,7 @@ class WorkoutGenerationFlowController extends AbstractController
     }
 
     /**
-     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
      */
     private function generationUsageType(string $baseType, WorkoutGeneration $workoutGeneration, array $stimulusContext): string
     {
@@ -275,7 +277,7 @@ class WorkoutGenerationFlowController extends AbstractController
     }
 
     /**
-     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
      *
      * @return array<string, mixed>
      */
@@ -288,6 +290,7 @@ class WorkoutGenerationFlowController extends AbstractController
             'stimulus' => $workoutGeneration->getStimulus(),
             'normalizedStimulus' => $stimulusContext['normalized'],
             'stimulusFamily' => $stimulusContext['family'],
+            'canonicalStimulus' => $stimulusContext['canonical'],
             'workoutType' => $this->workoutTypeNameForLog($workoutGeneration),
             'movementCount' => $this->movementCountForLog($workoutGeneration),
             'timeCap' => $this->timeCapForLog($workoutGeneration),
@@ -382,7 +385,7 @@ class WorkoutGenerationFlowController extends AbstractController
     }
 
     /**
-     * @param array{normalized: ?string, family: ?string, supported: bool} $stimulusContext
+     * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
      */
     private function unsupportedStimulusResponse(array $stimulusContext): JsonResponse
     {
@@ -395,7 +398,7 @@ class WorkoutGenerationFlowController extends AbstractController
     }
 
     /**
-     * @return array{normalized: ?string, family: ?string, supported: bool}
+     * @return array{normalized: ?string, family: ?string, canonical: ?string, supported: bool}
      */
     private function stimulusContext(?string $stimulus): array
     {
@@ -404,6 +407,7 @@ class WorkoutGenerationFlowController extends AbstractController
             return [
                 'normalized' => null,
                 'family' => null,
+                'canonical' => null,
                 'supported' => true,
             ];
         }
@@ -413,8 +417,21 @@ class WorkoutGenerationFlowController extends AbstractController
         return [
             'normalized' => $normalized,
             'family' => $family,
+            'canonical' => $family === null ? null : $this->canonicalStimulus($family),
             'supported' => $family !== null,
         ];
+    }
+
+    /**
+     * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
+     */
+    private function applyCanonicalStimulus(WorkoutGeneration $workoutGeneration, array $stimulusContext): void
+    {
+        if ($stimulusContext['canonical'] === null) {
+            return;
+        }
+
+        $workoutGeneration->setStimulus($stimulusContext['canonical']);
     }
 
     private function normalizeStimulus(?string $stimulus): ?string
@@ -494,6 +511,23 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return null;
+    }
+
+    private function canonicalStimulus(string $family): string
+    {
+        return match ($family) {
+            'strength' => 'Strength',
+            'sprint' => 'Sprint',
+            'threshold' => 'Threshold',
+            'engine' => 'Engine',
+            'hyrox_training' => 'Entrainement Hyrox',
+            'hyrox_simulation' => 'Simulation Hyrox',
+            'strength_endurance' => 'Strength Endurance',
+            'gymnastics_skill' => 'Gymnastics / Skill',
+            'competition' => 'Mixed Modal / Competition',
+            'metcon' => 'Metcon',
+            default => $family,
+        };
     }
 
     /**
