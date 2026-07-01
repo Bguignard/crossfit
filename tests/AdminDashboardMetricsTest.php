@@ -371,11 +371,20 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         self::assertContains('unknown', $analysisCategory['models']);
 
         $athleteProgrammingCategory = $payload['categories']['athlete_programming'];
-        self::assertSame(2, $athleteProgrammingCategory['successfulCount']);
+        self::assertSame('Programmation athlete globale', $athleteProgrammingCategory['label']);
+        self::assertSame(1, $athleteProgrammingCategory['successfulCount']);
         self::assertSame(0, $athleteProgrammingCategory['failureCount']);
-        self::assertSame('0.000327', $athleteProgrammingCategory['totalEstimatedCostUsd']);
+        self::assertSame('0.000315', $athleteProgrammingCategory['totalEstimatedCostUsd']);
         self::assertSame(0, $athleteProgrammingCategory['successfulUnknownCostCount']);
-        self::assertSame(470, $athleteProgrammingCategory['tokens']['total']);
+        self::assertSame(420, $athleteProgrammingCategory['tokens']['total']);
+
+        $athleteProgrammingSessionsCategory = $payload['categories']['athlete_programming_sessions'];
+        self::assertSame('Seances detaillees programmation athlete', $athleteProgrammingSessionsCategory['label']);
+        self::assertSame(1, $athleteProgrammingSessionsCategory['successfulCount']);
+        self::assertSame(0, $athleteProgrammingSessionsCategory['failureCount']);
+        self::assertSame('0.000012', $athleteProgrammingSessionsCategory['totalEstimatedCostUsd']);
+        self::assertSame(50, $athleteProgrammingSessionsCategory['tokens']['total']);
+        self::assertSame(['gpt-5-mini'], $athleteProgrammingSessionsCategory['models']);
 
         $boxProgrammingCategory = $payload['categories']['box_programming'];
         self::assertSame(1, $boxProgrammingCategory['successfulCount']);

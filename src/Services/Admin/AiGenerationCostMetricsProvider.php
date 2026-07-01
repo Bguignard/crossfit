@@ -17,6 +17,7 @@ class AiGenerationCostMetricsProvider
     private const CATEGORY_WORKOUT_GENERATION = 'workout_generation';
     private const CATEGORY_ATHLETE_ANALYSIS = 'athlete_analysis';
     private const CATEGORY_ATHLETE_PROGRAMMING = 'athlete_programming';
+    private const CATEGORY_ATHLETE_PROGRAMMING_SESSIONS = 'athlete_programming_sessions';
     private const CATEGORY_BOX_PROGRAMMING = 'box_programming';
     private const CATEGORY_COMPETITION_PROGRAMMING = 'competition_programming';
 
@@ -80,7 +81,7 @@ class AiGenerationCostMetricsProvider
             $category = match ($this->statusValue($row['type'] ?? null)) {
                 ProgrammingGenerationTypeEnum::BOX->value => self::CATEGORY_BOX_PROGRAMMING,
                 ProgrammingGenerationTypeEnum::COMPETITION->value => self::CATEGORY_COMPETITION_PROGRAMMING,
-                default => self::CATEGORY_ATHLETE_PROGRAMMING,
+                default => self::CATEGORY_ATHLETE_PROGRAMMING_SESSIONS,
             };
 
             $this->addUsage(
@@ -114,7 +115,8 @@ class AiGenerationCostMetricsProvider
         return [
             self::CATEGORY_WORKOUT_GENERATION => $this->emptyAccumulator('Generation de WOD'),
             self::CATEGORY_ATHLETE_ANALYSIS => $this->emptyAccumulator('Analyse IA athlete'),
-            self::CATEGORY_ATHLETE_PROGRAMMING => $this->emptyAccumulator('Programmation athlete'),
+            self::CATEGORY_ATHLETE_PROGRAMMING => $this->emptyAccumulator('Programmation athlete globale'),
+            self::CATEGORY_ATHLETE_PROGRAMMING_SESSIONS => $this->emptyAccumulator('Seances detaillees programmation athlete'),
             self::CATEGORY_BOX_PROGRAMMING => $this->emptyAccumulator('Programmation box'),
             self::CATEGORY_COMPETITION_PROGRAMMING => $this->emptyAccumulator('Programmation competition'),
         ];
