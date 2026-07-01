@@ -54,11 +54,11 @@ final class BenchmarkWorkoutGenerationCommand extends Command
 
         $live = (bool) $input->getOption('live');
         $scenarios = $this->selectedScenarios($this->auditor->scenarios(), $input->getOption('scenarios'), $live);
+        $jsonPath = $this->stringOption($input->getOption('output'));
+        $markdownPath = $this->stringOption($input->getOption('markdown-output'));
         $report = $live
             ? $this->liveReport($input, $models, $strategies, $scenarios)
             : $this->matrixBuilder->buildDryRunReport($scenarios, $models, $strategies);
-        $jsonPath = $this->stringOption($input->getOption('output'));
-        $markdownPath = $this->stringOption($input->getOption('markdown-output'));
 
         $this->writeFile($jsonPath, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         $this->writeFile($markdownPath, $this->markdownReport($report));

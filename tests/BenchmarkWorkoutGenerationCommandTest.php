@@ -207,6 +207,30 @@ final class BenchmarkWorkoutGenerationCommandTest extends TestCase
         ]);
     }
 
+    public function testLiveCommandValidatesReportPathsBeforeRunningBenchmark(): void
+    {
+        $command = new BenchmarkWorkoutGenerationCommand(
+            new WorkoutStimulusAuditor(),
+            new WorkoutGenerationBenchmarkMatrixBuilder(),
+            $this->configuredLiveRunner(),
+        );
+        $tester = new CommandTester($command);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Option must be a non-empty string.');
+
+        $tester->execute([
+            '--live' => true,
+            '--confirm-live' => true,
+            '--models' => 'gpt-live-test',
+            '--strategies' => 'full_ai',
+            '--scenarios' => 'strength',
+            '--max-live-runs' => '1',
+            '--output' => '',
+            '--markdown-output' => sys_get_temp_dir().'/unused.md',
+        ]);
+    }
+
     private function configuredLiveRunner(): WorkoutGenerationBenchmarkLiveRunnerInterface
     {
         return new class implements WorkoutGenerationBenchmarkLiveRunnerInterface {
