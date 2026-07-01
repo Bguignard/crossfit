@@ -2223,6 +2223,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         self::assertResponseStatusCodeSame(201);
         self::assertSame('Strength Endurance', $creator->receivedStimulus);
+        $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
+        self::assertSame('Force endurance', $workoutGeneration->getStimulus());
     }
 
     public function testAnonymousWorkoutGenerationQuotaAllowsFivePerDayAndThenReturns429(): void

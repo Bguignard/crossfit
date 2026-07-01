@@ -155,8 +155,12 @@ class WorkoutGenerationFlowController extends AbstractController
 
         try {
             $this->logger->info('monwod.workout_generation.before_create_workout', $baseLogContext);
-            $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
-            $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+            $originalStimulus = $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
+            try {
+                $workout = $this->workoutCreator->createWorkout($workoutGeneration);
+            } finally {
+                $this->restoreOriginalStimulus($workoutGeneration, $stimulusContext, $originalStimulus);
+            }
             $workout = $this->upsertGeneratedWorkout($workoutGeneration, $workout);
             $this->entityManager->persist($workout);
             $this->aiGenerationUsageTracker->recordSuccess(
@@ -227,8 +231,12 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         try {
-            $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
-            $variants = $this->workoutCreator->createWorkoutVariants($workoutGeneration);
+            $originalStimulus = $this->applyCanonicalStimulus($workoutGeneration, $stimulusContext);
+            try {
+                $variants = $this->workoutCreator->createWorkoutVariants($workoutGeneration);
+            } finally {
+                $this->restoreOriginalStimulus($workoutGeneration, $stimulusContext, $originalStimulus);
+            }
             $this->aiGenerationUsageTracker->recordSuccess(
                 $actor,
                 WorkoutAiGenerationUsage::ENDPOINT_VARIANTS,
@@ -425,13 +433,28 @@ class WorkoutGenerationFlowController extends AbstractController
     /**
      * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
      */
-    private function applyCanonicalStimulus(WorkoutGeneration $workoutGeneration, array $stimulusContext): void
+    private function applyCanonicalStimulus(WorkoutGeneration $workoutGeneration, array $stimulusContext): ?string
+    {
+        if ($stimulusContext['canonical'] === null) {
+            return null;
+        }
+
+        $originalStimulus = $workoutGeneration->getStimulus();
+        $workoutGeneration->setStimulus($stimulusContext['canonical']);
+
+        return $originalStimulus;
+    }
+
+    /**
+     * @param array{normalized: ?string, family: ?string, canonical: ?string, supported: bool} $stimulusContext
+     */
+    private function restoreOriginalStimulus(WorkoutGeneration $workoutGeneration, array $stimulusContext, ?string $originalStimulus): void
     {
         if ($stimulusContext['canonical'] === null) {
             return;
         }
 
-        $workoutGeneration->setStimulus($stimulusContext['canonical']);
+        $workoutGeneration->setStimulus($originalStimulus);
     }
 
     private function normalizeStimulus(?string $stimulus): ?string
