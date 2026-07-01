@@ -231,6 +231,32 @@ final class BenchmarkWorkoutGenerationCommandTest extends TestCase
         ]);
     }
 
+    public function testLiveCommandValidatesReportTargetBeforeRunningBenchmark(): void
+    {
+        $command = new BenchmarkWorkoutGenerationCommand(
+            new WorkoutStimulusAuditor(),
+            new WorkoutGenerationBenchmarkMatrixBuilder(),
+            $this->configuredLiveRunner(),
+        );
+        $tester = new CommandTester($command);
+        $invalidParent = sys_get_temp_dir().'/monwod-benchmark-parent-file-'.bin2hex(random_bytes(4));
+        file_put_contents($invalidParent, 'not a directory');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('exists but is not a directory');
+
+        $tester->execute([
+            '--live' => true,
+            '--confirm-live' => true,
+            '--models' => 'gpt-live-test',
+            '--strategies' => 'full_ai',
+            '--scenarios' => 'strength',
+            '--max-live-runs' => '1',
+            '--output' => $invalidParent.'/benchmark.json',
+            '--markdown-output' => sys_get_temp_dir().'/unused.md',
+        ]);
+    }
+
     private function configuredLiveRunner(): WorkoutGenerationBenchmarkLiveRunnerInterface
     {
         return new class implements WorkoutGenerationBenchmarkLiveRunnerInterface {

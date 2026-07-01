@@ -56,6 +56,8 @@ final class BenchmarkWorkoutGenerationCommand extends Command
         $scenarios = $this->selectedScenarios($this->auditor->scenarios(), $input->getOption('scenarios'), $live);
         $jsonPath = $this->stringOption($input->getOption('output'));
         $markdownPath = $this->stringOption($input->getOption('markdown-output'));
+        $this->assertWritableReportTarget($jsonPath);
+        $this->assertWritableReportTarget($markdownPath);
         $report = $live
             ? $this->liveReport($input, $models, $strategies, $scenarios)
             : $this->matrixBuilder->buildDryRunReport($scenarios, $models, $strategies);
@@ -236,6 +238,23 @@ final class BenchmarkWorkoutGenerationCommand extends Command
         }
 
         return (int) $value;
+    }
+
+    private function assertWritableReportTarget(string $path): void
+    {
+        $directory = dirname($path);
+        if (file_exists($directory) && !is_dir($directory)) {
+            throw new \RuntimeException(sprintf('Report directory "%s" exists but is not a directory.', $directory));
+        }
+        if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            throw new \RuntimeException(sprintf('Unable to create report directory "%s".', $directory));
+        }
+        if (file_exists($path) && !is_writable($path)) {
+            throw new \RuntimeException(sprintf('Report "%s" is not writable.', $path));
+        }
+        if (!file_exists($path) && !is_writable($directory)) {
+            throw new \RuntimeException(sprintf('Report directory "%s" is not writable.', $directory));
+        }
     }
 
     private function writeFile(string $path, string $contents): void
