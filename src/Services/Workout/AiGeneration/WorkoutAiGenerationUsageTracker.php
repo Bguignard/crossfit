@@ -53,13 +53,9 @@ readonly class WorkoutAiGenerationUsageTracker
     /**
      * @param array<string, mixed>|null $aiUsage
      */
-    public function recordFailure(WorkoutAiGenerationActor $actor, string $endpoint, string $generationType, \Throwable $exception, ?array $aiUsage = null): ?WorkoutAiGenerationUsage
+    public function recordFailure(WorkoutAiGenerationActor $actor, string $endpoint, string $generationType, \Throwable $exception, ?array $aiUsage = null): WorkoutAiGenerationUsage
     {
-        if ($aiUsage === null) {
-            return null;
-        }
-
-        return $this->record($actor, $endpoint, $generationType, 'failure', true, $aiUsage, $exception->getMessage());
+        return $this->record($actor, $endpoint, $generationType, 'failure', $aiUsage !== null, $aiUsage, $exception->getMessage());
     }
 
     /**

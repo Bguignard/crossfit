@@ -126,6 +126,7 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         $actor = $this->aiGenerationActor($request);
+        $generationType = $this->generationUsageType('workout', $workoutGeneration);
         $quota = $this->aiGenerationUsageTracker->quotaFor($actor);
         if (!$quota->isAllowed) {
             return $this->quotaExceededResponse($quota);
@@ -138,22 +139,23 @@ class WorkoutGenerationFlowController extends AbstractController
             $this->aiGenerationUsageTracker->recordSuccess(
                 $actor,
                 WorkoutAiGenerationUsage::ENDPOINT_WORKOUT,
-                'workout',
+                $generationType,
                 $workout->getAiUsage(),
             );
             $this->entityManager->flush();
         } catch (\InvalidArgumentException $exception) {
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\RuntimeException $exception) {
-            $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, 'workout', $exception);
+            $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
 
-            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+            return $this->aiGenerationFailureResponse($exception->getMessage(), $failure);
         } catch (\Throwable $exception) {
-            $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, 'workout', $exception);
+            $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
 
-            return $this->json([
-                'error' => sprintf('Workout generation failed: %s: %s', $exception::class, $exception->getMessage()),
-            ], Response::HTTP_BAD_GATEWAY);
+            return $this->aiGenerationFailureResponse(
+                sprintf('Workout generation failed: %s: %s', $exception::class, $exception->getMessage()),
+                $failure,
+            );
         }
 
         $payload = $this->serializeWorkout($workout);
@@ -171,6 +173,7 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         $actor = $this->aiGenerationActor($request);
+        $generationType = $this->generationUsageType('variants', $workoutGeneration);
         $quota = $this->aiGenerationUsageTracker->quotaFor($actor);
         if (!$quota->isAllowed) {
             return $this->quotaExceededResponse($quota);
@@ -181,22 +184,23 @@ class WorkoutGenerationFlowController extends AbstractController
             $this->aiGenerationUsageTracker->recordSuccess(
                 $actor,
                 WorkoutAiGenerationUsage::ENDPOINT_VARIANTS,
-                'variants',
+                $generationType,
                 $this->workoutCreator->getLastAiUsage(),
             );
             $this->entityManager->flush();
         } catch (\InvalidArgumentException $exception) {
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\RuntimeException $exception) {
-            $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_VARIANTS, 'variants', $exception);
+            $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_VARIANTS, $generationType, $exception);
 
-            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+            return $this->aiGenerationFailureResponse($exception->getMessage(), $failure);
         } catch (\Throwable $exception) {
-            $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_VARIANTS, 'variants', $exception);
+            $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_VARIANTS, $generationType, $exception);
 
-            return $this->json([
-                'error' => sprintf('Workout variant generation failed: %s: %s', $exception::class, $exception->getMessage()),
-            ], Response::HTTP_BAD_GATEWAY);
+            return $this->aiGenerationFailureResponse(
+                sprintf('Workout variant generation failed: %s: %s', $exception::class, $exception->getMessage()),
+                $failure,
+            );
         }
 
         return $this->json([
@@ -211,6 +215,16 @@ class WorkoutGenerationFlowController extends AbstractController
         return $this->aiGenerationActorResolver->resolve($request, $this->getUser(), $this->isGranted('ROLE_ADMIN'));
     }
 
+    private function generationUsageType(string $baseType, WorkoutGeneration $workoutGeneration): string
+    {
+        $stimulus = strtolower(trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $workoutGeneration->getStimulus()), '-'));
+        if ($stimulus === '') {
+            return $baseType;
+        }
+
+        return substr($baseType.':'.$stimulus, 0, 64);
+    }
+
     private function quotaExceededResponse(\App\Services\Workout\AiGeneration\WorkoutAiGenerationQuota $quota): JsonResponse
     {
         return $this->json([
@@ -220,7 +234,16 @@ class WorkoutGenerationFlowController extends AbstractController
         ], Response::HTTP_TOO_MANY_REQUESTS);
     }
 
-    private function recordAiGenerationFailure(WorkoutAiGenerationActor $actor, string $endpoint, string $generationType, \Throwable $exception): void
+    private function aiGenerationFailureResponse(string $message, WorkoutAiGenerationUsage $failure): JsonResponse
+    {
+        return $this->json([
+            'error' => $message,
+            'code' => 'workout_generation_failed',
+            'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
+        ], Response::HTTP_BAD_GATEWAY);
+    }
+
+    private function recordAiGenerationFailure(WorkoutAiGenerationActor $actor, string $endpoint, string $generationType, \Throwable $exception): WorkoutAiGenerationUsage
     {
         $usage = $this->aiGenerationUsageTracker->recordFailure(
             $actor,
@@ -229,9 +252,9 @@ class WorkoutGenerationFlowController extends AbstractController
             $exception,
             $this->workoutCreator->getLastAiUsage(),
         );
-        if ($usage !== null) {
-            $this->entityManager->flush();
-        }
+        $this->entityManager->flush();
+
+        return $usage;
     }
 
     private function upsertGeneratedWorkout(WorkoutGeneration $workoutGeneration, Workout $generatedWorkout): Workout

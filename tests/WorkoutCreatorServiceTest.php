@@ -128,6 +128,20 @@ class WorkoutCreatorServiceTest extends TestCase
         self::assertStringNotContainsString('with  rounds', $prompt);
     }
 
+    public function testWorkoutPromptIncludesPostGenerationValidationChecklist(): void
+    {
+        ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
+            WorkoutTypeEnum::FOR_TIME,
+            null,
+            'Competition',
+            2,
+        );
+
+        self::assertStringContainsString('run this validation checklist yourself', $prompt);
+        self::assertStringContainsString('every JSON movement name must appear in the main flow', $prompt);
+        self::assertStringContainsString('loaded movements must have a main-flow load prescription', $prompt);
+    }
+
     public function testWorkoutPromptDiscouragesDefaultBenchmarkMovementTrio(): void
     {
         ['prompt' => $prompt] = $this->createWorkoutAndCapturePrompt(
