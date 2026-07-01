@@ -13,8 +13,7 @@ readonly class WorkoutAiGenerationUsageTracker
     public function __construct(
         private EntityManagerInterface $entityManager,
         private WorkoutAiGenerationUsageRepository $usageRepository,
-        private int $anonymousDailyLimit,
-        private int $freeUserDailyLimit,
+        private WorkoutAiGenerationQuotaPolicy $quotaPolicy,
         private string $quotaTimezone,
         ?AiTokenCostEstimator $costEstimator = null,
     ) {
@@ -27,10 +26,14 @@ readonly class WorkoutAiGenerationUsageTracker
         $resetAt = $this->nextResetAt($now);
 
         if ($actor->isAdmin()) {
-            return new WorkoutAiGenerationQuota(null, 0, null, $resetAt, true);
+            return new WorkoutAiGenerationQuota(null, 0, null, $resetAt, true, true);
         }
 
-        $limit = $actor->user === null ? $this->anonymousDailyLimit : $this->freeUserDailyLimit;
+        $limit = $this->quotaPolicy->dailyLimitFor($actor);
+        if ($limit === null) {
+            return new WorkoutAiGenerationQuota(null, 0, null, $resetAt, true, true);
+        }
+
         $used = $this->usageRepository->countQuotaUsage(
             $actor->user,
             $actor->visitorHash,

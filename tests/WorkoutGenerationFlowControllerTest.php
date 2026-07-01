@@ -10,6 +10,7 @@ use App\Repository\Workout\MovementRepository;
 use App\Repository\WorkoutGeneration\WorkoutAiGenerationUsageRepository;
 use App\Services\Workout\AiGeneration\WorkoutAiGenerationActor;
 use App\Services\Workout\AiGeneration\WorkoutAiGenerationActorResolver;
+use App\Services\Workout\AiGeneration\WorkoutAiGenerationQuotaPolicy;
 use App\Services\Workout\AiGeneration\WorkoutAiGenerationUsageTracker;
 use App\Services\Workout\MovementDifficultyService;
 use App\Services\Workout\WorkoutCreatorServiceInterface;
@@ -100,8 +101,7 @@ class WorkoutGenerationFlowControllerTest extends TestCase
             new WorkoutAiGenerationUsageTracker(
                 $this->createMock(EntityManagerInterface::class),
                 $this->createMock(WorkoutAiGenerationUsageRepository::class),
-                5,
-                10,
+                new WorkoutAiGenerationQuotaPolicy(5, 10),
                 'UTC',
             ),
             $this->createMock(LoggerInterface::class),

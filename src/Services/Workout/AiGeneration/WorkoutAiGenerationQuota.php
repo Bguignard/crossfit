@@ -10,11 +10,12 @@ readonly class WorkoutAiGenerationQuota
         public ?int $remaining,
         public \DateTimeImmutable $resetAt,
         public bool $isAllowed,
+        public bool $isUnlimited = false,
     ) {
     }
 
     /**
-     * @return array{limit: int|null, used: int, remaining: int|null, resetAt: string, isAllowed: bool}
+     * @return array{limit: int|null, used: int, remaining: int|null, resetAt: string, isAllowed: bool, isUnlimited: bool}
      */
     public function toArray(): array
     {
@@ -24,6 +25,7 @@ readonly class WorkoutAiGenerationQuota
             'remaining' => $this->remaining,
             'resetAt' => $this->resetAt->format(\DateTimeInterface::ATOM),
             'isAllowed' => $this->isAllowed,
+            'isUnlimited' => $this->isUnlimited,
         ];
     }
 }

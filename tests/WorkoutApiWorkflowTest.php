@@ -2304,6 +2304,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(5, $payload['quota']['used']);
         self::assertSame(0, $payload['quota']['remaining']);
         self::assertFalse($payload['quota']['isAllowed']);
+        self::assertFalse($payload['quota']['isUnlimited']);
         self::assertSame(5, $this->getRepository(WorkoutAiGenerationUsage::class)->count(['endpoint' => WorkoutAiGenerationUsage::ENDPOINT_WORKOUT]));
 
         $this->browser()->request(
@@ -2428,6 +2429,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNull($payload['quota']['limit']);
         self::assertNull($payload['quota']['remaining']);
         self::assertTrue($payload['quota']['isAllowed']);
+        self::assertTrue($payload['quota']['isUnlimited']);
         $usage = $this->getRepository(WorkoutAiGenerationUsage::class)->findOneBy(['user' => $admin]);
         self::assertInstanceOf(WorkoutAiGenerationUsage::class, $usage);
         self::assertSame(WorkoutAiGenerationUsage::ACTOR_ADMIN, $usage->getActorType());
