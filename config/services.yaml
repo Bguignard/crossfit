@@ -85,10 +85,13 @@ services:
         arguments:
             $appSecret: '%kernel.secret%'
 
-    App\Services\Workout\AiGeneration\WorkoutAiGenerationUsageTracker:
+    App\Services\Workout\AiGeneration\WorkoutAiGenerationQuotaPolicy:
         arguments:
             $anonymousDailyLimit: '%env(int:WORKOUT_AI_ANONYMOUS_DAILY_LIMIT)%'
             $freeUserDailyLimit: '%env(int:WORKOUT_AI_FREE_USER_DAILY_LIMIT)%'
+
+    App\Services\Workout\AiGeneration\WorkoutAiGenerationUsageTracker:
+        arguments:
             $quotaTimezone: '%env(WORKOUT_AI_QUOTA_TIMEZONE)%'
 
     App\Services\Workout\Audit\WorkoutGenerationBenchmarkLiveRunner:
