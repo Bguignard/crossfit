@@ -2167,6 +2167,27 @@ class WorkoutCreatorServiceTest extends TestCase
         );
     }
 
+    public function testThresholdWorkoutGenerationRejectsRepCountShorthandBeforeBodyweight(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.');
+
+        $this->createWorkoutFromGeneratedPayload(
+            $difficulty,
+            [$deadlift],
+            [
+                'flow' => "AMRAP 15 minutes\n10x bodyweight Deadlifts\n15 Box Jumps",
+                'scalingOptions' => "RX: as written\nIntermediate: reduce load\nScaled: lighter deadlift",
+                'movements' => ['Deadlift'],
+            ],
+            'Threshold',
+        );
+    }
+
     public function testThresholdWorkoutGenerationAcceptsRelativeBodyweightLoadForLoadedMovement(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);

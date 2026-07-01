@@ -106,7 +106,7 @@ final class WorkoutLoadPrescriptionValidator
         $hasConcreteLoad = preg_match('/\b\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?(?:\s*-\s*|\s*)?(?:kg|kgs|kilograms?|lb|lbs|pounds?)\b/i', $text) === 1
             || preg_match('/\b(?:@|at\s+)?\d+(?:[.,]\d+)?\s*%/', $text) === 1
             || preg_match('/\b\d+(?:[.,]\d+)?\s*%\s*(?:1\s*rm|one\s*rep\s*max)\b/i', $text) === 1
-            || preg_match('/\b\d+(?:[.,]\d+)?\s*x\s*(?:bodyweight|bw)\b/i', $text) === 1;
+            || preg_match('/\b(?:0[.,]\d+|[1-4](?:[.,]\d+)?|5(?:[.,]0+)?)\s*x\s*(?:bodyweight|bw)\b/i', $text) === 1;
 
         if ($hasConcreteLoad) {
             return true;
