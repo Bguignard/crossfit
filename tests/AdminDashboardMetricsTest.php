@@ -344,12 +344,12 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
 
         self::assertSame(5, $payload['totals']['successfulCount']);
         self::assertSame(3, $payload['totals']['failureCount']);
-        self::assertSame('0.100012', $payload['totals']['totalEstimatedCostUsd']);
+        self::assertSame('0.100327', $payload['totals']['totalEstimatedCostUsd']);
         self::assertSame('0.040000', $payload['totals']['failedWithTokensEstimatedCostUsd']);
         self::assertSame(1080, $payload['totals']['tokens']['prompt']);
         self::assertSame(430, $payload['totals']['tokens']['completion']);
         self::assertSame(1510, $payload['totals']['tokens']['total']);
-        self::assertSame('0.070012', $payload['totals']['byModel']['gpt-5-mini']['totalEstimatedCostUsd']);
+        self::assertSame('0.070327', $payload['totals']['byModel']['gpt-5-mini']['totalEstimatedCostUsd']);
         self::assertSame('0.030000', $payload['totals']['byModel']['gpt-5']['totalEstimatedCostUsd']);
         self::assertSame(2, $payload['totals']['byModel']['unknown']['failureCount']);
 
@@ -373,8 +373,8 @@ class AdminDashboardMetricsTest extends AbstractIntegrationTest
         $athleteProgrammingCategory = $payload['categories']['athlete_programming'];
         self::assertSame(2, $athleteProgrammingCategory['successfulCount']);
         self::assertSame(0, $athleteProgrammingCategory['failureCount']);
-        self::assertSame('0.000012', $athleteProgrammingCategory['totalEstimatedCostUsd']);
-        self::assertSame(1, $athleteProgrammingCategory['successfulUnknownCostCount']);
+        self::assertSame('0.000327', $athleteProgrammingCategory['totalEstimatedCostUsd']);
+        self::assertSame(0, $athleteProgrammingCategory['successfulUnknownCostCount']);
         self::assertSame(470, $athleteProgrammingCategory['tokens']['total']);
 
         $boxProgrammingCategory = $payload['categories']['box_programming'];

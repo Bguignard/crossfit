@@ -9,6 +9,7 @@ use App\Entity\Product\PerformanceAnalysisRequest;
 use App\Entity\Product\ProgrammingGenerationRequest;
 use App\Entity\Product\ProgrammingSessionDetailRequest;
 use App\Entity\WorkoutGeneration\WorkoutAiGenerationUsage;
+use App\Services\Workout\AiGeneration\AiTokenCostEstimator;
 use Doctrine\ORM\EntityManagerInterface;
 
 class AiGenerationCostMetricsProvider
@@ -19,8 +20,10 @@ class AiGenerationCostMetricsProvider
     private const CATEGORY_BOX_PROGRAMMING = 'box_programming';
     private const CATEGORY_COMPETITION_PROGRAMMING = 'competition_programming';
 
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly AiTokenCostEstimator $costEstimator,
+    ) {
     }
 
     /**
@@ -41,13 +44,13 @@ class AiGenerationCostMetricsProvider
             $this->addUsage(
                 $categories[self::CATEGORY_WORKOUT_GENERATION],
                 status: $this->statusFromUsageRow($row),
-                usage: [
+                usage: $this->withEstimatedCost([
                     'model' => $row['model'] ?? null,
                     'prompt_tokens' => $row['promptTokens'] ?? null,
                     'completion_tokens' => $row['completionTokens'] ?? null,
                     'total_tokens' => $row['totalTokens'] ?? null,
                     'estimated_cost_usd' => $row['estimatedCostUsd'] ?? null,
-                ],
+                ]),
             );
         }
 
@@ -529,7 +532,33 @@ class AiGenerationCostMetricsProvider
             return null;
         }
 
-        return $payload['_openai_usage'];
+        return $this->withEstimatedCost($payload['_openai_usage']);
+    }
+
+    /**
+     * @param array<string, mixed>|null $usage
+     *
+     * @return array<string, mixed>|null
+     */
+    private function withEstimatedCost(?array $usage): ?array
+    {
+        if ($usage === null || ($usage['estimated_cost_usd'] ?? null) !== null) {
+            return $usage;
+        }
+
+        $model = is_string($usage['model'] ?? null) ? $usage['model'] : null;
+        $estimatedCost = $this->costEstimator->estimateUsd(
+            $model,
+            $this->nullableInt($usage['prompt_tokens'] ?? null),
+            $this->nullableInt($usage['completion_tokens'] ?? null),
+        );
+        if ($estimatedCost === null) {
+            return $usage;
+        }
+
+        $usage['estimated_cost_usd'] = $estimatedCost;
+
+        return $usage;
     }
 
     /**

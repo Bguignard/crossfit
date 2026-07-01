@@ -76,7 +76,7 @@ final class ChatGPTApiKeyTest extends TestCase
         self::assertSame(321, $usage['completion_tokens']);
         self::assertSame(1555, $usage['total_tokens']);
         self::assertSame('success', $usage['status']);
-        self::assertNull($usage['estimated_cost_usd']);
+        self::assertSame('0.003802', $usage['estimated_cost_usd']);
         self::assertIsInt($usage['duration_ms']);
     }
 

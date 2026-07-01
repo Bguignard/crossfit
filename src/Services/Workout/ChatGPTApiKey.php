@@ -2,6 +2,7 @@
 
 namespace App\Services\Workout;
 
+use App\Services\Workout\AiGeneration\AiTokenCostEstimator;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -25,6 +26,7 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
         public readonly string $chatGPTApiKey,
         private readonly string $openAiModel,
         private readonly HttpClientInterface $client,
+        private readonly ?AiTokenCostEstimator $costEstimator = null,
     ) {
     }
 
@@ -156,15 +158,19 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
     {
         $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
 
+        $model = is_string($data['model'] ?? null) ? $data['model'] : $this->openAiModel;
+        $promptTokens = $this->nullableInt($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? null);
+        $completionTokens = $this->nullableInt($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null);
+
         return [
             'request_type' => 'workout_generation',
-            'model' => is_string($data['model'] ?? null) ? $data['model'] : $this->openAiModel,
-            'prompt_tokens' => $this->nullableInt($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? null),
-            'completion_tokens' => $this->nullableInt($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null),
+            'model' => $model,
+            'prompt_tokens' => $promptTokens,
+            'completion_tokens' => $completionTokens,
             'total_tokens' => $this->nullableInt($usage['total_tokens'] ?? null),
             'duration_ms' => $durationMs,
             'status' => 'success',
-            'estimated_cost_usd' => null,
+            'estimated_cost_usd' => ($this->costEstimator ?? new AiTokenCostEstimator())->estimateUsd($model, $promptTokens, $completionTokens),
         ];
     }
 
