@@ -456,6 +456,7 @@ class ImportCompetitionResultsCommand extends Command
             ->setCompetitionFormatSlug($this->stringOrNull($row['competitionFormatSlug'] ?? null))
             ->setCompetitionDivision($competitionDivision)
             ->setPoints($this->intOrNull($row['points'] ?? null))
+            ->setPerformanceBreakdown($this->performanceBreakdown($row, $sourceName))
             ->setSourceUrl($sourceUrl);
 
         $participationExternalId = $this->participationExternalId(
@@ -567,6 +568,41 @@ class ImportCompetitionResultsCommand extends Command
         }
 
         return $items;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, mixed>|null
+     */
+    private function performanceBreakdown(array $row, string $sourceName): ?array
+    {
+        foreach (['performanceBreakdown', 'performance_breakdown', 'performanceDetails', 'performance_details'] as $field) {
+            if (isset($row[$field]) && is_array($row[$field])) {
+                return $row[$field];
+            }
+        }
+
+        $splits = $this->arrayListOrNull($row['splits'] ?? null);
+        if ($splits === null) {
+            return null;
+        }
+
+        $breakdown = [
+            'sport' => str_contains(strtolower($sourceName), 'hyrox') ? 'hyrox' : $sourceName,
+            'segments' => $splits,
+        ];
+
+        foreach ([
+            'total_time_seconds' => $row['total_time_seconds'] ?? $row['totalTimeSeconds'] ?? null,
+            'total_time_display' => $row['total_time_display'] ?? $row['totalTimeDisplay'] ?? null,
+        ] as $key => $value) {
+            if ($value !== null) {
+                $breakdown[$key] = $value;
+            }
+        }
+
+        return $breakdown;
     }
 
     /**

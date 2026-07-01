@@ -384,15 +384,20 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $initialMessengerMessages = $this->messengerMessageCount();
         $gamesAthlete = new Athlete('Bruno Games', 'crossfit_games', '942782');
         $cornerAthlete = new Athlete('Bruno Competition Corner', 'competition_corner', 'bruno-123');
+        $hyroxAthlete = new Athlete('Bruno HYROX', 'hyrox', 'hyrox-123');
         $scoringAthlete = new Athlete('Bruno Scoring', 'scoring_fit', 'scoring-123');
         $gamesProfile = (new UserAthleteProfile($user, $gamesAthlete))->setPrimaryProfile(true);
         $cornerProfile = new UserAthleteProfile($user, $cornerAthlete);
+        $hyroxProfile = new UserAthleteProfile($user, $hyroxAthlete);
         $scoringProfile = new UserAthleteProfile($user, $scoringAthlete);
         $performanceProfile = new UserPerformanceProfile($user);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::BACK_SQUAT_1RM))->setNumericValue(150);
         (new UserPerformanceMetric($performanceProfile, PerformanceMetricKeyEnum::STRICT_PULL_UP))->setBooleanValue(true);
         $open = (new Competition('CrossFit Open 2026', 'crossfit_games', 'open-2026'))->setSeason(2026);
         $throwdown = (new Competition('Marseille Throwdown 2026', 'competition_corner', 'mt-2026'))->setSeason(2026);
+        $hyrox = (new Competition('HYROX Paris 2026', 'hyrox', 'hyrox-paris-2026'))
+            ->setSeason(2026)
+            ->setCompetitionType('hyrox');
         $scoringCompetition = (new Competition('Scoring Event 2026', 'scoring_fit', 'sf-2026'))->setSeason(2026);
         $division = new CompetitionDivision($open, 'Men', 'crossfit_games', 'open-2026-men');
         $attemptedEvent = (new CompetitionEvent($open, 'Open 26.1', 'crossfit_games', 'open-2026-1'))
@@ -400,6 +405,8 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         $missedEvent = (new CompetitionEvent($open, 'Open 26.2', 'crossfit_games', 'open-2026-2'))
             ->setEventOrder(2);
         $throwdownEvent = (new CompetitionEvent($throwdown, 'Final 1', 'competition_corner', 'mt-2026-1'))
+            ->setEventOrder(1);
+        $hyroxEvent = (new CompetitionEvent($hyrox, 'HYROX Pro Men', 'hyrox', 'hyrox-paris-2026-pro-men'))
             ->setEventOrder(1);
         $scoringEvent = (new CompetitionEvent($scoringCompetition, 'Scoring 1', 'scoring_fit', 'sf-2026-1'))
             ->setEventOrder(1);
@@ -435,6 +442,37 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
             ->setDivision('Elite Men')
             ->setRank(4)
             ->setFieldSize(40);
+        $hyroxResult = (new WorkoutResult(
+            $hyroxAthlete,
+            $hyroxEvent,
+            (new Score(ScoreTypeEnum::TIME, '1:02:05'))->setTimeInSeconds(3725),
+            'hyrox',
+            'hyrox-paris-2026-bruno'
+        ))
+            ->setDivision('Pro Men')
+            ->setRank(12)
+            ->setFieldSize(240)
+            ->setPerformanceBreakdown([
+                'sport' => 'hyrox',
+                'total_time_seconds' => 3725,
+                'segments' => [
+                    [
+                        'order' => 1,
+                        'type' => 'run',
+                        'name' => 'Run 1',
+                        'distance_meters' => 1000,
+                        'time_seconds' => 255,
+                    ],
+                    [
+                        'order' => 2,
+                        'type' => 'station',
+                        'station_number' => 1,
+                        'name' => 'SkiErg',
+                        'distance_meters' => 1000,
+                        'time_seconds' => 270,
+                    ],
+                ],
+            ]);
         $scoringResult = (new WorkoutResult(
             $scoringAthlete,
             $scoringEvent,
@@ -448,22 +486,27 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
 
         $this->getEntityManager()->persist($gamesAthlete);
         $this->getEntityManager()->persist($cornerAthlete);
+        $this->getEntityManager()->persist($hyroxAthlete);
         $this->getEntityManager()->persist($scoringAthlete);
         $this->getEntityManager()->persist($gamesProfile);
         $this->getEntityManager()->persist($cornerProfile);
+        $this->getEntityManager()->persist($hyroxProfile);
         $this->getEntityManager()->persist($scoringProfile);
         $this->getEntityManager()->persist($performanceProfile);
         $this->getEntityManager()->persist($open);
         $this->getEntityManager()->persist($throwdown);
+        $this->getEntityManager()->persist($hyrox);
         $this->getEntityManager()->persist($scoringCompetition);
         $this->getEntityManager()->persist($division);
         $this->getEntityManager()->persist($attemptedEvent);
         $this->getEntityManager()->persist($missedEvent);
         $this->getEntityManager()->persist($throwdownEvent);
+        $this->getEntityManager()->persist($hyroxEvent);
         $this->getEntityManager()->persist($scoringEvent);
         $this->getEntityManager()->persist($attemptedResult);
         $this->getEntityManager()->persist($missedResult);
         $this->getEntityManager()->persist($throwdownResult);
+        $this->getEntityManager()->persist($hyroxResult);
         $this->getEntityManager()->persist($scoringResult);
         $this->getEntityManager()->flush();
 
@@ -483,12 +526,21 @@ class PrivateUserProfileApiTest extends AbstractIntegrationTest
         self::assertSame('known_rms_only', $analysisPayload['inputSnapshot']['prescription_guidance']['absoluteLoadPolicy']);
         self::assertEquals(150.0, $analysisPayload['inputSnapshot']['prescription_guidance']['knownLoadMetrics'][PerformanceMetricKeyEnum::BACK_SQUAT_1RM->value]);
         self::assertContains(PerformanceMetricKeyEnum::DEADLIFT_1RM->value, $analysisPayload['inputSnapshot']['prescription_guidance']['missingEssentialLoadMetrics']);
-        self::assertCount(2, $analysisPayload['inputSnapshot']['athlete_profiles']);
-        self::assertSame(['crossfit_games', 'competition_corner'], array_values(array_unique(array_column($analysisPayload['inputSnapshot']['athlete_profiles'], 'source_name'))));
+        self::assertCount(3, $analysisPayload['inputSnapshot']['athlete_profiles']);
+        self::assertSame(['crossfit_games', 'competition_corner', 'hyrox'], array_values(array_unique(array_column($analysisPayload['inputSnapshot']['athlete_profiles'], 'source_name'))));
         self::assertContains('Open 26.1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
         self::assertContains('Final 1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
+        self::assertContains('HYROX Pro Men', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
         self::assertNotContains('Scoring 1', array_column($analysisPayload['inputSnapshot']['competition_results'], 'event'));
         self::assertEquals(200.0, $analysisPayload['inputSnapshot']['competition_results'][0]['numeric_value']);
+        $hyroxSnapshot = array_values(array_filter(
+            $analysisPayload['inputSnapshot']['competition_results'],
+            static fn (array $result): bool => ($result['event'] ?? null) === 'HYROX Pro Men',
+        ))[0] ?? null;
+        self::assertIsArray($hyroxSnapshot);
+        self::assertSame('hyrox', $hyroxSnapshot['performance_details']['sport']);
+        self::assertSame('run', $hyroxSnapshot['performance_details']['segments'][0]['type']);
+        self::assertSame('station', $hyroxSnapshot['performance_details']['segments'][1]['type']);
         self::assertSame('Open 26.2', $analysisPayload['inputSnapshot']['excluded_non_attempted_results'][0]['event']);
         self::assertSame(
             'non_attempted_or_not_submitted',

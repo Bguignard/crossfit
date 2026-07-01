@@ -1133,6 +1133,102 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertNotContains('/api/athletes/'.$otherAthlete->getId(), array_column($payload['member'], 'athlete'));
     }
 
+    public function testAthleteResultSummaryExposesHyroxCompetitionPerformanceDetails(): void
+    {
+        $entityManager = $this->getEntityManager();
+        $athlete = new Athlete('HYROX Athlete', 'hyrox', 'hyrox-athlete-1');
+        $competition = (new Competition('HYROX Paris 2026', 'hyrox', 'hyrox-paris-2026'))
+            ->setCompetitionType('hyrox')
+            ->setStartsAt(new \DateTimeImmutable('2026-03-08T08:00:00+00:00'))
+            ->setLocationLabel('Paris, France');
+        $event = (new CompetitionEvent($competition, 'HYROX Pro Women', 'hyrox', 'hyrox-paris-2026-pro-women'))
+            ->setEventOrder(1);
+        $division = new CompetitionDivision($competition, 'Pro Women', 'hyrox', 'hyrox-paris-2026-pro-women-division');
+        $score = (new Score(ScoreTypeEnum::TIME, '1:02:05'))
+            ->setDisplayValue('1:02:05')
+            ->setTimeInSeconds(3725);
+        $result = (new WorkoutResult($athlete, $event, $score, 'hyrox', 'hyrox-paris-2026-athlete-1'))
+            ->setCompetitionDivision($division)
+            ->setDivision('Pro Women')
+            ->setRank(7)
+            ->setFieldSize(128)
+            ->setSourceUrl('https://results.hyrox.test/paris-2026/athlete-1')
+            ->setPerformanceBreakdown([
+                'sport' => 'hyrox',
+                'totalTime' => ['display' => '1:02:05', 'seconds' => 3725],
+                'segments' => [
+                    [
+                        'order' => 3,
+                        'type' => 'roxzone',
+                        'name' => 'Roxzone 1',
+                        'time' => ['display' => '0:58', 'seconds' => 58],
+                    ],
+                    [
+                        'order' => 1,
+                        'type' => 'run',
+                        'name' => 'Run 1',
+                        'distance_meters' => 1000,
+                        'time' => ['display' => '4:12', 'seconds' => 252],
+                    ],
+                    [
+                        'order' => 2,
+                        'type' => 'station',
+                        'station_number' => 1,
+                        'name' => 'SkiErg',
+                        'distance_meters' => 1000,
+                        'time' => ['display' => '4:25', 'seconds' => 265],
+                    ],
+                ],
+            ]);
+
+        foreach ([$athlete, $competition, $event, $division, $result] as $entity) {
+            $entityManager->persist($entity);
+        }
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $this->browser()->request('GET', sprintf('/api/athletes/%s/result-summary', $athlete->getId()));
+
+        self::assertResponseIsSuccessful();
+
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(1, $payload['totalItems']);
+
+        $resultPayload = $payload['member'][0];
+        self::assertSame('HYROX Paris 2026', $resultPayload['competitionDetails']['name']);
+        self::assertSame('HYROX Pro Women', $resultPayload['eventDetails']['name']);
+        self::assertSame('Pro Women', $resultPayload['competitionDivisionDetails']['name']);
+        self::assertSame('1:02:05', $resultPayload['scoreDetails']['displayValue']);
+        self::assertSame(3725, $resultPayload['scoreDetails']['timeInSeconds']);
+        self::assertSame(7, $resultPayload['rank']);
+        self::assertSame(128, $resultPayload['fieldSize']);
+        self::assertSame('hyrox', $resultPayload['sourceName']);
+
+        $performanceDetails = $resultPayload['performanceDetails'];
+        self::assertSame('hyrox', $performanceDetails['sport']);
+        self::assertSame('competition_result', $performanceDetails['resultKind']);
+        self::assertSame('HYROX Paris 2026', $performanceDetails['competition']['name']);
+        self::assertSame('2026-03-08T08:00:00+00:00', $performanceDetails['competition']['startsAt']);
+        self::assertSame('HYROX Pro Women', $performanceDetails['event']['name']);
+        self::assertSame('Pro Women', $performanceDetails['division']);
+        self::assertSame(['display' => '1:02:05', 'seconds' => 3725], $performanceDetails['totalTime']);
+        self::assertSame([
+            ['order' => 1, 'type' => 'run', 'name' => 'Run 1'],
+            ['order' => 2, 'type' => 'station', 'name' => 'SkiErg'],
+            ['order' => 3, 'type' => 'roxzone', 'name' => 'Roxzone 1'],
+        ], array_map(
+            static fn (array $segment): array => [
+                'order' => $segment['order'],
+                'type' => $segment['type'],
+                'name' => $segment['name'],
+            ],
+            $performanceDetails['segments'],
+        ));
+        self::assertSame(1000, $performanceDetails['segments'][0]['distanceMeters']);
+        self::assertSame(['display' => '4:25', 'seconds' => 265], $performanceDetails['segments'][1]['time']);
+        self::assertSame('https://results.hyrox.test/paris-2026/athlete-1', $performanceDetails['source']['url']);
+    }
+
     public function testAthleteResultSummaryIncludesUpcomingParticipationsWithoutResults(): void
     {
         $entityManager = $this->getEntityManager();

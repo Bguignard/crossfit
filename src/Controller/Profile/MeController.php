@@ -1384,7 +1384,7 @@ class MeController extends AbstractController
         $profiles = array_values(array_filter(
             $userAthleteProfiles,
             static fn (UserAthleteProfile $athleteProfile): bool => $athleteProfile->getLinkType() === UserAthleteProfile::LINK_SELF
-                && in_array($athleteProfile->getAthlete()->getSourceName(), ['crossfit_games', 'competition_corner'], true)
+                && in_array($athleteProfile->getAthlete()->getSourceName(), ['crossfit_games', 'competition_corner', 'hyrox'], true)
         ));
 
         usort(

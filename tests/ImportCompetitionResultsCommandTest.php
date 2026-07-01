@@ -285,6 +285,93 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
         }
     }
 
+    public function testImportPersistsHyroxPerformanceBreakdownSplits(): void
+    {
+        $command = $this->getService(ImportCompetitionResultsCommand::class);
+        self::assertInstanceOf(ImportCompetitionResultsCommand::class, $command);
+
+        $file = tempnam(sys_get_temp_dir(), 'competition-import-');
+        self::assertIsString($file);
+        file_put_contents($file, json_encode([
+            'contractVersion' => 'competition-results.v1',
+            'source' => ['name' => 'hyrox'],
+            'athletes' => [
+                ['source' => ['externalId' => 'hyrox-athlete-1'], 'displayName' => 'HYROX Athlete'],
+            ],
+            'competitions' => [
+                [
+                    'source' => ['externalId' => 'hyrox-paris-2026'],
+                    'name' => 'HYROX Paris 2026',
+                    'competitionType' => 'hyrox',
+                ],
+            ],
+            'events' => [
+                [
+                    'source' => ['externalId' => 'hyrox-paris-2026-pro'],
+                    'competitionSourceId' => 'hyrox-paris-2026',
+                    'name' => 'HYROX Pro',
+                    'eventOrder' => 1,
+                ],
+            ],
+            'results' => [
+                [
+                    'source' => ['externalId' => 'hyrox-paris-2026-athlete-1'],
+                    'athleteSourceId' => 'hyrox-athlete-1',
+                    'eventSourceId' => 'hyrox-paris-2026-pro',
+                    'rank' => 9,
+                    'division' => 'Pro Men',
+                    'score' => ['type' => 'time', 'rawValue' => '1:02:05', 'displayValue' => '1:02:05', 'timeInSeconds' => 3725],
+                    'totalTimeSeconds' => 3725,
+                    'splits' => [
+                        [
+                            'order' => 1,
+                            'type' => 'run',
+                            'name' => 'Run 1',
+                            'distance_meters' => 1000,
+                            'time_seconds' => 255,
+                        ],
+                        [
+                            'order' => 2,
+                            'type' => 'station',
+                            'station_number' => 1,
+                            'name' => 'SkiErg',
+                            'distance_meters' => 1000,
+                            'time_seconds' => 270,
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            $tester = new CommandTester($command);
+
+            self::assertSame(Command::SUCCESS, $tester->execute(['file' => $file]));
+            $this->getEntityManager()->clear();
+
+            /** @var WorkoutResult|null $result */
+            $result = $this->getRepository(WorkoutResult::class)->findOneBy([
+                'sourceName' => 'hyrox',
+                'externalId' => 'hyrox-paris-2026-athlete-1',
+            ]);
+
+            self::assertNotNull($result);
+            $breakdown = $result->getPerformanceBreakdown();
+            self::assertIsArray($breakdown);
+            self::assertSame('hyrox', $breakdown['sport']);
+            self::assertSame(3725, $breakdown['total_time_seconds']);
+            self::assertCount(2, $breakdown['segments']);
+            self::assertSame('run', $breakdown['segments'][0]['type']);
+            self::assertSame('Run 1', $breakdown['segments'][0]['name']);
+            self::assertSame(1000, $breakdown['segments'][0]['distance_meters']);
+            self::assertSame('station', $breakdown['segments'][1]['type']);
+            self::assertSame('SkiErg', $breakdown['segments'][1]['name']);
+            self::assertSame(270, $breakdown['segments'][1]['time_seconds']);
+        } finally {
+            @unlink($file);
+        }
+    }
+
     public function testImportDeduplicatesUnflushedCompetitionParticipations(): void
     {
         $command = $this->getService(ImportCompetitionResultsCommand::class);

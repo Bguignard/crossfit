@@ -8,6 +8,7 @@ use App\Entity\Competition\WorkoutResult;
 use App\Entity\Workout\Workout;
 use App\Services\Competition\AthleteNameNormalizer;
 use App\Services\Competition\CompetitionOfficialQualificationPresenter;
+use App\Services\Competition\HyroxResultPerformanceDetailsNormalizer;
 use App\Services\Workout\WorkoutPlaceholderFlowDetector;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +21,7 @@ final class AthleteResultSummaryController extends AbstractController
     public function __construct(
         private readonly CompetitionOfficialQualificationPresenter $qualificationPresenter,
         private readonly WorkoutPlaceholderFlowDetector $placeholderFlowDetector,
+        private readonly HyroxResultPerformanceDetailsNormalizer $performanceDetailsNormalizer,
     ) {
     }
 
@@ -111,6 +113,7 @@ final class AthleteResultSummaryController extends AbstractController
             'sourceName' => $result->getSourceName(),
             'externalId' => $result->getExternalId(),
             'sourceUrl' => $result->getSourceUrl(),
+            'performanceDetails' => $this->performanceDetailsNormalizer->normalize($result),
             'createdAt' => $result->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'updatedAt' => $result->getUpdatedAt()->format(\DateTimeInterface::ATOM),
             'scoreDetails' => [
