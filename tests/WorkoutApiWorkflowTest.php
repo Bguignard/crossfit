@@ -2140,6 +2140,67 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(0, $quotaPayload['quota']['remaining']);
     }
 
+    public function testAnonymousWorkoutGenerationQuotaCannotBeBypassedByChangingVisitorIdOnSameIp(): void
+    {
+        $this->browser()->disableReboot();
+        $this->installSuccessfulWorkoutCreator();
+        $draft = $this->createWorkoutGenerationDraft('Anonymous quota stable IP WOD');
+
+        for ($i = 0; $i < 5; ++$i) {
+            $this->browser()->request(
+                'POST',
+                sprintf('/api/workout-generation-flow/%s/workout', $draft['id']),
+                [],
+                [],
+                [
+                    'HTTP_X_MONWOD_VISITOR_ID' => 'anonymous-quota-device-'.$i,
+                    'REMOTE_ADDR' => '203.0.113.42',
+                ]
+            );
+
+            self::assertResponseStatusCodeSame(201);
+        }
+
+        $this->browser()->request(
+            'POST',
+            sprintf('/api/workout-generation-flow/%s/workout', $draft['id']),
+            [],
+            [],
+            [
+                'HTTP_X_MONWOD_VISITOR_ID' => 'anonymous-quota-device-rotated',
+                'REMOTE_ADDR' => '203.0.113.42',
+            ]
+        );
+
+        self::assertResponseStatusCodeSame(429);
+        $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('workout_generation_quota_reached', $payload['code']);
+        self::assertSame(5, $payload['quota']['used']);
+        self::assertSame(0, $payload['quota']['remaining']);
+    }
+
+    public function testCorsAllowsMonwodVisitorIdHeaderForWorkoutGenerationQuota(): void
+    {
+        $this->browser()->request(
+            'OPTIONS',
+            '/api/workout-generation-flow/quota',
+            [],
+            [],
+            [
+                'HTTP_ORIGIN' => 'http://localhost:3000',
+                'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'GET',
+                'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'X-MonWOD-Visitor-Id, Content-Type',
+            ]
+        );
+
+        $response = $this->browser()->getResponse();
+        self::assertTrue($response->isSuccessful());
+        self::assertStringContainsString(
+            'x-monwod-visitor-id',
+            strtolower((string) $response->headers->get('Access-Control-Allow-Headers'))
+        );
+    }
+
     public function testLoggedInFreeUserWorkoutGenerationQuotaAllowsTenPerDayAndThenReturns429(): void
     {
         $this->browser()->disableReboot();
