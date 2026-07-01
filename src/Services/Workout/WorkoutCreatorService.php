@@ -264,12 +264,15 @@ EOD;
         $allowedMovements = array_merge($mandatoryMovements, $candidateMovementsForPrompt);
         $generatedWorkout = null;
         $WorkoutMovements = null;
-        $clusterRejection = null;
+        $previousGenerationRejection = null;
         for ($attempt = 0; $attempt < 2; ++$attempt) {
             $attemptPrompt = $promptForChatGPT;
-            if ($clusterRejection instanceof \RuntimeException) {
-                $attemptPrompt .= "\nPrevious generation rejected: ".$clusterRejection->getMessage()."\n";
-                $attemptPrompt .= "Generate a different valid movement mix now. Keep common competition movements available, but do not return the rejected cluster again.\n";
+            if ($previousGenerationRejection instanceof \RuntimeException) {
+                $attemptPrompt .= "\nPrevious generation rejected by MonWOD validation: ".$previousGenerationRejection->getMessage()."\n";
+                $attemptPrompt .= "Correct that exact issue now. Return valid JSON only, keep the movements array and main flow consistent, include main-flow load prescriptions for loaded movements, avoid strict toes to bar, and keep the structure coherent with the requested stimulus.\n";
+                if ($this->isRejectedCompetitionMovementCluster($previousGenerationRejection)) {
+                    $attemptPrompt .= "Generate a different valid movement mix now. Keep common competition movements available, but do not return the rejected cluster again.\n";
+                }
             }
 
             $openAiStartedAt = microtime(true);
@@ -315,15 +318,21 @@ EOD;
                     'attempt' => $attempt + 1,
                     'exceptionClass' => $exception::class,
                     'message' => $exception->getMessage(),
+                    'retryable' => $this->canRetryGeneratedWorkoutRejection($exception, $attempt),
                     'lastAiUsage' => $this->lastOpenAiUsage(),
                 ]);
+
+                if ($this->canRetryGeneratedWorkoutRejection($exception, $attempt)) {
+                    $previousGenerationRejection = $exception;
+                    continue;
+                }
 
                 throw $exception;
             }
 
             try {
                 $this->assertNoRejectedCompetitionMovementCluster($workoutGeneration, $WorkoutMovements);
-                $clusterRejection = null;
+                $previousGenerationRejection = null;
                 break;
             } catch (\RuntimeException $exception) {
                 $this->logger->warning('monwod.workout_generation.validation_failed', [
@@ -334,7 +343,7 @@ EOD;
                     'retryable' => $attempt === 0,
                     'lastAiUsage' => $this->lastOpenAiUsage(),
                 ]);
-                $clusterRejection = $exception;
+                $previousGenerationRejection = $exception;
                 if ($attempt === 1) {
                     throw $exception;
                 }
@@ -543,7 +552,7 @@ EOD;
         } elseif (str_contains($stimulus, 'sprint')) {
             $guidance .= "- Sprint: keep the workout short, simple, and near-maximal. Target roughly 2-8 minutes, with few transitions and no pacing-heavy volume.\n";
         } elseif (str_contains($stimulus, 'threshold')) {
-            $guidance .= "- Threshold: target 8-20 minutes at hard sustainable intensity. Include a pacing note and avoid both all-out sprint volume and slow aerobic cruising.\n";
+            $guidance .= "- Threshold: target 8-20 minutes at hard sustainable intensity. Prefer a simple repeatable couplet/triplet or compact interval structure that is easy to parse. Include a pacing note, avoid both all-out sprint volume and slow aerobic cruising, and give every loaded movement a sustainable main-flow load.\n";
         } elseif (str_contains($stimulus, 'engine')) {
             $guidance .= "- Engine: make the limitation primarily aerobic. Prefer simple cardio-dominant movements, ergs, running, simple cyclical work, and low technical complexity. Avoid grip-heavy, high-skill gymnastics, and high-rep loaded stations as the main limiter. Do not choose Wall Ball Shot, sled, sandbag, dumbbell or other equipment-specific movements unless their required implement is explicitly printed under that exact movement in the allowed movement pool.\n";
         } elseif ($this->isFullHyroxStimulus($stimulus)) {
@@ -553,7 +562,7 @@ EOD;
         } elseif (str_contains($stimulus, 'gymnastics') || str_contains($stimulus, 'skill')) {
             $guidance .= "- Gymnastics / Skill: calibrate complexity and volume to the requested level. For RX, avoid accidental Elite volume; favor quality, control, and repeatable skill practice. Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar. For RX skill-under-fatigue work, keep total advanced gymnastics volume manageable instead of testing max capacity: avoid combining high totals of muscle-ups, HSPU and toes-to-bar in the same workout. Decide whether it is technical skill work or skill under fatigue and make that explicit.\n";
         } elseif (str_contains($stimulus, 'competition')) {
-            $guidance .= "- Competition: combine several qualities and movement families with clear standards and strategic pacing. It can feel Open-like, but must remain coherent for the requested level.\n";
+            $guidance .= "- Competition: combine several qualities and movement families with clear standards and strategic pacing. It can feel Open-like, but must remain coherent for the requested level. Keep the flow parseable: use exact movement names from the allowed pool, list no extra movements, include loads/standards in the main flow, and avoid overcomplicated multi-part structures unless they clearly serve the stimulus.\n";
         }
 
         $guidance .= "- JSON integrity: the movements array must contain exactly the movement names used in the main workout flow, no extra movement and no missing movement.\n";
@@ -1197,6 +1206,21 @@ EOD;
         foreach ($this->loadPrescriptionValidator->movementsMissingMainFlowLoadPrescription($flow, $selectedMovements) as $movement) {
             throw new \RuntimeException(sprintf('OpenAI workout generation included loaded movement "%s" without a main workout load prescription.', $movement->getName()));
         }
+    }
+
+    private function canRetryGeneratedWorkoutRejection(\Throwable $exception, int $attempt): bool
+    {
+        if ($attempt > 0 || !$exception instanceof \RuntimeException) {
+            return false;
+        }
+
+        return str_starts_with($exception->getMessage(), 'OpenAI workout generation ')
+            || $this->isRejectedCompetitionMovementCluster($exception);
+    }
+
+    private function isRejectedCompetitionMovementCluster(\RuntimeException $exception): bool
+    {
+        return str_starts_with($exception->getMessage(), 'Generated Competition workout selected an overused movement cluster');
     }
 
     private function flowWithoutScalingOptions(string $flow): string

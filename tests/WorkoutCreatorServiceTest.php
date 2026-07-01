@@ -392,6 +392,136 @@ class WorkoutCreatorServiceTest extends TestCase
         ));
     }
 
+    public function testThresholdGenerationRetriesInvalidJsonWithValidationFeedback(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $row = new Movement('Row', $difficulty, $cardio);
+        $burpee = new Movement('Burpee', $difficulty, $cardio);
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public int $calls = 0;
+
+            /**
+             * @var list<string>
+             */
+            public array $prompts = [];
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompts[] = $prompt;
+                ++$this->calls;
+
+                if ($this->calls === 1) {
+                    return 'Here is the workout: AMRAP 12 Row and Burpee';
+                }
+
+                return json_encode([
+                    'flow' => "AMRAP 12 minutes\n250 m Row\n12 Burpee",
+                    'scalingOptions' => "RX: as written\nIntermediate: reduce row distance\nScaled: step-down burpees",
+                    'movements' => ['Row', 'Burpee'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Threshold retry test')
+            ->setStimulus('Threshold')
+            ->setStimulusIntent('Hard sustainable pace.')
+            ->setTimeCap(12)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::AMRAP))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$cardio])
+            ->setNumberOfDifferentMovements(2)
+            ->setNumberOfRounds(1)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService(
+            $this->movementServiceReturning([$row, $burpee]),
+            $chatGpt,
+            $this->workoutOriginService(),
+        ))->createWorkout($workoutGeneration);
+
+        self::assertSame(2, $chatGpt->calls);
+        self::assertStringContainsString('Previous generation rejected by MonWOD validation', $chatGpt->prompts[1]);
+        self::assertStringContainsString('OpenAI workout generation returned invalid JSON.', $chatGpt->prompts[1]);
+        self::assertStringContainsString('Correct that exact issue now', $chatGpt->prompts[1]);
+        self::assertSame(['Row', 'Burpee'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
+    public function testCompetitionGenerationRetriesMissingLoadPrescriptionWithValidationFeedback(): void
+    {
+        $difficulty = new MovementDifficulty(MovementDifficultyEnum::RX);
+        $weightlifting = new MovementType(MovementTypeEnum::WEIGHTLIFTING);
+        $cardio = new MovementType(MovementTypeEnum::CARDIO);
+        $deadlift = new Movement('Deadlift', $difficulty, $weightlifting);
+        $row = new Movement('Row', $difficulty, $cardio);
+
+        $chatGpt = new class implements ChatGPTApiKeyInterface {
+            public int $calls = 0;
+
+            /**
+             * @var list<string>
+             */
+            public array $prompts = [];
+
+            public function getWorkoutFlowFromPrompt(string $prompt): string
+            {
+                $this->prompts[] = $prompt;
+                ++$this->calls;
+
+                if ($this->calls === 1) {
+                    return json_encode([
+                        'flow' => "For time:\n3 rounds of:\n- 10 Deadlift\n- 250 m Row",
+                        'scalingOptions' => "RX: moderate deadlift\nIntermediate: reduce load\nScaled: lighter barbell",
+                        'movements' => ['Deadlift', 'Row'],
+                    ], JSON_THROW_ON_ERROR);
+                }
+
+                return json_encode([
+                    'flow' => "For time:\n3 rounds of:\n- 10 Deadlift (100/70 kg)\n- 250 m Row",
+                    'scalingOptions' => "RX: as written\nIntermediate: reduce deadlift load\nScaled: lighter barbell",
+                    'movements' => ['Deadlift', 'Row'],
+                ], JSON_THROW_ON_ERROR);
+            }
+        };
+
+        $workoutGeneration = (new WorkoutGeneration())
+            ->setName('Competition missing load retry')
+            ->setStimulus('Competition')
+            ->setStimulusIntent('Mixed modal test with clear standards.')
+            ->setTimeCap(15)
+            ->setWorkoutType(new WorkoutType(WorkoutTypeEnum::FOR_TIME))
+            ->setMovementGenerationType(new WorkoutMovementGenerationType(WorkoutMovementGenerationTypeEnum::MOVEMENT))
+            ->setMovementDifficulty($difficulty)
+            ->setMovementTypes([$weightlifting, $cardio])
+            ->setNumberOfDifferentMovements(2)
+            ->setNumberOfRounds(3)
+            ->setIsTeamWorkout(false);
+
+        $workout = (new WorkoutCreatorService(
+            $this->movementServiceReturning([$deadlift, $row]),
+            $chatGpt,
+            $this->workoutOriginService(),
+        ))->createWorkout($workoutGeneration);
+
+        self::assertSame(2, $chatGpt->calls);
+        self::assertStringContainsString('Previous generation rejected by MonWOD validation', $chatGpt->prompts[1]);
+        self::assertStringContainsString(
+            'OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.',
+            $chatGpt->prompts[1],
+        );
+        self::assertStringContainsString('include main-flow load prescriptions for loaded movements', $chatGpt->prompts[1]);
+        self::assertSame(['Deadlift', 'Row'], array_map(
+            static fn (Movement $movement): ?string => $movement->getName(),
+            $workout->getMovements()->toArray()
+        ));
+    }
+
     public function testCompetitionGenerationAllowsRejectedClusterWhenUserForcedMovements(): void
     {
         $difficulty = new MovementDifficulty(MovementDifficultyEnum::INTERMEDIATE);
@@ -736,6 +866,14 @@ class WorkoutCreatorServiceTest extends TestCase
         $gymnasticsGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Gymnastics / Skill'));
         self::assertStringContainsString('Use small sets and clear rest when using muscle-ups, HSPU, handstand walk or toes-to-bar', $gymnasticsGuidance);
         self::assertStringContainsString('avoid combining high totals of muscle-ups, HSPU and toes-to-bar in the same workout', $gymnasticsGuidance);
+
+        $thresholdGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Threshold'));
+        self::assertStringContainsString('simple repeatable couplet/triplet or compact interval structure', $thresholdGuidance);
+        self::assertStringContainsString('sustainable main-flow load', $thresholdGuidance);
+
+        $competitionGuidance = $extractGuidance->invoke($creator, (new WorkoutGeneration())->setStimulus('Competition'));
+        self::assertStringContainsString('Keep the flow parseable', $competitionGuidance);
+        self::assertStringContainsString('include loads/standards in the main flow', $competitionGuidance);
     }
 
     public function testOpenAiCanSuggestWorkoutVariantsBeforeFinalGeneration(): void
