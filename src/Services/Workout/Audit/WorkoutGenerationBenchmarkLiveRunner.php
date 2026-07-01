@@ -107,7 +107,8 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 $this->loadPrescriptionValidator,
             );
             $workout = $creator->createWorkout($this->workoutGenerationFromScenario($scenario));
-            $usage = $workout->getAiUsage();
+            $usage = $this->aggregateUsage($chatGpt->getUsageHistory(), $workout->getAiUsage());
+            $retryCount = $this->retryCount($chatGpt->getUsageHistory(), $usage);
             $result = $this->auditor->evaluate($scenario, $workout);
 
             return $this->entry(
@@ -119,11 +120,14 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 failureReason: $result->passed ? null : 'Generated workout did not pass scenario validation checks.',
                 checks: $result->checks,
                 tokenUsage: $this->tokenUsage($usage),
+                retryCount: $retryCount,
                 durationMs: $this->durationMs($usage, $startedAt),
                 estimatedCostUsd: $this->estimatedCost($usage),
             );
         } catch (\Throwable $exception) {
-            $usage ??= $creator?->getLastAiUsage() ?? $chatGpt?->getLastUsage();
+            $usageHistory = $chatGpt?->getUsageHistory() ?? [];
+            $usage ??= $this->aggregateUsage($usageHistory, $creator?->getLastAiUsage() ?? $chatGpt?->getLastUsage());
+            $retryCount = $this->retryCount($usageHistory, $usage);
 
             return $this->entry(
                 model: $model,
@@ -134,6 +138,7 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 failureReason: $exception->getMessage(),
                 checks: ['generated_workout_available' => false],
                 tokenUsage: $this->tokenUsage($usage),
+                retryCount: $retryCount,
                 durationMs: $this->durationMs($usage, $startedAt),
                 estimatedCostUsd: $this->estimatedCost($usage),
             );
@@ -158,6 +163,46 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
             ->setIntervalsTime($workoutType === WorkoutTypeEnum::INTERVALS ? 60 : null)
             ->setIntervalsRestTime($workoutType === WorkoutTypeEnum::INTERVALS ? 30 : null)
             ->setIsTeamWorkout(false);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $usageHistory
+     * @param array<string, mixed>|null  $fallbackUsage
+     *
+     * @return array<string, mixed>|null
+     */
+    private function aggregateUsage(array $usageHistory, ?array $fallbackUsage): ?array
+    {
+        if ($usageHistory === []) {
+            return $fallbackUsage;
+        }
+        if (count($usageHistory) === 1) {
+            return $usageHistory[0];
+        }
+
+        $lastUsage = $usageHistory[array_key_last($usageHistory)];
+
+        return array_merge($lastUsage, [
+            'prompt_tokens' => $this->sumNullableInts($usageHistory, 'prompt_tokens'),
+            'completion_tokens' => $this->sumNullableInts($usageHistory, 'completion_tokens'),
+            'total_tokens' => $this->sumNullableInts($usageHistory, 'total_tokens'),
+            'duration_ms' => $this->sumNullableInts($usageHistory, 'duration_ms'),
+            'estimated_cost_usd' => $this->sumNullableNumericStrings($usageHistory, 'estimated_cost_usd'),
+            'call_count' => count($usageHistory),
+        ]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $usageHistory
+     * @param array<string, mixed>|null  $usage
+     */
+    private function retryCount(array $usageHistory, ?array $usage): ?int
+    {
+        if ($usageHistory !== []) {
+            return max(0, count($usageHistory) - 1);
+        }
+
+        return $usage === null ? null : 0;
     }
 
     /**
@@ -195,6 +240,48 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
         return is_numeric($value) ? (string) $value : null;
     }
 
+    /**
+     * @param list<array<string, mixed>> $usages
+     */
+    private function sumNullableInts(array $usages, string $key): ?int
+    {
+        $sum = 0;
+        $hasValue = false;
+
+        foreach ($usages as $usage) {
+            $value = $this->nullableInt($usage[$key] ?? null);
+            if ($value === null) {
+                continue;
+            }
+
+            $sum += $value;
+            $hasValue = true;
+        }
+
+        return $hasValue ? $sum : null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $usages
+     */
+    private function sumNullableNumericStrings(array $usages, string $key): ?string
+    {
+        $sum = 0.0;
+        $hasValue = false;
+
+        foreach ($usages as $usage) {
+            $value = $usage[$key] ?? null;
+            if (!is_numeric($value)) {
+                continue;
+            }
+
+            $sum += (float) $value;
+            $hasValue = true;
+        }
+
+        return $hasValue ? rtrim(rtrim(sprintf('%.10F', $sum), '0'), '.') : null;
+    }
+
     private function nullableInt(mixed $value): ?int
     {
         if (is_int($value)) {
@@ -222,6 +309,7 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
         ?string $failureReason,
         array $checks,
         ?array $tokenUsage = null,
+        ?int $retryCount = null,
         ?int $durationMs = null,
         ?string $estimatedCostUsd = null,
     ): array {
@@ -237,7 +325,7 @@ final readonly class WorkoutGenerationBenchmarkLiveRunner implements WorkoutGene
                 'completionTokens' => null,
                 'totalTokens' => null,
             ],
-            'retryCount' => null,
+            'retryCount' => $retryCount,
             'durationMs' => $durationMs,
             'estimatedCostUsd' => $estimatedCostUsd,
             'checks' => $checks,

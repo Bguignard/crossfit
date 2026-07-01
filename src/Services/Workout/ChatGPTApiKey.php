@@ -16,6 +16,11 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
      */
     private ?array $lastUsage = null;
 
+    /**
+     * @var list<array<string, mixed>>
+     */
+    private array $usageHistory = [];
+
     public function __construct(
         public readonly string $chatGPTApiKey,
         private readonly string $openAiModel,
@@ -71,6 +76,9 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
         }
         $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
+        $this->lastUsage = $this->usageFromResponse($data, $durationMs);
+        $this->usageHistory[] = $this->lastUsage;
+
         $content = trim((string) ($data['output_text'] ?? ''));
         if ($content === '') {
             $content = $this->extractOutputText($data);
@@ -78,8 +86,6 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
         if ($content === '') {
             throw new \RuntimeException('OpenAI workout generation returned an empty response.');
         }
-
-        $this->lastUsage = $this->usageFromResponse($data, $durationMs);
 
         return $content;
     }
@@ -90,6 +96,14 @@ class ChatGPTApiKey implements ChatGPTApiKeyInterface, ChatGPTUsageAwareInterfac
     public function getLastUsage(): ?array
     {
         return $this->lastUsage;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getUsageHistory(): array
+    {
+        return $this->usageHistory;
     }
 
     private function errorMessage(\Throwable $exception): string
