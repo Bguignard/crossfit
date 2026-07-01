@@ -21,6 +21,7 @@ use App\Services\Workout\AiGeneration\WorkoutAiGenerationUsageTracker;
 use App\Services\Workout\MovementDifficultyService;
 use App\Services\Workout\WorkoutCreatorServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -40,6 +41,7 @@ class WorkoutGenerationFlowController extends AbstractController
         private readonly WorkoutCreatorServiceInterface $workoutCreator,
         private readonly WorkoutAiGenerationActorResolver $aiGenerationActorResolver,
         private readonly WorkoutAiGenerationUsageTracker $aiGenerationUsageTracker,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -127,12 +129,22 @@ class WorkoutGenerationFlowController extends AbstractController
 
         $actor = $this->aiGenerationActor($request);
         $generationType = $this->generationUsageType('workout', $workoutGeneration);
+        $startedAt = microtime(true);
+        $baseLogContext = $this->workoutGenerationLogContext($workoutGeneration, $actor, $generationType);
+        $this->logger->info('monwod.workout_generation.received_request', $baseLogContext);
         $quota = $this->aiGenerationUsageTracker->quotaFor($actor);
         if (!$quota->isAllowed) {
+            $this->logger->info('monwod.workout_generation.quota_reached', [
+                ...$baseLogContext,
+                'elapsedMs' => $this->elapsedMs($startedAt),
+                'quota' => $quota->toArray(),
+            ]);
+
             return $this->quotaExceededResponse($quota);
         }
 
         try {
+            $this->logger->info('monwod.workout_generation.before_create_workout', $baseLogContext);
             $workout = $this->workoutCreator->createWorkout($workoutGeneration);
             $workout = $this->upsertGeneratedWorkout($workoutGeneration, $workout);
             $this->entityManager->persist($workout);
@@ -142,15 +154,28 @@ class WorkoutGenerationFlowController extends AbstractController
                 $generationType,
                 $workout->getAiUsage(),
             );
+            $this->logger->info('monwod.workout_generation.before_flush', [
+                ...$baseLogContext,
+                'lastAiUsage' => $workout->getAiUsage(),
+            ]);
             $this->entityManager->flush();
         } catch (\InvalidArgumentException $exception) {
-            return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
+            $this->logWorkoutGenerationException('monwod.workout_generation.invalid_request', $exception, $baseLogContext, $startedAt, $failure);
+
+            return $this->json([
+                'error' => $exception->getMessage(),
+                'code' => 'workout_generation_invalid_request',
+                'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\RuntimeException $exception) {
             $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
+            $this->logWorkoutGenerationException('monwod.workout_generation.runtime_failure', $exception, $baseLogContext, $startedAt, $failure);
 
             return $this->aiGenerationFailureResponse($exception->getMessage(), $failure);
         } catch (\Throwable $exception) {
             $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
+            $this->logWorkoutGenerationException('monwod.workout_generation.unhandled_failure', $exception, $baseLogContext, $startedAt, $failure);
 
             return $this->aiGenerationFailureResponse(
                 sprintf('Workout generation failed: %s: %s', $exception::class, $exception->getMessage()),
@@ -160,6 +185,12 @@ class WorkoutGenerationFlowController extends AbstractController
 
         $payload = $this->serializeWorkout($workout);
         $payload['quota'] = $this->aiGenerationUsageTracker->quotaFor($actor)->toArray();
+        $this->logger->info('monwod.workout_generation.success', [
+            ...$baseLogContext,
+            'elapsedMs' => $this->elapsedMs($startedAt),
+            'workoutId' => $workout->getId() === null ? null : (string) $workout->getId(),
+            'lastAiUsage' => $workout->getAiUsage(),
+        ]);
 
         return $this->json($payload, Response::HTTP_CREATED);
     }
@@ -223,6 +254,46 @@ class WorkoutGenerationFlowController extends AbstractController
         }
 
         return substr($baseType.':'.$stimulus, 0, 64);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workoutGenerationLogContext(WorkoutGeneration $workoutGeneration, WorkoutAiGenerationActor $actor, string $generationType): array
+    {
+        return [
+            'draftId' => $workoutGeneration->getId() === null ? null : (string) $workoutGeneration->getId(),
+            'actorType' => $actor->type,
+            'generationType' => $generationType,
+            'stimulus' => $workoutGeneration->getStimulus(),
+            'workoutType' => $workoutGeneration->getWorkoutType()->getName(),
+            'movementCount' => $workoutGeneration->getNumberOfDifferentMovements(),
+            'timeCap' => $workoutGeneration->getTimeCap(),
+            'level' => $workoutGeneration->getMovementDifficulty()->getName(),
+            'isTeamWorkout' => $workoutGeneration->isTeamWorkout(),
+        ];
+    }
+
+    private function logWorkoutGenerationException(
+        string $event,
+        \Throwable $exception,
+        array $baseLogContext,
+        float $startedAt,
+        WorkoutAiGenerationUsage $failure,
+    ): void {
+        $this->logger->error($event, [
+            ...$baseLogContext,
+            'elapsedMs' => $this->elapsedMs($startedAt),
+            'exceptionClass' => $exception::class,
+            'message' => $exception->getMessage(),
+            'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
+            'lastAiUsage' => $this->workoutCreator->getLastAiUsage(),
+        ]);
+    }
+
+    private function elapsedMs(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 
     private function quotaExceededResponse(\App\Services\Workout\AiGeneration\WorkoutAiGenerationQuota $quota): JsonResponse

@@ -8,6 +8,8 @@ use App\Entity\Workout\Enum\WorkoutTypeEnum;
 use App\Entity\Workout\Movement;
 use App\Entity\Workout\Workout;
 use App\Entity\WorkoutGeneration\WorkoutGeneration;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
 {
@@ -15,6 +17,7 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
     private TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider;
     private MovementInteractionStrategyProvider $movementInteractionStrategyProvider;
     private WorkoutLoadPrescriptionValidator $loadPrescriptionValidator;
+    private LoggerInterface $logger;
 
     public function __construct(
         public MovementServiceInterface $movementService,
@@ -25,11 +28,13 @@ readonly class WorkoutCreatorService implements WorkoutCreatorServiceInterface
         ?TeamWorkoutStructureGuidanceProvider $teamWorkoutStructureGuidanceProvider = null,
         ?MovementInteractionStrategyProvider $movementInteractionStrategyProvider = null,
         ?WorkoutLoadPrescriptionValidator $loadPrescriptionValidator = null,
+        ?LoggerInterface $logger = null,
     ) {
         $this->competitionMovementFrequencyGuidanceProvider = $competitionMovementFrequencyGuidanceProvider ?? new CompetitionMovementFrequencyGuidanceProvider();
         $this->teamWorkoutStructureGuidanceProvider = $teamWorkoutStructureGuidanceProvider ?? new TeamWorkoutStructureGuidanceProvider();
         $this->movementInteractionStrategyProvider = $movementInteractionStrategyProvider ?? new MovementInteractionStrategyProvider();
         $this->loadPrescriptionValidator = $loadPrescriptionValidator ?? new WorkoutLoadPrescriptionValidator();
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
@@ -267,30 +272,68 @@ EOD;
                 $attemptPrompt .= "Generate a different valid movement mix now. Keep common competition movements available, but do not return the rejected cluster again.\n";
             }
 
+            $openAiStartedAt = microtime(true);
+            $this->logger->info('monwod.workout_generation.before_openai_call', [
+                ...$this->workoutGenerationLogContext($workoutGeneration),
+                'attempt' => $attempt + 1,
+                'promptBytes' => strlen($attemptPrompt),
+            ]);
             $rawResponse = $this->chatGPTApiKey->getWorkoutFlowFromPrompt($attemptPrompt);
-            $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
-            $WorkoutMovements = $this->resolveSelectedMovements(
-                $generatedWorkout['movements'],
-                $mandatoryMovements,
-                $candidateMovementsForPrompt,
-                $workoutGeneration->getNumberOfDifferentMovements()
-            );
-            $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
-            $WorkoutMovements = $this->reconcileSelectedMovementsWithFlow(
-                $WorkoutMovements,
-                $allowedMovements,
-                $generatedWorkout['flow'],
-                $workoutGeneration->getNumberOfDifferentMovements()
-            );
-            $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
-            $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
-            $this->assertGeneratedMainFlowSafety($workoutGeneration, $WorkoutMovements, $generatedWorkout['flow']);
+            $this->logger->info('monwod.workout_generation.after_openai_call', [
+                ...$this->workoutGenerationLogContext($workoutGeneration),
+                'attempt' => $attempt + 1,
+                'elapsedMs' => $this->elapsedMs($openAiStartedAt),
+                'responseBytes' => strlen($rawResponse),
+                'lastAiUsage' => $this->lastOpenAiUsage(),
+            ]);
+
+            try {
+                $this->logger->info('monwod.workout_generation.before_validation', [
+                    ...$this->workoutGenerationLogContext($workoutGeneration),
+                    'attempt' => $attempt + 1,
+                ]);
+                $generatedWorkout = $this->parseGeneratedWorkout($rawResponse);
+                $WorkoutMovements = $this->resolveSelectedMovements(
+                    $generatedWorkout['movements'],
+                    $mandatoryMovements,
+                    $candidateMovementsForPrompt,
+                    $workoutGeneration->getNumberOfDifferentMovements()
+                );
+                $this->assertMandatoryMovementsAppearInFlow($mandatoryMovements, $allowedMovements, $generatedWorkout['flow']);
+                $WorkoutMovements = $this->reconcileSelectedMovementsWithFlow(
+                    $WorkoutMovements,
+                    $allowedMovements,
+                    $generatedWorkout['flow'],
+                    $workoutGeneration->getNumberOfDifferentMovements()
+                );
+                $this->assertBannedMovementsDoNotAppearInFlow($workoutGeneration->getBannedMovements()->toArray(), $allowedMovements, $generatedWorkout['flow']);
+                $this->assertNoUnlistedAllowedMovementsAppearInFlow($WorkoutMovements, $allowedMovements, $generatedWorkout['flow']);
+                $this->assertGeneratedMainFlowSafety($workoutGeneration, $WorkoutMovements, $generatedWorkout['flow']);
+            } catch (\Throwable $exception) {
+                $this->logger->warning('monwod.workout_generation.validation_failed', [
+                    ...$this->workoutGenerationLogContext($workoutGeneration),
+                    'attempt' => $attempt + 1,
+                    'exceptionClass' => $exception::class,
+                    'message' => $exception->getMessage(),
+                    'lastAiUsage' => $this->lastOpenAiUsage(),
+                ]);
+
+                throw $exception;
+            }
 
             try {
                 $this->assertNoRejectedCompetitionMovementCluster($workoutGeneration, $WorkoutMovements);
                 $clusterRejection = null;
                 break;
             } catch (\RuntimeException $exception) {
+                $this->logger->warning('monwod.workout_generation.validation_failed', [
+                    ...$this->workoutGenerationLogContext($workoutGeneration),
+                    'attempt' => $attempt + 1,
+                    'exceptionClass' => $exception::class,
+                    'message' => $exception->getMessage(),
+                    'retryable' => $attempt === 0,
+                    'lastAiUsage' => $this->lastOpenAiUsage(),
+                ]);
                 $clusterRejection = $exception;
                 if ($attempt === 1) {
                     throw $exception;
@@ -409,6 +452,25 @@ EOD;
     public function getLastAiUsage(): ?array
     {
         return $this->lastOpenAiUsage();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workoutGenerationLogContext(WorkoutGeneration $workoutGeneration): array
+    {
+        return [
+            'draftId' => $workoutGeneration->getId() === null ? null : (string) $workoutGeneration->getId(),
+            'stimulus' => $workoutGeneration->getStimulus(),
+            'workoutType' => $workoutGeneration->getWorkoutType()->getName(),
+            'movementCount' => $workoutGeneration->getNumberOfDifferentMovements(),
+            'timeCap' => $workoutGeneration->getTimeCap(),
+        ];
+    }
+
+    private function elapsedMs(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 
     /**
