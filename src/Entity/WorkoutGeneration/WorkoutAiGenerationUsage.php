@@ -169,6 +169,13 @@ class WorkoutAiGenerationUsage
         return $this->estimatedCostUsd;
     }
 
+    public function setEstimatedCostUsd(?string $estimatedCostUsd): self
+    {
+        $this->estimatedCostUsd = $this->nullableDecimalString($estimatedCostUsd);
+
+        return $this;
+    }
+
     public function isQuotaCounted(): bool
     {
         return $this->quotaCounted;
