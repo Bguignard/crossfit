@@ -2019,7 +2019,7 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame(['Row'], $payload['variants'][0]['movementNames']);
     }
 
-    public function testWorkoutGenerationReturnsBadGatewayWhenCreatorRejectsPayload(): void
+    public function testWorkoutGenerationReturnsJsonValidationErrorWhenCreatorRejectsPayload(): void
     {
         $this->browser()->disableReboot();
         static::getContainer()->set(WorkoutCreatorServiceInterface::class, new class implements WorkoutCreatorServiceInterface {
@@ -2077,10 +2077,10 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
 
-        self::assertResponseStatusCodeSame(502);
+        self::assertResponseStatusCodeSame(422);
         $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('OpenAI workout generation listed movement "Row" but did not include it in the workout flow.', $payload['error']);
-        self::assertSame('workout_generation_failed', $payload['code']);
+        self::assertSame('workout_generation_invalid_generated_workout', $payload['code']);
         self::assertNotEmpty($payload['failureId']);
         $workoutGeneration = $this->getRepository(WorkoutGeneration::class)->find($draft['id']);
         self::assertSame(0, $this->getRepository(Workout::class)->count(['workoutGeneration' => $workoutGeneration]));
@@ -2117,9 +2117,9 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
 
         $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
 
-        self::assertResponseStatusCodeSame(502);
+        self::assertResponseStatusCodeSame(422);
         $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame('workout_generation_failed', $payload['code']);
+        self::assertSame('workout_generation_invalid_generated_workout', $payload['code']);
         self::assertSame(
             'OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.',
             $payload['error'],
@@ -2137,6 +2137,50 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             'OpenAI workout generation included loaded movement "Deadlift" without a main workout load prescription.',
             $usage->getFailureReason(),
         );
+    }
+
+    public function testCompetitionAndThresholdGeneratedValidationFailuresReturnJsonErrors(): void
+    {
+        $this->browser()->disableReboot();
+        $creator = new class implements WorkoutCreatorServiceInterface {
+            /**
+             * @var list<string|null>
+             */
+            public array $receivedStimuli = [];
+
+            public function createWorkout(WorkoutGeneration $workoutGeneration): Workout
+            {
+                $this->receivedStimuli[] = $workoutGeneration->getStimulus();
+
+                throw new \RuntimeException('OpenAI workout generation returned invalid JSON.');
+            }
+
+            public function createWorkoutVariants(WorkoutGeneration $workoutGeneration): array
+            {
+                return [];
+            }
+
+            public function getLastAiUsage(): ?array
+            {
+                return null;
+            }
+        };
+        static::getContainer()->set(WorkoutCreatorServiceInterface::class, $creator);
+
+        foreach (['Complet/Competition', 'Seuil/Threshold'] as $stimulus) {
+            $draft = $this->createWorkoutGenerationDraft(sprintf('%s rejected WOD', $stimulus), $stimulus);
+
+            $this->browser()->request('POST', sprintf('/api/workout-generation-flow/%s/workout', $draft['id']));
+
+            self::assertResponseStatusCodeSame(422);
+            self::assertResponseHeaderSame('content-type', 'application/json');
+            $payload = json_decode($this->browser()->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            self::assertSame('workout_generation_invalid_generated_workout', $payload['code']);
+            self::assertSame('OpenAI workout generation returned invalid JSON.', $payload['error']);
+            self::assertNotEmpty($payload['failureId']);
+        }
+
+        self::assertSame(['Complet/Competition', 'Seuil/Threshold'], $creator->receivedStimuli);
     }
 
     public function testWorkoutGenerationRejectsUnknownStimulusBeforeCallingCreator(): void

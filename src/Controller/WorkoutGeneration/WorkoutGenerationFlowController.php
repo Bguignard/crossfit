@@ -187,6 +187,10 @@ class WorkoutGenerationFlowController extends AbstractController
             $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
             $this->logWorkoutGenerationException('monwod.workout_generation.runtime_failure', $exception, $baseLogContext, $startedAt, $failure);
 
+            if ($this->isGeneratedWorkoutValidationFailure($exception)) {
+                return $this->invalidGeneratedWorkoutResponse($exception->getMessage(), $failure);
+            }
+
             return $this->aiGenerationFailureResponse($exception->getMessage(), $failure);
         } catch (\Throwable $exception) {
             $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_WORKOUT, $generationType, $exception);
@@ -248,6 +252,10 @@ class WorkoutGenerationFlowController extends AbstractController
             return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\RuntimeException $exception) {
             $failure = $this->recordAiGenerationFailure($actor, WorkoutAiGenerationUsage::ENDPOINT_VARIANTS, $generationType, $exception);
+
+            if ($this->isGeneratedWorkoutValidationFailure($exception)) {
+                return $this->invalidGeneratedWorkoutResponse($exception->getMessage(), $failure);
+            }
 
             return $this->aiGenerationFailureResponse($exception->getMessage(), $failure);
         } catch (\Throwable $exception) {
@@ -390,6 +398,25 @@ class WorkoutGenerationFlowController extends AbstractController
             'code' => 'workout_generation_failed',
             'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
         ], Response::HTTP_BAD_GATEWAY);
+    }
+
+    private function invalidGeneratedWorkoutResponse(string $message, WorkoutAiGenerationUsage $failure): JsonResponse
+    {
+        return $this->json([
+            'error' => $message,
+            'code' => 'workout_generation_invalid_generated_workout',
+            'failureId' => $failure->getId() === null ? null : (string) $failure->getId(),
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function isGeneratedWorkoutValidationFailure(\RuntimeException $exception): bool
+    {
+        $message = $exception->getMessage();
+        if (!str_starts_with($message, 'OpenAI workout generation ')) {
+            return false;
+        }
+
+        return !str_starts_with($message, 'OpenAI workout generation failed:');
     }
 
     /**
