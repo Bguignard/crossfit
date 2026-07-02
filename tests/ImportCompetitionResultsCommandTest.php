@@ -322,21 +322,66 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
                     'division' => 'Pro Men',
                     'score' => ['type' => 'time', 'rawValue' => '1:02:05', 'displayValue' => '1:02:05', 'timeInSeconds' => 3725],
                     'totalTimeSeconds' => 3725,
-                    'splits' => [
-                        [
-                            'order' => 1,
-                            'type' => 'run',
-                            'name' => 'Run 1',
-                            'distance_meters' => 1000,
-                            'time_seconds' => 255,
+                    'performanceDetails' => [
+                        'sport' => 'hyrox',
+                        'totalTime' => '1:02:05',
+                        'totalTimeSeconds' => 3725,
+                        'resultSummary' => [
+                            'category' => 'total',
+                            'displayLabel' => 'Total',
+                            'duration' => '1:02:05',
+                            'durationSeconds' => 3725,
+                            'rank' => 9,
                         ],
-                        [
-                            'order' => 2,
-                            'type' => 'station',
-                            'station_number' => 1,
-                            'name' => 'SkiErg',
-                            'distance_meters' => 1000,
-                            'time_seconds' => 270,
+                        'segments' => [
+                            [
+                                'key' => 'run_1',
+                                'order' => 1,
+                                'kind' => 'run',
+                                'category' => 'run',
+                                'name' => 'Run 1',
+                                'displayLabel' => 'Run 1',
+                                'distance_meters' => 1000,
+                                'durationSeconds' => 255,
+                            ],
+                            [
+                                'key' => 'skierg',
+                                'order' => 2,
+                                'kind' => 'station',
+                                'category' => 'station',
+                                'station_number' => 1,
+                                'name' => '1000m SkiErg',
+                                'displayLabel' => 'SkiErg',
+                                'distance_meters' => 1000,
+                                'durationSeconds' => 270,
+                                'analysisArea' => 'ergs_engine',
+                            ],
+                        ],
+                        'segmentGroups' => [
+                            'runs' => [
+                                ['key' => 'run_1', 'displayLabel' => 'Run 1', 'durationSeconds' => 255],
+                            ],
+                            'stations' => [
+                                ['key' => 'skierg', 'displayLabel' => 'SkiErg', 'durationSeconds' => 270],
+                            ],
+                            'roxzone' => [],
+                            'unknown' => [],
+                        ],
+                        'analysisSummary' => [
+                            'areas' => [
+                                'running' => ['segmentCount' => 1, 'totalDurationSeconds' => 255],
+                                'ergs_engine' => ['segmentCount' => 1, 'totalDurationSeconds' => 270],
+                            ],
+                        ],
+                        'exportQuality' => [
+                            'expectedSegmentCount' => 17,
+                            'knownSegmentCount' => 2,
+                            'missingSegmentCount' => 15,
+                            'isComplete' => false,
+                            'missingSegmentKeys' => ['run_2'],
+                        ],
+                        'missingSegments' => [
+                            ['key' => 'run_2', 'name' => 'Run 2', 'kind' => 'run', 'order' => 3],
                         ],
                     ],
                 ],
@@ -359,14 +404,20 @@ class ImportCompetitionResultsCommandTest extends AbstractIntegrationTest
             $breakdown = $result->getPerformanceBreakdown();
             self::assertIsArray($breakdown);
             self::assertSame('hyrox', $breakdown['sport']);
-            self::assertSame(3725, $breakdown['total_time_seconds']);
+            self::assertSame(3725, $breakdown['totalTimeSeconds']);
+            self::assertSame('Total', $breakdown['resultSummary']['displayLabel']);
             self::assertCount(2, $breakdown['segments']);
-            self::assertSame('run', $breakdown['segments'][0]['type']);
+            self::assertSame('run_1', $breakdown['segments'][0]['key']);
+            self::assertSame('run', $breakdown['segments'][0]['kind']);
             self::assertSame('Run 1', $breakdown['segments'][0]['name']);
             self::assertSame(1000, $breakdown['segments'][0]['distance_meters']);
-            self::assertSame('station', $breakdown['segments'][1]['type']);
-            self::assertSame('SkiErg', $breakdown['segments'][1]['name']);
-            self::assertSame(270, $breakdown['segments'][1]['time_seconds']);
+            self::assertSame('station', $breakdown['segments'][1]['kind']);
+            self::assertSame('SkiErg', $breakdown['segments'][1]['displayLabel']);
+            self::assertSame(270, $breakdown['segments'][1]['durationSeconds']);
+            self::assertSame(['run_1'], array_column($breakdown['segmentGroups']['runs'], 'key'));
+            self::assertSame(270, $breakdown['analysisSummary']['areas']['ergs_engine']['totalDurationSeconds']);
+            self::assertFalse($breakdown['exportQuality']['isComplete']);
+            self::assertSame(['run_2'], $breakdown['exportQuality']['missingSegmentKeys']);
         } finally {
             @unlink($file);
         }

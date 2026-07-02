@@ -21,7 +21,7 @@ final class HyroxResultPerformanceDetailsNormalizer
         $division = $result->getCompetitionDivision()?->getName() ?? $result->getDivision();
         $totalTime = $breakdown !== null && is_array($breakdown['totalTime'] ?? null) ? $breakdown['totalTime'] : [];
 
-        return [
+        $payload = [
             'sport' => 'hyrox',
             'resultKind' => 'competition_result',
             'competition' => [
@@ -52,6 +52,21 @@ final class HyroxResultPerformanceDetailsNormalizer
             ],
             'segments' => $this->segments($breakdown),
         ];
+
+        foreach ([
+            'category' => $this->stringValue($breakdown['category'] ?? null),
+            'resultSummary' => $this->arrayValue($breakdown['resultSummary'] ?? $breakdown['result_summary'] ?? null),
+            'segmentGroups' => $this->arrayValue($breakdown['segmentGroups'] ?? $breakdown['segment_groups'] ?? null),
+            'analysisSummary' => $this->arrayValue($breakdown['analysisSummary'] ?? $breakdown['analysis_summary'] ?? null),
+            'exportQuality' => $this->arrayValue($breakdown['exportQuality'] ?? $breakdown['export_quality'] ?? $breakdown['qualityFlags'] ?? $breakdown['quality_flags'] ?? null),
+            'missingSegments' => $this->arrayListValue($breakdown['missingSegments'] ?? $breakdown['missing_segments'] ?? null),
+        ] as $key => $value) {
+            if ($value !== null) {
+                $payload[$key] = $value;
+            }
+        }
+
+        return $payload;
     }
 
     /**
@@ -103,17 +118,35 @@ final class HyroxResultPerformanceDetailsNormalizer
 
             $order = $this->intValue($segment['order'] ?? $segment['position'] ?? null) ?? ($index + 1);
             $time = is_array($segment['time'] ?? null) ? $segment['time'] : [];
+            $displayTime = $this->stringValue(
+                $segment['time_display'] ?? $segment['display_time'] ?? $segment['displayTime'] ?? $time['display'] ?? null
+            );
+            $duration = $this->stringValue($segment['duration'] ?? $segment['time'] ?? null);
+            $durationSeconds = $this->intValue($segment['durationSeconds'] ?? $segment['duration_seconds'] ?? null);
+            $timeSeconds = $this->intValue($segment['time_seconds'] ?? $segment['timeSeconds'] ?? $time['seconds'] ?? null)
+                ?? $durationSeconds;
+
             $segments[] = [
                 'order' => $order,
-                'type' => $this->segmentType($segment['type'] ?? $segment['kind'] ?? null),
+                'type' => $this->segmentType($segment['type'] ?? $segment['category'] ?? $segment['kind'] ?? null),
+                'key' => $this->stringValue($segment['key'] ?? null),
                 'name' => $this->stringValue($segment['name'] ?? null),
                 'label' => $this->stringValue($segment['label'] ?? null),
+                'sourceLabel' => $this->stringValue($segment['sourceLabel'] ?? $segment['source_label'] ?? null),
+                'displayLabel' => $this->stringValue($segment['displayLabel'] ?? $segment['display_label'] ?? null),
+                'canonicalName' => $this->stringValue($segment['canonicalName'] ?? $segment['canonical_name'] ?? null),
+                'category' => $this->stringValue($segment['category'] ?? null),
+                'kind' => $this->stringValue($segment['kind'] ?? null),
                 'stationNumber' => $this->intValue($segment['station_number'] ?? $segment['stationNumber'] ?? null),
                 'distanceMeters' => $this->intValue($segment['distance_meters'] ?? $segment['distanceMeters'] ?? null),
                 'reps' => $this->intValue($segment['reps'] ?? null),
+                'rank' => $this->intValue($segment['rank'] ?? null),
+                'analysisArea' => $this->stringValue($segment['analysisArea'] ?? $segment['analysis_area'] ?? null),
+                'duration' => $duration ?? $displayTime,
+                'durationSeconds' => $durationSeconds ?? $timeSeconds,
                 'time' => [
-                    'display' => $this->stringValue($segment['time_display'] ?? $segment['display_time'] ?? $segment['displayTime'] ?? $time['display'] ?? null),
-                    'seconds' => $this->intValue($segment['time_seconds'] ?? $segment['timeSeconds'] ?? $time['seconds'] ?? null),
+                    'display' => $displayTime ?? $duration,
+                    'seconds' => $timeSeconds,
                 ],
                 'rawValue' => $this->stringValue($segment['raw_value'] ?? $segment['rawValue'] ?? null),
             ];
@@ -138,6 +171,33 @@ final class HyroxResultPerformanceDetailsNormalizer
     private function stringValue(mixed $value): ?string
     {
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function arrayValue(mixed $value): ?array
+    {
+        return is_array($value) ? $value : null;
+    }
+
+    /**
+     * @return list<array<string, mixed>>|null
+     */
+    private function arrayListValue(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
     }
 
     private function intValue(mixed $value): ?int

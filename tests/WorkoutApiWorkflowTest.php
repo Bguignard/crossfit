@@ -1155,29 +1155,94 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
             ->setSourceUrl('https://results.hyrox.test/paris-2026/athlete-1')
             ->setPerformanceBreakdown([
                 'sport' => 'hyrox',
+                'category' => 'HYROX WOMEN',
                 'totalTime' => ['display' => '1:02:05', 'seconds' => 3725],
+                'resultSummary' => [
+                    'category' => 'total',
+                    'displayLabel' => 'Total',
+                    'duration' => '1:02:05',
+                    'durationSeconds' => 3725,
+                    'rank' => 7,
+                ],
                 'segments' => [
                     [
                         'order' => 3,
                         'type' => 'roxzone',
+                        'key' => 'roxzone',
                         'name' => 'Roxzone 1',
-                        'time' => ['display' => '0:58', 'seconds' => 58],
+                        'sourceLabel' => 'Roxzone 1',
+                        'displayLabel' => 'Roxzone',
+                        'category' => 'roxzone',
+                        'kind' => 'transition',
+                        'duration' => '0:58',
+                        'durationSeconds' => 58,
+                        'analysisArea' => 'roxzone_transitions',
                     ],
                     [
                         'order' => 1,
                         'type' => 'run',
+                        'key' => 'run_1',
                         'name' => 'Run 1',
+                        'displayLabel' => 'Run 1',
+                        'category' => 'run',
+                        'kind' => 'run',
                         'distance_meters' => 1000,
-                        'time' => ['display' => '4:12', 'seconds' => 252],
+                        'duration' => '4:12',
+                        'durationSeconds' => 252,
+                        'analysisArea' => 'running',
                     ],
                     [
                         'order' => 2,
                         'type' => 'station',
+                        'key' => 'skierg',
                         'station_number' => 1,
-                        'name' => 'SkiErg',
+                        'name' => '1000m SkiErg',
+                        'displayLabel' => 'SkiErg',
+                        'canonicalName' => 'SkiErg',
+                        'category' => 'station',
+                        'kind' => 'station',
                         'distance_meters' => 1000,
-                        'time' => ['display' => '4:25', 'seconds' => 265],
+                        'duration' => '4:25',
+                        'durationSeconds' => 265,
+                        'rank' => 12,
+                        'analysisArea' => 'ergs_engine',
                     ],
+                ],
+                'segmentGroups' => [
+                    'runs' => [
+                        ['key' => 'run_1', 'displayLabel' => 'Run 1', 'durationSeconds' => 252],
+                    ],
+                    'stations' => [
+                        ['key' => 'skierg', 'displayLabel' => 'SkiErg', 'durationSeconds' => 265],
+                    ],
+                    'roxzone' => [
+                        ['key' => 'roxzone', 'displayLabel' => 'Roxzone', 'durationSeconds' => 58],
+                    ],
+                    'unknown' => [],
+                ],
+                'analysisSummary' => [
+                    'areas' => [
+                        'running' => ['segmentCount' => 1, 'totalDurationSeconds' => 252],
+                        'ergs_engine' => ['segmentCount' => 1, 'totalDurationSeconds' => 265],
+                        'roxzone_transitions' => ['segmentCount' => 1, 'totalDurationSeconds' => 58],
+                    ],
+                    'runPacing' => null,
+                ],
+                'exportQuality' => [
+                    'expectedSegmentCount' => 17,
+                    'knownSegmentCount' => 3,
+                    'missingSegmentCount' => 14,
+                    'unknownSegmentCount' => 0,
+                    'duplicateSegmentCount' => 0,
+                    'invalidDurationSegmentCount' => 0,
+                    'isComplete' => false,
+                    'presentSegmentKeys' => ['run_1', 'skierg', 'roxzone'],
+                    'missingSegmentKeys' => ['run_2'],
+                    'duplicateSegmentKeys' => [],
+                    'unknownSegments' => [],
+                ],
+                'missingSegments' => [
+                    ['key' => 'run_2', 'name' => 'Run 2', 'kind' => 'run', 'analysisArea' => 'running', 'order' => 3],
                 ],
             ]);
 
@@ -1211,21 +1276,35 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('2026-03-08T08:00:00+00:00', $performanceDetails['competition']['startsAt']);
         self::assertSame('HYROX Pro Women', $performanceDetails['event']['name']);
         self::assertSame('Pro Women', $performanceDetails['division']);
+        self::assertSame('HYROX WOMEN', $performanceDetails['category']);
         self::assertSame(['display' => '1:02:05', 'seconds' => 3725], $performanceDetails['totalTime']);
+        self::assertSame('Total', $performanceDetails['resultSummary']['displayLabel']);
+        self::assertSame(3725, $performanceDetails['resultSummary']['durationSeconds']);
         self::assertSame([
-            ['order' => 1, 'type' => 'run', 'name' => 'Run 1'],
-            ['order' => 2, 'type' => 'station', 'name' => 'SkiErg'],
-            ['order' => 3, 'type' => 'roxzone', 'name' => 'Roxzone 1'],
+            ['order' => 1, 'type' => 'run', 'key' => 'run_1', 'name' => 'Run 1', 'displayLabel' => 'Run 1'],
+            ['order' => 2, 'type' => 'station', 'key' => 'skierg', 'name' => '1000m SkiErg', 'displayLabel' => 'SkiErg'],
+            ['order' => 3, 'type' => 'roxzone', 'key' => 'roxzone', 'name' => 'Roxzone 1', 'displayLabel' => 'Roxzone'],
         ], array_map(
             static fn (array $segment): array => [
                 'order' => $segment['order'],
                 'type' => $segment['type'],
+                'key' => $segment['key'],
                 'name' => $segment['name'],
+                'displayLabel' => $segment['displayLabel'],
             ],
             $performanceDetails['segments'],
         ));
         self::assertSame(1000, $performanceDetails['segments'][0]['distanceMeters']);
         self::assertSame(['display' => '4:25', 'seconds' => 265], $performanceDetails['segments'][1]['time']);
+        self::assertSame('ergs_engine', $performanceDetails['segments'][1]['analysisArea']);
+        self::assertSame(12, $performanceDetails['segments'][1]['rank']);
+        self::assertSame(['run_1'], array_column($performanceDetails['segmentGroups']['runs'], 'key'));
+        self::assertSame(['skierg'], array_column($performanceDetails['segmentGroups']['stations'], 'key'));
+        self::assertSame(['roxzone'], array_column($performanceDetails['segmentGroups']['roxzone'], 'key'));
+        self::assertSame(252, $performanceDetails['analysisSummary']['areas']['running']['totalDurationSeconds']);
+        self::assertFalse($performanceDetails['exportQuality']['isComplete']);
+        self::assertSame(['run_2'], $performanceDetails['exportQuality']['missingSegmentKeys']);
+        self::assertSame('Run 2', $performanceDetails['missingSegments'][0]['name']);
         self::assertSame('https://results.hyrox.test/paris-2026/athlete-1', $performanceDetails['source']['url']);
     }
 
