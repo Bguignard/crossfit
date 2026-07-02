@@ -1140,9 +1140,11 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $competition = (new Competition('HYROX Paris 2026', 'hyrox', 'hyrox-paris-2026'))
             ->setCompetitionType('hyrox')
             ->setStartsAt(new \DateTimeImmutable('2026-03-08T08:00:00+00:00'))
-            ->setLocationLabel('Paris, France');
+            ->setLocationLabel('Paris, France')
+            ->setSourceUrl('https://www.hyresult.com/event/hyrox-paris-2026');
         $event = (new CompetitionEvent($competition, 'HYROX Pro Women', 'hyrox', 'hyrox-paris-2026-pro-women'))
-            ->setEventOrder(1);
+            ->setEventOrder(1)
+            ->setSourceUrl('https://www.hyresult.com/event/hyrox-paris-2026');
         $division = new CompetitionDivision($competition, 'Pro Women', 'hyrox', 'hyrox-paris-2026-pro-women-division');
         $score = (new Score(ScoreTypeEnum::TIME, '1:02:05'))
             ->setDisplayValue('1:02:05')
@@ -1150,6 +1152,8 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         $result = (new WorkoutResult($athlete, $event, $score, 'hyrox', 'hyrox-paris-2026-athlete-1'))
             ->setCompetitionDivision($division)
             ->setDivision('Pro Women')
+            ->setDivisionSourceId('pro-women')
+            ->setCompetitionRank('4')
             ->setRank(7)
             ->setFieldSize(128)
             ->setSourceUrl('https://results.hyrox.test/paris-2026/athlete-1')
@@ -1273,9 +1277,14 @@ class WorkoutApiWorkflowTest extends AbstractIntegrationTest
         self::assertSame('hyrox', $performanceDetails['sport']);
         self::assertSame('competition_result', $performanceDetails['resultKind']);
         self::assertSame('HYROX Paris 2026', $performanceDetails['competition']['name']);
+        self::assertSame('https://www.hyresult.com/event/hyrox-paris-2026', $performanceDetails['competition']['sourceUrl']);
         self::assertSame('2026-03-08T08:00:00+00:00', $performanceDetails['competition']['startsAt']);
         self::assertSame('HYROX Pro Women', $performanceDetails['event']['name']);
+        self::assertSame('hyrox-paris-2026-pro-women', $performanceDetails['event']['externalId']);
+        self::assertSame('https://www.hyresult.com/event/hyrox-paris-2026', $performanceDetails['event']['sourceUrl']);
         self::assertSame('Pro Women', $performanceDetails['division']);
+        self::assertSame(['rank' => 7, 'fieldSize' => 128], $performanceDetails['rankings']['overall']);
+        self::assertSame(['rank' => '4', 'division' => 'Pro Women', 'divisionSourceId' => 'pro-women'], $performanceDetails['rankings']['division']);
         self::assertSame('HYROX WOMEN', $performanceDetails['category']);
         self::assertSame(['display' => '1:02:05', 'seconds' => 3725], $performanceDetails['totalTime']);
         self::assertSame('Total', $performanceDetails['resultSummary']['displayLabel']);

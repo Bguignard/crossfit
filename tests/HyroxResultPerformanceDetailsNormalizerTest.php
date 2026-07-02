@@ -17,9 +17,11 @@ class HyroxResultPerformanceDetailsNormalizerTest extends TestCase
     {
         $competition = (new Competition('HYROX Sydney 2026', 'hyrox', 'hyrox-sydney-2026'))
             ->setCompetitionType('hyrox')
-            ->setStartsAt(new \DateTimeImmutable('2026-07-01T00:00:00+10:00'));
+            ->setStartsAt(new \DateTimeImmutable('2026-07-01T00:00:00+10:00'))
+            ->setSourceUrl('https://www.hyresult.com/event/s9-2026-sydney');
         $event = (new CompetitionEvent($competition, 'HYROX Pro Men', 'hyrox', 'hyrox-sydney-2026-pro-men'))
-            ->setEventOrder(1);
+            ->setEventOrder(1)
+            ->setSourceUrl('https://www.hyresult.com/event/s9-2026-sydney');
         $result = (new WorkoutResult(
             new Athlete('James Hansen', 'hyrox', 'hyrox-james'),
             $event,
@@ -28,6 +30,8 @@ class HyroxResultPerformanceDetailsNormalizerTest extends TestCase
             'hyrox-result-1',
         ))
             ->setDivision('30-34')
+            ->setDivisionSourceId('men-30-34')
+            ->setCompetitionRank('3')
             ->setRank(1)
             ->setFieldSize(120)
             ->setPerformanceBreakdown([
@@ -113,8 +117,13 @@ class HyroxResultPerformanceDetailsNormalizerTest extends TestCase
         self::assertSame('competition_result', $payload['resultKind']);
         self::assertSame('HYROX MEN', $payload['category']);
         self::assertSame('HYROX Sydney 2026', $payload['competition']['name']);
+        self::assertSame('https://www.hyresult.com/event/s9-2026-sydney', $payload['competition']['sourceUrl']);
         self::assertSame('HYROX Pro Men', $payload['event']['name']);
+        self::assertSame('hyrox-sydney-2026-pro-men', $payload['event']['externalId']);
+        self::assertSame('https://www.hyresult.com/event/s9-2026-sydney', $payload['event']['sourceUrl']);
         self::assertSame('30-34', $payload['division']);
+        self::assertSame(['rank' => 1, 'fieldSize' => 120], $payload['rankings']['overall']);
+        self::assertSame(['rank' => '3', 'division' => '30-34', 'divisionSourceId' => 'men-30-34'], $payload['rankings']['division']);
         self::assertSame(['display' => '57:57', 'seconds' => 3477], $payload['totalTime']);
         self::assertSame('Total', $payload['resultSummary']['displayLabel']);
         self::assertSame(['run_1', 'skierg', 'roxzone'], array_column($payload['segments'], 'key'));
