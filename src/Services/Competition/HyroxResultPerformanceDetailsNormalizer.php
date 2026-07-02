@@ -28,16 +28,30 @@ final class HyroxResultPerformanceDetailsNormalizer
                 'name' => $competition->getName(),
                 'sourceName' => $competition->getSourceName(),
                 'externalId' => $competition->getExternalId(),
+                'sourceUrl' => $competition->getSourceUrl(),
                 'startsAt' => $competition->getStartsAt()?->format(\DateTimeInterface::ATOM),
                 'endsAt' => $competition->getEndsAt()?->format(\DateTimeInterface::ATOM),
             ],
             'event' => [
                 'name' => $result->getEvent()->getName(),
                 'order' => $result->getEvent()->getEventOrder(),
+                'externalId' => $result->getEvent()->getExternalId(),
+                'sourceUrl' => $result->getEvent()->getSourceUrl(),
             ],
             'division' => $division,
             'rank' => $result->getRank(),
             'fieldSize' => $result->getFieldSize(),
+            'rankings' => [
+                'overall' => [
+                    'rank' => $result->getRank(),
+                    'fieldSize' => $result->getFieldSize(),
+                ],
+                'division' => [
+                    'rank' => $this->stringValue($result->getCompetitionRank()),
+                    'division' => $division,
+                    'divisionSourceId' => $result->getDivisionSourceId(),
+                ],
+            ],
             'totalTime' => [
                 'display' => $this->stringValue($breakdown['total_time_display'] ?? $breakdown['totalTimeDisplay'] ?? $totalTime['display'] ?? null)
                     ?? $score->getDisplayValue()
